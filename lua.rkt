@@ -14,6 +14,8 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+(provide c)
+
 (define-syntax-rule (f2 o)
   (exp "function(x,y)return x" o "y end"))
 
@@ -39,6 +41,12 @@
           "return " (EVAL (second xs))
           " end")]
     [(eq? f 'letrec) (LETREC xs)]
+    [(eq? f 'if)
+     (exp "if " (EVAL (car xs)) " then "
+          (EVAL (second xs))
+          " else "
+          (EVAL (third xs))
+          " end")]
     [else (call (EVAL f) (%apply xs))]))
 
 (define (%apply xs)
@@ -85,3 +93,5 @@
     [(stream? x) (string-append (e (stream-first x)) (e (stream-rest x)))]
     [(list? x) (string-append (e (car x)) (e (cdr x)))]
     [else x]))
+
+(define (c x) (e (EVAL x)))
