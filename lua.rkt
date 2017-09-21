@@ -42,11 +42,12 @@
           " end")]
     [(eq? f 'letrec) (LETREC xs)]
     [(eq? f 'if)
-     (exp "if " (EVAL (car xs)) " then "
-          (EVAL (second xs))
-          " else "
-          (EVAL (third xs))
-          " end")]
+     (exp (exp "function()"
+               "if " (EVAL (car xs))
+               " then return " (EVAL (second xs))
+               " else return " (EVAL (third xs))
+               " end end") "()")]
+    [(eq? f 'ffi) (FFI (car xs))]
     [else (call (EVAL f) (%apply xs))]))
 
 (define (%apply xs)
@@ -66,7 +67,7 @@
 
 (define (LETREC xs)
   (let ([ps (car xs)])
-    (stream
+    (exp
      (exp "function()"
           (map (λ (s)
                  (stream "local " (id s) "=nil "))
@@ -95,3 +96,5 @@
     [else x]))
 
 (define (c x) (e (EVAL x)))
+
+(define (FFI x) (error))
