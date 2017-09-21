@@ -31,8 +31,8 @@
         'or (f2 "or")
         'luatype "type"))
 
-(define-syntax-rule (call f x ...)
-  (stream f "(" x ... ")"))
+(define-syntax-rule (call f x)
+  (stream f "(" x ")"))
 
 (define (APPLY f xs)
   (cond
@@ -41,6 +41,7 @@
           "return " (EVAL (second xs))
           " end")]
     [(eq? f 'letrec) (LETREC xs)]
+    [(eq? f 'let) (LET xs)]
     [(eq? f 'if)
      (exp (exp "function()"
                "if " (EVAL (car xs))
@@ -77,6 +78,13 @@
                ps)
           "return " (EVAL (second xs))
           " end") "()")))
+
+(define (LET xs)
+  (let ([ps (car xs)])
+    (exp
+     (exp "function(" (%λ (map car ps)) ")"
+          "return " (EVAL (second xs))
+          " end") "(" (%apply (map second ps)) ")")))
 
 (define (EVAL x)
   (cond
