@@ -104,6 +104,7 @@
     [(number? x) (number->string x)]
     [(eq? x #t) "true"]
     [(eq? x #f) "false"]
+    [(string? x) x]
     [else (error)]))
 
 (define (e x)
@@ -123,4 +124,5 @@
    pre
    x))
 
-(define (FFI x) (error))
+(define (FFI x)
+  (call "l2sv" (symbol->string x)))
