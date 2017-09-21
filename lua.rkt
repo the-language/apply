@@ -74,9 +74,9 @@
                 "zs"
                 (number->string idc)
                 "_"
-                              (list->string (map
-                                             (λ (x) (if (or (char-alphabetic? x) (char-numeric? x)) x #\_))
-                                             (string->list (symbol->string x))))))))
+                (list->string (map
+                               (λ (x) (if (or (char-alphabetic? x) (char-numeric? x)) x #\_))
+                               (string->list (symbol->string x))))))))
 
 (define (LETREC xs)
   (let ([ps (car xs)])
@@ -115,6 +115,14 @@
     [(list? x) (string-append (e (car x)) (e (cdr x)))]
     [else x]))
 
-(define (c x) (e (EVAL x)))
+(define pre (file->string "prelude.lua"))
+
+(define (c x)
+  (endc (e (EVAL x))))
+
+(define (endc x)
+  (string-append
+   pre
+   x))
 
 (define (FFI x) (error))
