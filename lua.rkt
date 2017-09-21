@@ -16,19 +16,17 @@
 
 (provide c)
 
-(define-syntax-rule (f2 o)
-  (exp "function(x,y)return x" o "y end"))
-
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
 
 (define p
-  (hash '+ (f2 "+")
-        '- (f2 "-")
-        '* (f2 "*")
-        '/ (f2 "/")
-        'and (f2 "and")
-        'or (f2 "or")
+  (hash '+ "add"
+        '- "sub"
+        '* "mul"
+        '/ "quo"
+        'and "and2"
+        'or "or2"
+        'not "notf"
         'luatype "type"))
 
 (define-syntax-rule (call f x)
