@@ -63,8 +63,20 @@
     [(null? (cdr xs)) (id (car xs))]
     [else (stream (id (car xs)) "," (%λ (cdr xs)))]))
 
+(define ids (make-hasheq))
+(define idc 0)
+
 (define (id x)
-  (symbol->string x)) ;; Fix
+  (hash-ref! ids x
+             (λ ()
+               (set! idc (+ 1 idc))
+               (string-append
+                "zs"
+                (number->string idc)
+                "_"
+                              (list->string (map
+                                             (λ (x) (if (or (char-alphabetic? x) (char-numeric? x)) x #\_))
+                                             (string->list (symbol->string x))))))))
 
 (define (LETREC xs)
   (let ([ps (car xs)])
