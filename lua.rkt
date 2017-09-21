@@ -102,7 +102,7 @@
   (cond
     [(symbol? x) (hash-ref p x (id x))]
     [(pair? x) (APPLY (car x) (cdr x))]
-    [(null? x) "nil"]
+    [(null? x) "null"]
     [(number? x) (number->string x)]
     [(eq? x #t) "true"]
     [(eq? x #f) "false"]
