@@ -51,15 +51,28 @@
     [(null? (cdr xs)) (id (car xs))]
     [else (stream (id (car xs)) "," (%λ (cdr xs)))]))
 
-(define ids (make-hasheq
-             (list (cons '+ "add")
-        (cons '- "sub")
-        (cons '* "mul")
-        (cons '/ "quo")
-        (cons 'and "and2")
-        (cons 'or "or2")
-        (cons 'not "notf")
-        (cons 'luatype "type"))))
+(define-syntax-rule (ps [x v] ...)
+  (make-hasheq
+   (list
+    (cons (quote x) (symbol->string (quote v))) ...)))
+
+(define ids (ps
+             [+ add]
+             [- sub]
+             [* mul]
+             [/ quo]
+             [and2 and2]
+             [or2 or2]
+             [not notf]
+             [luatype type]
+             [null? is_null]
+             [pair? is_pair]
+             [cons cons]
+             [car car]
+             [cdr cdr]
+             [vec vector]
+             [vec? is_vector]
+             [vec-ref vector_ref]))
 (define idc 0)
 
 (define (id x)
