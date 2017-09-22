@@ -19,16 +19,6 @@
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
 
-(define p
-  (hash '+ "add"
-        '- "sub"
-        '* "mul"
-        '/ "quo"
-        'and "and2"
-        'or "or2"
-        'not "notf"
-        'luatype "type"))
-
 (define-syntax-rule (call f x)
   (stream f "(" x ")"))
 
@@ -61,7 +51,15 @@
     [(null? (cdr xs)) (id (car xs))]
     [else (stream (id (car xs)) "," (%λ (cdr xs)))]))
 
-(define ids (make-hasheq))
+(define ids (make-hasheq
+             (list (cons '+ "add")
+        (cons '- "sub")
+        (cons '* "mul")
+        (cons '/ "quo")
+        (cons 'and "and2")
+        (cons 'or "or2")
+        (cons 'not "notf")
+        (cons 'luatype "type"))))
 (define idc 0)
 
 (define (id x)
@@ -98,7 +96,7 @@
 
 (define (EVAL x)
   (cond
-    [(symbol? x) (hash-ref p x (id x))]
+    [(symbol? x) (id x)]
     [(pair? x) (APPLY (car x) (cdr x))]
     [(null? x) "null"]
     [(number? x) (number->string x)]
@@ -122,7 +120,7 @@
 (define (endc x)
   (string-append
    pre
-   x))
+   "return " x))
 
 (define (FFI x)
   (call "l2sv" (symbol->string x)))
