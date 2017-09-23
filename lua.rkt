@@ -24,11 +24,17 @@
                x ...
                " end") "()"))
 
+(define-syntax-rule (var x)
+  (stream "local " (id x) "=nil "))
+
+(define-syntax-rule (set x v)
+  (stream (id x) "=" (EVAL v) " "))
+
 (define (APPLY f xs)
   (cond
     [(eq? f 'λ)
      (exp "function(" (mkss (car xs)) ")"
-          "return " (EVAL (second xs))
+          "return " (EVAL (cons 'begin (cdr xs)))
           " end")]
     [(eq? f 'letrec) (LETREC xs)]
     [(eq? f 'let) (LET xs)]
@@ -37,8 +43,20 @@
             " then return " (EVAL (second xs))
             " else return " (EVAL (third xs))
             " end")]
+    [(eq? f 'begin) (BEGIN xs)]
+    [(eq? f 'set!) (set (car xs) (second xs))]
     [(eq? f 'ffi) (FFI (car xs))]
     [else (stream (EVAL f) "(" (%apply xs) ")")]))
+
+(define (BEGIN xs)
+  (block
+   (map (λ (x)
+          (var (second x)))
+        (filter (λ (x) (and (pair? x) (eq? (car x) 'def))) xs))
+   (map (λ (x)
+          (if (and (pair? x) (eq? (car x) 'def))
+              (set (second x) (third x))
+              (EVAL x))) xs)))
 
 (define (%apply xs)
   (cond
@@ -92,7 +110,7 @@
   (let ([ps (car xs)])
     (block
      (map (λ (s)
-            (stream "local " (id s) "=nil "))
+            (var s))
           (map car ps))
      (map (λ (p)
             (stream (id (car p)) "=" (EVAL (second p)) " "))
