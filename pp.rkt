@@ -17,7 +17,7 @@
 (provide pp)
 
 (define (pp s)
-  (let-values ([(dms os) (partition (λ (x) (and (pair? x) (eq? (car x) 'defmacro))) x)])
+  (let-values ([(dms os) (partition (λ (x) (and (pair? x) (eq? (car x) 'defmacro))) s)])
     (let ([ms (map (λ (x) (cons (second x) (eval (third x)))) dms)])
       (EVAL (make-hasheq ms) os))))
 

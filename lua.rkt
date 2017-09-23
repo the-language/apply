@@ -15,6 +15,7 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (provide c)
+(require "pp.rkt")
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
@@ -149,7 +150,7 @@
 (define pre (file->string "prelude.lua"))
 
 (define (c x)
-  (endc (e (EVAL x))))
+  (endc (e (EVAL (pp x)))))
 
 (define (endc x)
   (string-append
