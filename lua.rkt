@@ -27,7 +27,7 @@
 (define (APPLY f xs)
   (cond
     [(eq? f 'λ)
-     (exp "function(" (%λ (car xs)) ")"
+     (exp "function(" (mkss (car xs)) ")"
           "return " (EVAL (second xs))
           " end")]
     [(eq? f 'letrec) (LETREC xs)]
@@ -46,11 +46,11 @@
     [(null? (cdr xs)) (EVAL (car xs))]
     [else (stream (EVAL (car xs)) "," (%apply (cdr xs)))]))
 
-(define (%λ xs)
+(define (mkss xs)
   (cond
     [(null? xs) ""]
     [(null? (cdr xs)) (id (car xs))]
-    [else (stream (id (car xs)) "," (%λ (cdr xs)))]))
+    [else (stream (id (car xs)) "," (mkss (cdr xs)))]))
 
 (define-syntax-rule (ps [x v] ...)
   (make-hasheq
@@ -102,7 +102,7 @@
 (define (LET xs)
   (let ([ps (car xs)])
     (stream
-     (exp "function(" (%λ (map car ps)) ")"
+     (exp "function(" (mkss (map car ps)) ")"
           "return " (EVAL (second xs))
           " end") "(" (%apply (map second ps)) ")")))
 
