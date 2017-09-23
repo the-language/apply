@@ -91,7 +91,11 @@
              [cdr cdr]
              [vec vector]
              [vec? is_vector]
-             [vec-ref vector_ref]))
+             [vec-ref vector_ref]
+             [symbol? is_symbol]
+             [string->symbol symbol]
+             [symbol->syring sym2str]
+             [string? is_string]))
 (define idc 0)
 
 (define (id x)

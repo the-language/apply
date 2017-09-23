@@ -1,6 +1,7 @@
 local null={}
 local pairt={}
 local vectort={}
+local symbolt={}
 local function add(x,y)return x+y end
 local function sub(x,y)return x-y end
 local function mul(x,y)return x*y end
@@ -10,6 +11,7 @@ local function and2(x,y)return x and y end
 local function notf(x)return not x end
 local function is_null(x)return x==null end
 local function is_table(x)return(type(x)=="table")end
+local function is_string(x)return(type(x)=="string")end
 local function is_pair(x)return(is_table(x)and x[1]==pairt)end
 local function cons(x,y)return{pairt,x,y}end
 local function car(x)assert(is_pair(x))return x[2]end
@@ -22,3 +24,6 @@ local function vector_ref(x,n)
 	assert(r~=nil)
 	return r
 end
+local function symbol(x)return{symbolt,x}end
+local function is_symbol(x)return(is_table(x)and x[1]==symbolt)end
+local function sym2str(x)assert(is_symbol(x))return x[2]end
