@@ -19,8 +19,10 @@
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
 
-(define-syntax-rule (call f x)
-  (stream f "(" x ")"))
+(define-syntax-rule (block x ...)
+  (stream (exp "function()"
+               x ...
+               " end") "()"))
 
 (define (APPLY f xs)
   (cond
@@ -31,13 +33,12 @@
     [(eq? f 'letrec) (LETREC xs)]
     [(eq? f 'let) (LET xs)]
     [(eq? f 'if)
-     (exp (exp "function()"
-               "if " (EVAL (car xs))
-               " then return " (EVAL (second xs))
-               " else return " (EVAL (third xs))
-               " end end") "()")]
+     (block "if " (EVAL (car xs))
+            " then return " (EVAL (second xs))
+            " else return " (EVAL (third xs))
+            " end")]
     [(eq? f 'ffi) (FFI (car xs))]
-    [else (call (EVAL f) (%apply xs))]))
+    [else (stream (EVAL f) "(" (%apply xs) ")")]))
 
 (define (%apply xs)
   (cond
@@ -89,20 +90,18 @@
 
 (define (LETREC xs)
   (let ([ps (car xs)])
-    (exp
-     (exp "function()"
-          (map (λ (s)
-                 (stream "local " (id s) "=nil "))
-               (map car ps))
-          (map (λ (p)
-                 (stream (id (car p)) "=" (EVAL (second p)) " "))
-               ps)
-          "return " (EVAL (second xs))
-          " end") "()")))
+    (block
+     (map (λ (s)
+            (stream "local " (id s) "=nil "))
+          (map car ps))
+     (map (λ (p)
+            (stream (id (car p)) "=" (EVAL (second p)) " "))
+          ps)
+     "return " (EVAL (second xs)))))
 
 (define (LET xs)
   (let ([ps (car xs)])
-    (exp
+    (stream
      (exp "function(" (%λ (map car ps)) ")"
           "return " (EVAL (second xs))
           " end") "(" (%apply (map second ps)) ")")))
@@ -136,4 +135,4 @@
    "return " x))
 
 (define (FFI x)
-  (call "l2sv" (symbol->string x)))
+  (stream "l2sv(" (symbol->string x) ")"))
