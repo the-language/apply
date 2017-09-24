@@ -1,8 +1,13 @@
-(defmacro let
+(defmacro define-macro
   (λ (p . v)
+    `(defmacro ,(car p)
+       (λ ,(cdr p)
+         ,@v))))
+
+(define-macro (let p . v)
     `((λ ,(map car p)
         ,@v)
-      ,@(map second p))))
+      ,@(map second p)))
 
 (defmacro define
   (λ (f . v)
