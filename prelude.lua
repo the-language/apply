@@ -31,3 +31,14 @@ local function sym2str(x)assert(is_symbol(x))return x[2]end
 local function voidf()return void end
 local function is_void(x)return x==void end
 local function ig(x)end
+local function veceq(x,y) error() end
+local function eq(x,y)
+	if not (is_table(x)and is_table(y))then return false end
+	local t=x[1]
+	if t~=y[1] then return false end
+	return t==null
+		or t==void
+		or (t==pairt and eq(x[2],y[2]) and eq(x[3],y[3]))
+		or (t==symbolt and x[2]==y[2])
+		or veceq(x,y)
+end

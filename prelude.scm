@@ -23,6 +23,7 @@
 (define cadr second)
 (define (third x) (car (cdr (cdr x))))
 (define caddr third)
+(define (cadar x) (car (cdr (car x))))
 
 (defmacro and
   (λ xs
@@ -38,3 +39,6 @@
 (defmacro vector
   (λ xs
     `(vec '_v ,@xs)))
+
+(define (vector? x)
+  (and (vec? x) (equal? (car x) '_v)))

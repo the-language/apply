@@ -118,7 +118,8 @@
              [string->symbol symbol]
              [symbol->syring sym2str]
              [string? is_string]
-             [void voidf]))
+             [void voidf]
+             [equal? eq]))
 (define idc 0)
 
 (define (mknewid x)
