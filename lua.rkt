@@ -201,7 +201,8 @@
 (define (macroexpand ms x)
   (cond
     [(and (pair? x) (eq? (car x) 'defmacro))
-     (hash-set! ms (second x) (eval (third x) macrons))]
+     (hash-set! ms (second x) (eval (third x) macrons))
+     'void]
     [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand ms (mf (cdr x))))]
     [else x]))
 
