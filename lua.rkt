@@ -93,8 +93,8 @@
 (define (mkss xs)
   (cond
     [(null? xs) ""]
-    [(null? (cdr xs)) (id (car xs))]
-    [else (stream (id (car xs)) "," (mkss (cdr xs)))]))
+    [(null? (cdr xs)) (newvarid (car xs))]
+    [else (stream (newvarid (car xs)) "," (mkss (cdr xs)))]))
 
 (define-syntax-rule (ps [x v] ...)
   (make-hasheq
