@@ -1,7 +1,7 @@
 (defmacro let
   (λ (p . v)
     `((λ ,(map car p)
-       ,@v)
+        ,@v)
       ,@(map second p))))
 
 (defmacro define
@@ -21,13 +21,14 @@
 
 (defmacro and
   (λ xs
-    (if (null? xs)
-        #t
-        (let ([a (mcsym 'a)])
-          `(let ([,a ,(car xs)])
-             (if ,a
-                 ,a
-                 (and ,@(cdr xs))))))))
+    (cond
+      [(null? xs) #t]
+      [(null? (cdr xs)) (car xs)]
+      [else (let ([a (mcsym 'a)])
+              `(let ([,a ,(car xs)])
+                 (if ,a
+                     ,a
+                     (and ,@(cdr xs)))))])))
 
 (defmacro vector
   (λ xs
