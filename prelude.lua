@@ -2,6 +2,7 @@ local null={}
 local pairt={}
 local vectort={}
 local symbolt={}
+local void={}
 local function add(x,y)return x+y end
 local function sub(x,y)return x-y end
 local function mul(x,y)return x*y end
@@ -27,3 +28,6 @@ end
 local function symbol(x)return{symbolt,x}end
 local function is_symbol(x)return(is_table(x)and x[1]==symbolt)end
 local function sym2str(x)assert(is_symbol(x))return x[2]end
+local function voidf()return void end
+local function is_void(x)return x==void end
+local function ig(x)end
