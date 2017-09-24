@@ -25,7 +25,7 @@ local function vector_ref(x,n)
 	assert(r~=nil)
 	return r
 end
-local function symbol(x)return{symbolt,x}end
+local function symbol(x)assert(is_string(x))return{symbolt,x}end
 local function is_symbol(x)return(is_table(x)and x[1]==symbolt)end
 local function sym2str(x)assert(is_symbol(x))return x[2]end
 local function voidf()return void end

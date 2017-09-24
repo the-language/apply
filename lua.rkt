@@ -47,6 +47,7 @@
       [(eq? f 'begin) (BEGIN ms xs)]
       [(eq? f 'set!) (set ms (car xs) (second xs))]
       [(eq? f 'ffi) (FFI (car xs))]
+      [(eq? f 'quote) (QUOTE (car xs))]
       [else (stream (EVAL ms f) "(" (%apply ms xs) ")")])))
 
 (define (BEGIN ms xs)
@@ -152,7 +153,7 @@
       [(number? x) (number->string x)]
       [(eq? x #t) "true"]
       [(eq? x #f) "false"]
-      [(string? x) x]
+      [(string? x) (stream "\"" x "\"")]
       [else (error)])))
 
 (define (e x)
@@ -179,3 +180,14 @@
   (cond
     [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand ms (mf (cdr x))))]
     [else x]))
+
+(define (QUOTE x)
+  (cond
+    [(symbol? x) (stream "symbol(\"" (symbol->string x) "\")")]
+    [(pair? x) (stream "cons(" (QUOTE (car x)) "," (QUOTE (cdr x)) ")")]
+    [(null? x) "null"]
+    [(eq? x #t) "true"]
+    [(eq? x #f) "false"]
+    [(number? x) (number->string x)]
+    [(string? x) (stream "\"" x "\"")]
+    [else (error)]))
