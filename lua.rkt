@@ -19,10 +19,10 @@
 (struct macrosym (id sym))
 
 (define mcsym
-    (let ([midc 0])
-      (λ (s)
-        (set! midc (+ 1 midc))
-        (macrosym midc s))))
+  (let ([midc 0])
+    (λ (s)
+      (set! midc (+ 1 midc))
+      (macrosym midc s))))
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
@@ -132,7 +132,10 @@
                   (string->list (symbol->string x))))))
 
 (define (id x)
-  (hash-ref! ids x (λ () (mknewid x))))
+  (hash-ref! ids x (λ ()
+                     (if (macrosym? x)
+                         (mknewid (macrosym-sym x))
+                         (mknewid x)))))
 
 (define (newvarid x)
   (hash-ref! ids x
@@ -142,7 +145,7 @@
                     "zsm"
                     (number->string (macrosym-id x))
                     "_"
-                    (macrosym-sym x))
+                    (symbol->string (macrosym-sym x)))
                    (mknewid x)))))
 
 (define (LETREC ms xs)
@@ -160,6 +163,7 @@
   (let ([x (macroexpand ms x)])
     (cond
       [(symbol? x) (id x)]
+      [(macrosym? x) (id x)]
       [(pair? x) (APPLY ms (car x) (cdr x))]
       [(null? x) "null"]
       [(number? x) (number->string x)]
@@ -177,7 +181,6 @@
 
 (define pre (file->string "prelude.lua"))
 (define prescm (read (open-input-string (string-append "(" (file->string "prelude.scm") ")"))))
-
 
 (define (c x)
   (endc
