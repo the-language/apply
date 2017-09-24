@@ -16,6 +16,18 @@
 
 (provide c)
 
+(struct macrosym (id sym))
+
+(define midc 0)
+(define newmacrosym
+  (let ([midc 0])
+    (λ (s)
+      (set! midc (+ 1 midc))
+      (macrosym midc s))))
+
+(define macrons (make-base-namespace))
+(namespace-set-variable-value! 'sym newmacrosym #f macrons)
+
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
 
@@ -112,19 +124,29 @@
              [string? is_string]))
 (define idc 0)
 
+(define (mknewid x)
+  (set! idc (+ 1 idc))
+  (string-append
+   "zs"
+   (number->string idc)
+   "_"
+   (list->string (map
+                  (λ (x) (if (or (char-alphabetic? x) (char-numeric? x)) x #\_))
+                  (string->list (symbol->string x))))))
+
 (define (id x)
+  (hash-ref! ids x (λ () (mknewid x))))
+
+(define (newvarid x)
   (hash-ref! ids x
              (λ ()
-               (set! idc (+ 1 idc))
-               (string-append
-                "zs"
-                (number->string idc)
-                "_"
-                (list->string (map
-                               (λ (x) (if (or (char-alphabetic? x) (char-numeric? x)) x #\_))
-                               (string->list (symbol->string x))))))))
-
-(define newvarid id)
+               (if (macrosym? x)
+                   (string-append
+                    "zsm"
+                    (number->string (macrosym-id x))
+                    "_"
+                    (macrosym-sym x))
+                   (mknewid x)))))
 
 (define (LETREC ms xs)
   (let ([ps (car xs)])
@@ -166,7 +188,7 @@
 (define pre (file->string "prelude.lua"))
 
 (define (c x)
-  (endc (e (EVAL (hash) x))))
+  (endc (e (EVAL (make-hasheq) x))))
 
 (define (endc x)
   (string-append
@@ -178,6 +200,8 @@
 
 (define (macroexpand ms x)
   (cond
+    [(and (pair? x) (eq? (car x) 'defmacro))
+     (hash-set! ms (second x) (eval (third x) macrons))]
     [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand ms (mf (cdr x))))]
     [else x]))
 
