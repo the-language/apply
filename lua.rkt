@@ -18,15 +18,11 @@
 
 (struct macrosym (id sym))
 
-(define midc 0)
-(define newmacrosym
-  (let ([midc 0])
-    (λ (s)
-      (set! midc (+ 1 midc))
-      (macrosym midc s))))
-
-(define macrons (make-base-namespace))
-(namespace-set-variable-value! 'sym newmacrosym #f macrons)
+(define mcsym
+    (let ([midc 0])
+      (λ (s)
+        (set! midc (+ 1 midc))
+        (macrosym midc s))))
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
@@ -50,7 +46,6 @@
             "return " (BEGIN ms (cdr xs))
             " end")]
       [(eq? f 'letrec) (LETREC ms xs)]
-      [(eq? f 'let) (LET ms xs)]
       [(eq? f 'if)
        (block "if " (EVAL ms (car xs))
               " then return " (EVAL ms (second xs))
@@ -63,9 +58,10 @@
       [else (stream (EVAL ms f) "(" (%apply ms xs) ")")])))
 
 (define (BEGIN ms xs)
-  (if (null? (cdr xs))
-      (EVAL ms (car xs))
-      (let ([xs (map (λ (x) (macroexpand ms x)) xs)])
+  (let ([xs (filter-not (λ (x) (equal? x '(void)))
+                        (map (λ (x) (macroexpand ms x)) xs))])
+    (if (null? (cdr xs))
+        (EVAL ms (car xs))
         (block
          (map (λ (x)
                 (var (second x)))
@@ -121,7 +117,8 @@
              [symbol? is_symbol]
              [string->symbol symbol]
              [symbol->syring sym2str]
-             [string? is_string]))
+             [string? is_string]
+             [void voidf]))
 (define idc 0)
 
 (define (mknewid x)
@@ -159,13 +156,6 @@
           ps)
      "return " (BEGIN ms (cdr xs)))))
 
-(define (LET ms xs)
-  (let ([ps (car xs)])
-    (stream
-     (exp "function(" (mkss (map car ps)) ")"
-          "return " (BEGIN ms (cdr xs))
-          " end") "(" (%apply ms (map second ps)) ")")))
-
 (define (EVAL ms x)
   (let ([x (macroexpand ms x)])
     (cond
@@ -186,9 +176,16 @@
     [else x]))
 
 (define pre (file->string "prelude.lua"))
+(define prescm (read (open-input-string (string-append "(" (file->string "prelude.scm") ")"))))
+
 
 (define (c x)
-  (endc (e (EVAL (make-hasheq) x))))
+  (endc
+   (e
+    (EVAL (make-hasheq)
+          (append (list 'begin)
+                  prescm
+                  (list x))))))
 
 (define (endc x)
   (string-append
@@ -201,9 +198,9 @@
 (define (macroexpand ms x)
   (cond
     [(and (pair? x) (eq? (car x) 'defmacro))
-     (hash-set! ms (second x) (eval (third x) macrons))
-     'void]
-    [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand ms (mf (cdr x))))]
+     (hash-set! ms (second x) (eval (third x)))
+     '(void)]
+    [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand ms (apply mf (cdr x))))]
     [else x]))
 
 (define (QUOTE x)
