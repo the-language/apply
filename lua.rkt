@@ -32,59 +32,68 @@
                x ...
                " end") "()"))
 
-(define-syntax-rule (var x)
-  (stream "local " (newvarid x) "=nil "))
+(define-syntax-rule (var nme xc)
+  (let ([x xc])
+    (begin
+      (set! nme (upme nme x))
+      (stream "local " (newvarid x) "=nil "))))
 
-(define-syntax-rule (set ms x v)
-  (stream (id x) "=" (EVAL ms v) " "))
+(define-syntax-rule (setc me ms x v)
+  (stream (id me x) "=" (EVAL me ms v) " "))
 
-(define (APPLY ms f xs)
+(define (APPLY me ms f xs)
   (let ([f (macroexpand ms f)])
     (cond
       [(eq? f 'λ)
        (exp "function(" (mkss (car xs)) ")"
-            "return " (BEGIN ms (cdr xs))
+            "return " (BEGIN me ms (cdr xs))
             " end")]
-      [(eq? f 'letrec) (LETREC ms xs)]
+      [(eq? f 'letrec) (LETREC me ms xs)]
       [(eq? f 'if)
-       (block "if " (EVAL ms (car xs))
-              " then return " (EVAL ms (second xs))
-              " else return " (EVAL ms (third xs))
+       (block "if " (EVAL me ms (car xs))
+              " then return " (EVAL me ms (second xs))
+              " else return " (EVAL me ms (third xs))
               " end")]
-      [(eq? f 'begin) (BEGIN ms xs)]
-      [(eq? f 'set!) (set ms (car xs) (second xs))]
+      [(eq? f 'begin) (BEGIN me ms xs)]
+      [(eq? f 'set!) (setc me ms (car xs) (second xs))]
       [(eq? f 'ffi) (FFI (car xs))]
       [(eq? f 'quote) (QUOTE (car xs))]
-      [else (stream (EVAL ms f) "(" (%apply ms xs) ")")])))
+      [else (stream (EVAL me ms f) "(" (%apply me ms xs) ")")])))
 
-(define (BEGIN ms xs)
+(define (upme me x)
+  (if (macrosym? x)
+      (set-add me x)
+      me))
+
+(define (BEGIN me ms xs)
   (let ([xs (filter-not (λ (x) (equal? x '(void)))
                         (map (λ (x) (macroexpand ms x)) xs))])
     (if (null? (cdr xs))
-        (EVAL ms (car xs))
-        (block
-         (map (λ (x)
-                (var (second x)))
-              (filter (λ (x) (and (pair? x) (eq? (car x) 'def))) xs))
-         (let loop ([x (car xs)] [xs (cdr xs)])
-           (if (and (pair? x) (or (eq? (car x) 'set!) (eq? (car x) 'def)))
-               (stream
-                (set ms (second x) (third x))
-                (if (null? xs)
-                    "return void"
-                    (loop (car xs) (cdr xs))))
-               (if (null? xs)
-                   (stream
-                    "return " (EVAL ms x))
-                   (stream
-                    "ig(" (EVAL ms x) ")"
-                    (loop (car xs) (cdr xs))))))))))
+        (EVAL me ms (car xs))
+        (let ([nme me])
+          (block
+           (map (λ (x)
+                  (var nme (second x)))
+                (filter (λ (x) (and (pair? x) (eq? (car x) 'def))) xs))
+           (let loop ([x (car xs)] [xs (cdr xs)])
+             (if (and (pair? x) (or (eq? (car x) 'set!) (eq? (car x) 'def)))
+                 (stream
+                  (setc me ms (second x) (third x))
+                  (if (null? xs)
+                      "return void"
+                      (loop (car xs) (cdr xs))))
+                 (if (null? xs)
+                     (stream
+                      "return " (EVAL me ms x))
+                     (stream
+                      "ig(" (EVAL me ms x) ")"
+                      (loop (car xs) (cdr xs)))))))))))
 
-(define (%apply ms xs)
+(define (%apply me ms xs)
   (cond
     [(null? xs) ""]
-    [(null? (cdr xs)) (EVAL ms (car xs))]
-    [else (stream (EVAL ms (car xs)) "," (%apply ms (cdr xs)))]))
+    [(null? (cdr xs)) (EVAL me ms (car xs))]
+    [else (stream (EVAL me ms (car xs)) "," (%apply me ms (cdr xs)))]))
 
 (define (mkss xs)
   (cond
@@ -132,40 +141,40 @@
                   (λ (x) (if (or (char-alphabetic? x) (char-numeric? x)) x #\_))
                   (string->list (symbol->string x))))))
 
-(define (id x)
-  (hash-ref! ids x (λ ()
-                     (if (macrosym? x)
-                         (mknewid (macrosym-sym x))
-                         (mknewid x)))))
+(define (id me x)
+  (if (set-member? me x)
+      (newvarid x)
+      (hash-ref! ids x (λ ()
+                         (if (macrosym? x)
+                             (mknewid (macrosym-sym x))
+                             (mknewid x))))))
 
 (define (newvarid x)
-  (hash-ref! ids x
-             (λ ()
-               (if (macrosym? x)
-                   (string-append
-                    "zsm"
-                    (number->string (macrosym-id x))
-                    "_"
-                    (symbol->string (macrosym-sym x)))
-                   (mknewid x)))))
+  (if (macrosym? x)
+      (string-append
+       "zsm"
+       (number->string (macrosym-id x))
+       "_"
+       (symbol->string (macrosym-sym x)))
+      (id (set) x)))
 
-(define (LETREC ms xs)
-  (let ([ps (car xs)])
+(define (LETREC me ms xs)
+  (let ([ps (car xs)] [nme me])
     (block
      (map (λ (s)
-            (var s))
+            (var nme s))
           (map car ps))
      (map (λ (p)
-            (stream (id (car p)) "=" (EVAL ms (second p)) " "))
+            (stream (id me (car p)) "=" (EVAL me ms (second p)) " "))
           ps)
-     "return " (BEGIN ms (cdr xs)))))
+     "return " (BEGIN me ms (cdr xs)))))
 
-(define (EVAL ms x)
+(define (EVAL me ms x)
   (let ([x (macroexpand ms x)])
     (cond
-      [(symbol? x) (id x)]
-      [(macrosym? x) (id x)]
-      [(pair? x) (APPLY ms (car x) (cdr x))]
+      [(symbol? x) (id me x)]
+      [(macrosym? x) (id me x)]
+      [(pair? x) (APPLY me ms (car x) (cdr x))]
       [(null? x) "null"]
       [(number? x) (number->string x)]
       [(eq? x #t) "true"]
@@ -186,7 +195,7 @@
 (define (c x)
   (endc
    (e
-    (EVAL (make-hasheq)
+    (EVAL (set) (make-hasheq)
           (append (list 'begin)
                   prescm
                   (list x))))))
