@@ -146,17 +146,31 @@
 (define (id me x)
   (cond
     [(set-member? me x) (newvarid x)]
-    [(macrosym? x) (id me (macrosym-sym x))]
-    [else (hash-ref! ids x (λ () (mknewid x)))]))
+    [(symbol? x) (hash-ref! ids x (λ () (mknewid x)))]
+    [else (id me (macrosym-sym2 x))]))
+
+(define (macrosym-id2 x)
+  (if (macrosym? x)
+      (macrosym-id x)
+      (let ([v (struct->vector x)])
+        (and (eq? (vector-ref v 0) 'struct:macrosym)
+             (vector-ref v 1)))))
+
+(define (macrosym-sym2 x)
+  (if (macrosym? x)
+      (macrosym-id x)
+      (let ([v (struct->vector x)])
+        (and (eq? (vector-ref v 0) 'struct:macrosym)
+             (vector-ref v 2)))))
 
 (define (newvarid x)
-  (if (macrosym? x)
+  (if (symbol? x)
+      (id (set) x)
       (string-append
        "zsm"
-       (number->string (macrosym-id x))
+       (number->string (macrosym-id2 x))
        "_"
-       (symbol->string (macrosym-sym x)))
-      (id (set) x)))
+       (symbol->string (macrosym-sym2 x)))))
 
 (define (LETREC me ms xs)
   (let ([ps (car xs)] [me me])
@@ -173,7 +187,7 @@
   (let ([x (macroexpand ms x)])
     (cond
       [(symbol? x) (id me x)]
-      [(macrosym? x) (id me x)]
+      [(struct? x) (id me x)]
       [(pair? x) (APPLY me ms (car x) (cdr x))]
       [(null? x) "null"]
       [(number? x) (number->string x)]
@@ -190,9 +204,9 @@
     [else x]))
 
 (define pre (file->string "prelude.lua"))
-(define (rs f)
-  (read (open-input-string (string-append "(" (file->string f) ")"))))
-(define prescm (rs "prelude.scm"))
+(define (rs s)
+  (read (open-input-string (string-append "(" s ")"))))
+(define prescm (rs (file->string "prelude.scm")))
 
 (define (c x)
   (endc
@@ -213,7 +227,7 @@
 (define (macroexpand ms x)
   (cond
     [(and (pair? x) (eq? (car x) 'defmacro))
-     (hash-set! ms (second x) (eval (third x)))
+     (hash-set! ms (second x) ((make-evaluator 'racket #:requires '("p.rkt")) (third x)))
      '(void)]
     [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand ms (apply mf (cdr x))))]
     [else x]))
@@ -229,6 +243,10 @@
     [(string? x) (stream "\"" x "\"")]
     [else (error)]))
 
-;(command-line
-; #:args fs
-; (displayln (c (apply append (map rs fs)))))
+(define (read* port)
+  (let ([x (read-line port)])
+    (if (eof-object? x)
+        ""
+        (string-append x "\n" (read* port)))))
+
+(displayln (c (rs (read* (current-input-port)))))
