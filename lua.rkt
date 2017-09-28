@@ -43,7 +43,12 @@
              [symbol->syring sym2str]
              [string? is_string]
              [void voidf]
-             [equal? eq]))
+             [equal? eq]
+             [atom? is_atom]
+             [atom! atom]
+             [atom-map! atom_map]
+             [atom-set! atom_set]
+             [atom-get atom_get]))
 
 (struct macrosym (id sym))
 

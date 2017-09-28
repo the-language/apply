@@ -3,6 +3,7 @@ local pairt={}
 local vectort={}
 local symbolt={}
 local void={}
+local atomt={}
 local function add(x,y)return x+y end
 local function sub(x,y)return x-y end
 local function mul(x,y)return x*y end
@@ -31,14 +32,30 @@ local function sym2str(x)assert(is_symbol(x))return x[2]end
 local function voidf()return void end
 local function is_void(x)return x==void end
 local function ig(x)end
-local function veceq(x,y) error() end
+local function veceq(x,y)
+	if #x ~= #y then return false end
+	for i=1,#x do
+		if not eq(x[i],y[i]) then return false end
+	end
+	return true
+end
 local function eq(x,y)
 	if not (is_table(x)and is_table(y))then return false end
 	local t=x[1]
 	if t~=y[1] then return false end
-	return t==null
-		or t==void
-		or (t==pairt and eq(x[2],y[2]) and eq(x[3],y[3]))
-		or (t==symbolt and x[2]==y[2])
-		or veceq(x,y)
+	if t==null or t==void then
+		return true
+	elseif t==pairt then
+		return eq(x[2],y[2]) and eq(x[3],y[3])
+	elseif t==symbolt then
+		return x[2]==y[2]
+	elseif t==vectort
+		return veceq(x[2],y[2])
+	end
+	return x==y
 end
+local function atom(x)return{atomt,x}end
+local function is_atom(x)return(is_table(x)and x[1]==atomt)end
+local function atom_set(a,v)assert(is_atom(a))a[2]=v return void end
+local function atom_map(a,f)assert(is_atom(a))a[2]=f(a[2])return void end
+local function atom_get(a)assert(is_atom(a))return a[2]end
