@@ -16,6 +16,35 @@
 
 (provide c)
 
+(define-syntax-rule (ps [x v] ...)
+  (make-hasheq
+   (list
+    (cons (quote x) (symbol->string (quote v))) ...)))
+
+(define ids (ps
+             [+ add]
+             [- sub]
+             [* mul]
+             [/ quo]
+             [and2 and2]
+             [or2 or2]
+             [not notf]
+             [luatype type]
+             [null? is_null]
+             [pair? is_pair]
+             [cons cons]
+             [car car]
+             [cdr cdr]
+             [vec vector]
+             [vec? is_vector]
+             [vec-ref vector_ref]
+             [symbol? is_symbol]
+             [string->symbol symbol]
+             [symbol->syring sym2str]
+             [string? is_string]
+             [void voidf]
+             [equal? eq]))
+
 (struct macrosym (id sym))
 
 (define mcsym
@@ -104,34 +133,6 @@
       (set-add me x)
       me))
 
-(define-syntax-rule (ps [x v] ...)
-  (make-hasheq
-   (list
-    (cons (quote x) (symbol->string (quote v))) ...)))
-
-(define ids (ps
-             [+ add]
-             [- sub]
-             [* mul]
-             [/ quo]
-             [and2 and2]
-             [or2 or2]
-             [not notf]
-             [luatype type]
-             [null? is_null]
-             [pair? is_pair]
-             [cons cons]
-             [car car]
-             [cdr cdr]
-             [vec vector]
-             [vec? is_vector]
-             [vec-ref vector_ref]
-             [symbol? is_symbol]
-             [string->symbol symbol]
-             [symbol->syring sym2str]
-             [string? is_string]
-             [void voidf]
-             [equal? eq]))
 (define idc 0)
 
 (define (mknewid x)
