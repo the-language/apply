@@ -63,6 +63,12 @@
       [(eq? f 'quote) (QUOTE (car xs))]
       [else (stream (EVAL me ms f) "(" (%apply me ms xs) ")")])))
 
+(define (mkss xs)
+  (cond
+    [(null? xs) ""]
+    [(null? (cdr xs)) (newvarid (car xs))]
+    [else (stream (newvarid (car xs)) "," (mkss (cdr xs)))]))
+
 (define (upme me x)
   (if (macrosym? x)
       (set-add me x)
@@ -97,12 +103,6 @@
     [(null? xs) ""]
     [(null? (cdr xs)) (EVAL me ms (car xs))]
     [else (stream (EVAL me ms (car xs)) "," (%apply me ms (cdr xs)))]))
-
-(define (mkss xs)
-  (cond
-    [(null? xs) ""]
-    [(null? (cdr xs)) (newvarid (car xs))]
-    [else (stream (newvarid (car xs)) "," (mkss (cdr xs)))]))
 
 (define-syntax-rule (ps [x v] ...)
   (make-hasheq
