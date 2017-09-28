@@ -45,9 +45,12 @@
   (let ([f (macroexpand ms f)])
     (cond
       [(eq? f 'λ)
-       (exp "function(" (mkss (car xs)) ")"
-            "return " (BEGIN me ms (cdr xs))
-            " end")]
+       (let ([me me])
+         (for ([x (car xs)])
+           (set! me (upme me x)))
+         (exp "function(" (mkss (car xs)) ")"
+              "return " (BEGIN me ms (cdr xs))
+              " end"))]
       [(eq? f 'letrec) (LETREC me ms xs)]
       [(eq? f 'if)
        (block "if " (EVAL me ms (car xs))
@@ -70,10 +73,10 @@
                         (map (λ (x) (macroexpand ms x)) xs))])
     (if (null? (cdr xs))
         (EVAL me ms (car xs))
-        (let ([nme me])
+        (let ([me me])
           (block
            (map (λ (x)
-                  (var nme (second x)))
+                  (var me (second x)))
                 (filter (λ (x) (and (pair? x) (eq? (car x) 'def))) xs))
            (let loop ([x (car xs)] [xs (cdr xs)])
              (if (and (pair? x) (or (eq? (car x) 'set!) (eq? (car x) 'def)))
@@ -142,12 +145,10 @@
                   (string->list (symbol->string x))))))
 
 (define (id me x)
-  (if (set-member? me x)
-      (newvarid x)
-      (hash-ref! ids x (λ ()
-                         (if (macrosym? x)
-                             (mknewid (macrosym-sym x))
-                             (mknewid x))))))
+  (cond
+    [(set-member? me x) (newvarid x)]
+    [(macrosym? x) (id me (macrosym-sym x))]
+    [else (hash-ref! ids x (λ () (mknewid x)))]))
 
 (define (newvarid x)
   (if (macrosym? x)
@@ -159,10 +160,10 @@
       (id (set) x)))
 
 (define (LETREC me ms xs)
-  (let ([ps (car xs)] [nme me])
+  (let ([ps (car xs)] [me me])
     (block
      (map (λ (s)
-            (var nme s))
+            (var me s))
           (map car ps))
      (map (λ (p)
             (stream (id me (car p)) "=" (EVAL me ms (second p)) " "))
