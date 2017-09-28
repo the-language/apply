@@ -134,7 +134,6 @@
       me))
 
 (define idc 0)
-
 (define (mknewid x)
   (set! idc (+ 1 idc))
   (string-append
