@@ -15,6 +15,8 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (provide c)
+(require racket/sandbox)
+(require "p.rkt")
 
 (define-syntax-rule (ps [x v] ...)
   (make-hasheq
@@ -49,14 +51,6 @@
              [atom-map! atom_map]
              [atom-set! atom_set]
              [atom-get atom_get]))
-
-(struct macrosym (id sym))
-
-(define mcsym
-  (let ([midc 0])
-    (λ (s)
-      (set! midc (+ 1 midc))
-      (macrosym midc s))))
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
@@ -196,7 +190,9 @@
     [else x]))
 
 (define pre (file->string "prelude.lua"))
-(define prescm (read (open-input-string (string-append "(" (file->string "prelude.scm") ")"))))
+(define (rs f)
+  (read (open-input-string (string-append "(" (file->string f) ")"))))
+(define prescm (rs "prelude.scm"))
 
 (define (c x)
   (endc
@@ -204,7 +200,7 @@
     (EVAL (set) (make-hasheq)
           (append (list 'begin)
                   prescm
-                  (list x))))))
+                  x)))))
 
 (define (endc x)
   (string-append
@@ -232,3 +228,7 @@
     [(number? x) (number->string x)]
     [(string? x) (stream "\"" x "\"")]
     [else (error)]))
+
+;(command-line
+; #:args fs
+; (displayln (c (apply append (map rs fs)))))
