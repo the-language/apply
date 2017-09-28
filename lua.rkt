@@ -69,11 +69,6 @@
     [(null? (cdr xs)) (newvarid (car xs))]
     [else (stream (newvarid (car xs)) "," (mkss (cdr xs)))]))
 
-(define (upme me x)
-  (if (macrosym? x)
-      (set-add me x)
-      me))
-
 (define (BEGIN me ms xs)
   (let ([xs (filter-not (λ (x) (equal? x '(void)))
                         (map (λ (x) (macroexpand ms x)) xs))])
@@ -103,6 +98,11 @@
     [(null? xs) ""]
     [(null? (cdr xs)) (EVAL me ms (car xs))]
     [else (stream (EVAL me ms (car xs)) "," (%apply me ms (cdr xs)))]))
+
+(define (upme me x)
+  (if (macrosym? x)
+      (set-add me x)
+      me))
 
 (define-syntax-rule (ps [x v] ...)
   (make-hasheq
