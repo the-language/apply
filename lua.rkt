@@ -63,6 +63,12 @@
       [(eq? f 'quote) (QUOTE (car xs))]
       [else (stream (EVAL me ms f) "(" (%apply me ms xs) ")")])))
 
+(define (%apply me ms xs)
+  (cond
+    [(null? xs) ""]
+    [(null? (cdr xs)) (EVAL me ms (car xs))]
+    [else (stream (EVAL me ms (car xs)) "," (%apply me ms (cdr xs)))]))
+
 (define (mkss xs)
   (cond
     [(null? xs) ""]
@@ -92,12 +98,6 @@
                      (stream
                       "ig(" (EVAL me ms x) ")"
                       (loop (car xs) (cdr xs)))))))))))
-
-(define (%apply me ms xs)
-  (cond
-    [(null? xs) ""]
-    [(null? (cdr xs)) (EVAL me ms (car xs))]
-    [else (stream (EVAL me ms (car xs)) "," (%apply me ms (cdr xs)))]))
 
 (define (upme me x)
   (if (macrosym? x)
