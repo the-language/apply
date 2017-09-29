@@ -16,7 +16,6 @@
 
 (provide c)
 (require racket/sandbox)
-(require "p.rkt")
 
 (define-syntax-rule (includes f)
   (include/reader
@@ -166,30 +165,37 @@
   (cond
     [(set-member? me x) (newvarid x)]
     [(symbol? x) (hash-ref! ids x (λ () (mknewid x)))]
-    [else (id me (macrosym-sym2 x))]))
+    [else (id me (macrosym-sym x))]))
 
-(define (macrosym-id2 x)
-  (if (macrosym? x)
-      (macrosym-id x)
-      (let ([v (struct->vector x)])
-        (and (eq? (vector-ref v 0) 'struct:macrosym)
-             (vector-ref v 1)))))
+(define evalr
+  (make-evaluator
+   'racket
+   '(begin
+      (struct macrosym (id sym))
+      (define mcsym
+        (let ([midc 0])
+          (λ (s)
+            (set! midc (+ 1 midc))
+            (macrosym midc s)))))))
 
-(define (macrosym-sym2 x)
+(define (macrosym? x) (and (struct? x) (eq? (vector-ref (struct->vector x) 0) 'struct:macrosym)))
+(define (macrosym-id x)
   (if (macrosym? x)
-      (macrosym-id x)
-      (let ([v (struct->vector x)])
-        (and (eq? (vector-ref v 0) 'struct:macrosym)
-             (vector-ref v 2)))))
+      (vector-ref (struct->vector x) 1)
+      (error 'i)))
+(define (macrosym-sym x)
+  (if (macrosym? x)
+      (vector-ref (struct->vector x) 2)
+      (error 'i)))
 
 (define (newvarid x)
   (if (symbol? x)
       (id (set) x)
       (string-append
        "zsm"
-       (number->string (macrosym-id2 x))
+       (number->string (macrosym-id x))
        "_"
-       (symbol->string (macrosym-sym2 x)))))
+       (symbol->string (macrosym-sym x)))))
 
 (define (LETREC me ms xs)
   (BEGIN me ms (append (map (λ (p) (list 'def (car p) (cdr p))) (car xs)) (cdr xs))))
@@ -198,7 +204,7 @@
   (let ([x (macroexpand ms x)])
     (cond
       [(symbol? x) (id me x)]
-      [(struct? x) (id me x)]
+      [(macrosym? x) (id me x)]
       [(pair? x) (APPLY me ms (car x) (cdr x))]
       [(null? x) "null"]
       [(number? x) (number->string x)]
@@ -235,8 +241,6 @@
 (define (FFI x)
   (stream "l2sv(" (symbol->string x) ")"))
 
-(define evalr (make-module-evaluator (includes "p.rkt") #:language 'racket))
-
 (define (macroexpand ms x)
   (cond
     [(and (pair? x) (eq? (car x) 'defmacro))
@@ -254,7 +258,7 @@
     [(eq? x #f) "false"]
     [(number? x) (number->string x)]
     [(string? x) (stream "\"" x "\"")]
-    [(struct? x) (QUOTE (macrosym-sym2 x))]
+    [(macrosym? x) (QUOTE (macrosym-sym x))]
     [else (error)]))
 
 (define (read* port)
