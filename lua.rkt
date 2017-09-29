@@ -248,6 +248,7 @@
     [(eq? x #f) "false"]
     [(number? x) (number->string x)]
     [(string? x) (stream "\"" x "\"")]
+    [(struct? x) (QUOTE (macrosym-sym2 x))]
     [else (error)]))
 
 (define (read* port)
