@@ -22,7 +22,7 @@ local function vector(...)return{vectort,{...}}end
 local function is_vector(x)return(is_table(x)and x[1]==vectort)end
 local function vector_ref(x,n)
 	assert(is_vector(x))
-	local r=x[2][n]
+	local r=x[2][n+1]
 	assert(r~=nil)
 	return r
 end
@@ -40,22 +40,26 @@ local function veceq(x,y)
 	return true
 end
 local function eq(x,y)
+	if x==y then return true end
 	if not (is_table(x)and is_table(y))then return false end
 	local t=x[1]
 	if t~=y[1] then return false end
-	if t==null or t==void then
-		return true
-	elseif t==pairt then
+	if t==pairt then
 		return eq(x[2],y[2]) and eq(x[3],y[3])
 	elseif t==symbolt then
 		return x[2]==y[2]
 	elseif t==vectort
 		return veceq(x[2],y[2])
 	end
-	return x==y
+	return false
 end
 local function atom(x)return{atomt,x}end
 local function is_atom(x)return(is_table(x)and x[1]==atomt)end
 local function atom_set(a,v)assert(is_atom(a))a[2]=v return void end
 local function atom_map(a,f)assert(is_atom(a))a[2]=f(a[2])return void end
 local function atom_get(a)assert(is_atom(a))return a[2]end
+local function eq(x,y)return x==y end
+local function gt(x,y)return x>y end
+local function lt(x,y)return x<y end
+local function gteq(x,y)return x>=y end
+local function lteq(x,y)return x<=y end

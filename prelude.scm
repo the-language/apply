@@ -42,3 +42,8 @@
 
 (define (vector? x)
   (and (vec? x) (equal? (car x) '_v)))
+
+(define (vector-ref x n)
+  (assert (vector? x))
+  (assert (>= x 0))
+  (vec-ref x (+ 1 n)))

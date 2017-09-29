@@ -41,6 +41,11 @@
              [- sub]
              [* mul]
              [/ quo]
+             [> gt]
+             [< lt]
+             [= eq]
+             [>= gteq]
+             [<= lteq]
              [and2 and2]
              [or2 or2]
              [not notf]
@@ -63,7 +68,8 @@
              [atom! atom]
              [atom-map! atom_map]
              [atom-set! atom_set]
-             [atom-get atom_get]))
+             [atom-get atom_get]
+             [assert assert]))
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
