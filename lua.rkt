@@ -235,7 +235,7 @@
 (define (FFI x)
   (stream "l2sv(" (symbol->string x) ")"))
 
-(define evalr (make-evaluator 'racket #:requires '("p.rkt")))
+(define evalr (make-module-evaluator (includes "p.rkt") #:language 'racket))
 
 (define (macroexpand ms x)
   (cond
