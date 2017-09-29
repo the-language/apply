@@ -18,6 +18,19 @@
 (require racket/sandbox)
 (require "p.rkt")
 
+(define-syntax-rule (includes f)
+  (include/reader
+   f
+   (λ (source-name in)
+     (let ([x (read-line in)])
+       (if (eof-object? x)
+           eof
+           (let loop ([s x])
+             (let ([x (read-line in)])
+               (if (eof-object? x)
+                   (datum->syntax #f s)
+                   (loop (string-append s "\n" x))))))))))
+
 (define-syntax-rule (ps [x v] ...)
   (make-hasheq
    (list
@@ -203,10 +216,10 @@
     [(list? x) (string-append (e (car x)) (e (cdr x)))]
     [else x]))
 
-(define pre (file->string "prelude.lua"))
+(define pre (includes "prelude.lua"))
 (define (rs s)
   (read (open-input-string (string-append "(" s ")"))))
-(define prescm (rs (file->string "prelude.scm")))
+(define prescm (rs (includes "prelude.scm")))
 
 (define (c x)
   (endc
@@ -224,10 +237,12 @@
 (define (FFI x)
   (stream "l2sv(" (symbol->string x) ")"))
 
+(define evalr (make-evaluator 'racket #:requires '("p.rkt")))
+
 (define (macroexpand ms x)
   (cond
     [(and (pair? x) (eq? (car x) 'defmacro))
-     (hash-set! ms (second x) ((make-evaluator 'racket #:requires '("p.rkt")) (third x)))
+     (hash-set! ms (second x) (evalr (third x)))
      '(void)]
     [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand ms (apply mf (cdr x))))]
     [else x]))
