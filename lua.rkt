@@ -186,15 +186,7 @@
        (symbol->string (macrosym-sym2 x)))))
 
 (define (LETREC me ms xs)
-  (let ([ps (car xs)] [me me])
-    (block
-     (map (λ (s)
-            (var me s))
-          (map car ps))
-     (map (λ (p)
-            (stream (id me (car p)) "=" (EVAL me ms (second p)) " "))
-          ps)
-     "return " (BEGIN me ms (cdr xs)))))
+  (BEGIN me ms (append (map (λ (p) (list 'def (car p) (cdr p))) (car xs)) (cdr xs))))
 
 (define (EVAL me ms x)
   (let ([x (macroexpand ms x)])
