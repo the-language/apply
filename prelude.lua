@@ -161,4 +161,19 @@ local function write(x)
 	end
 end
 local function writeln(x)write(x)newline()end
+local errorv=nil
+local serr="SchemeError"
+local function raise(x)errorv=x error(serr)end
+local function spcall(x,f)
+	local s,r=pcall(x)
+	if s then
+		return r
+	elseif string.sub(r,-#serr)==serr then
+		local v=errorv
+		errorv=nil
+		return f(v)
+	else
+		error(r)
+	end
+end
 

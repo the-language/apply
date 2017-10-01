@@ -76,7 +76,8 @@
              [force force]
              [procedure? is_procedure]
              [wrtie write]
-             [writeln writeln]))
+             [writeln writeln]
+             [raise raise]))
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
@@ -127,6 +128,7 @@
       [(eq? f 'ffi) (FFI (car xs))]
       [(eq? f 'quote) (QUOTE (car xs))]
       [(eq? f 'delay) (stream "{promiset,function()return " (EVAL me ms (car xs)) " end}")]
+      [(eq? f 'catch*) (stream "spcall(function()return " (EVAL me ms (car xs)) " end," (EVAL me ms (second xs)) ")")]
       [else (stream (EVAL me ms f) "(" (%apply me ms xs) ")")])))
 
 (define (%apply me ms xs)

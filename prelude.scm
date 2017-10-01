@@ -85,3 +85,14 @@
             (car xs)))))
 (define (hash-set h k v)
   (hashv (cons (cons k v) (hashv-v h))))
+
+(define-macro (with-handlers hs x)
+  `(catch* ,x
+           (λ (e)
+             ,(let loop ([hs hs])
+                (if (null? hs)
+                    `(raise e)
+                    (let ([h (car hs)])
+                      `(if (,(car h) e)
+                           (,(second h) e)
+                           ,(loop (cdr hs)))))))))
