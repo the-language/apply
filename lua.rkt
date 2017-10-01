@@ -36,6 +36,8 @@
     (cons (quote x) (symbol->string (quote v))) ...)))
 
 (define ids (ps
+             [number? is_number]
+             [boolean? is_boolean]
              [+ add]
              [- sub]
              [* mul]
@@ -43,6 +45,7 @@
              [> gt]
              [< lt]
              [= eq]
+             [equal? equal]
              [>= gteq]
              [<= lteq]
              [and2 and2]
@@ -54,6 +57,7 @@
              [cons cons]
              [car car]
              [cdr cdr]
+             [list list]
              [vec vector]
              [vec? is_vector]
              [vec-ref vector_ref]
@@ -62,7 +66,6 @@
              [symbol->syring sym2str]
              [string? is_string]
              [void voidf]
-             [equal? eq]
              [atom? is_atom]
              [atom! atom]
              [atom-map! atom_map]
@@ -70,7 +73,10 @@
              [atom-get atom_get]
              [assert assert]
              [promise? is_promise]
-             [force force]))
+             [force force]
+             [procedure? is_procedure]
+             [wrtie write]
+             [writeln writeln]))
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
@@ -93,12 +99,23 @@
   (let ([f (macroexpand ms f)])
     (cond
       [(eq? f 'λ)
-       (let ([me me])
-         (for ([x (car xs)])
-           (set! me (upme me x)))
-         (exp "function(" (mkss (car xs)) ")"
+       (let loop ([as (car xs)] [ss '()] [me me])
+         (cond
+           [(null? as)
+            (exp "function(" ss ")"
               "return " (BEGIN me ms (cdr xs))
-              "\nend"))]
+              "\nend")]
+           [(symbol? as)
+            (exp "function(" (if (null? ss) "..." (list ss ",...")) ")"
+                 "local " (newvarid as) "=list(...)\n"
+              "return " (BEGIN (upme me as) ms (cdr xs))
+              "\nend")]
+           [else (let ([s (car as)])
+                   (loop (cdr as)
+                         (if (null? ss)
+                             (newvarid s)
+                             (list ss "," (newvarid s)))
+                         (upme me s)))]))]
       [(eq? f 'letrec) (LETREC me ms xs)]
       [(eq? f 'if)
        (block "if " (EVAL me ms (car xs))
@@ -117,12 +134,6 @@
     [(null? xs) ""]
     [(null? (cdr xs)) (EVAL me ms (car xs))]
     [else (stream (EVAL me ms (car xs)) "," (%apply me ms (cdr xs)))]))
-
-(define (mkss xs)
-  (cond
-    [(null? xs) ""]
-    [(null? (cdr xs)) (newvarid (car xs))]
-    [else (stream (newvarid (car xs)) "," (mkss (cdr xs)))]))
 
 (define (bh ms xs)
   (if (null? xs)

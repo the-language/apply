@@ -21,6 +21,8 @@
 (define first car)
 (define (second x) (car (cdr x)))
 (define cadr second)
+(define (caar x) (car (car x)))
+(define (cddr x) (cdr (cdr x)))
 (define (third x) (car (cdr (cdr x))))
 (define caddr third)
 (define (cadar x) (car (cdr (car x))))
@@ -33,8 +35,8 @@
       [else (let ([a (mcsym 'a)])
               `(let ([,a ,(car xs)])
                  (if ,a
-                     ,a
-                     (and ,@(cdr xs)))))])))
+                     (and ,@(cdr xs))
+                     #f)))])))
 
 (defmacro vector
   (λ xs
@@ -58,3 +60,28 @@
                       (assert (,is x))
                       (vec-ref x ,c))
                    (loop (+ c 1) (cdr fs))))))))
+
+(struct hashv (v))
+(define hash? hashv?)
+(define hash->list hashv-v)
+(define make-immutable-hash hashv)
+(define (hash . xs) (hashv (%hash xs)))
+(define (%hash xs)
+  (if (null? xs)
+      '()
+      (cons (cons (car xs) (cadr xs)) (%hash (cddr xs)))))
+(define (assoc v xs)
+  (if (null? xs)
+      #f
+      (if (equal? (caar xs) v)
+          (car xs)
+          (assoc v (cdr xs)))))
+(define (hash-ref h k . rs)
+  (let ([r (assoc k (hashv-v h))])
+    (if r
+        (cdr r)
+        (if (procedure? (car xs))
+            ((car xs))
+            (car xs)))))
+(define (hash-set h k v)
+  (hashv (cons (cons k v) (hashv-v h))))
