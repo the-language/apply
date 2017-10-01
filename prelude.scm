@@ -39,11 +39,22 @@
 (defmacro vector
   (λ xs
     `(vec '_v ,@xs)))
-
 (define (vector? x)
-  (and (vec? x) (equal? (car x) '_v)))
-
+  (and (vec? x) (equal? (vec-ref x 0) '_v)))
 (define (vector-ref x n)
   (assert (vector? x))
   (assert (>= x 0))
   (vec-ref x (+ 1 n)))
+
+(define-macro (struct n fs)
+  (let ([is (string->symbol (string-append (symbol->string n) "?"))])
+  `(begin
+     (define (,is x) (and (vec? x) (equal? (vec-ref x 0) (quote ,n))))
+     (define (,n ,@fs) (vec (quote ,n) ,@fs))
+     ,@(let loop ([c 1] [fs fs])
+         (if (null? fs)
+             '()
+             (cons `(define (,(string->symbol (string-append (symbol->string n) "-" (symbol->string (car fs)))) x)
+                      (assert (,is x))
+                      (vec-ref x ,c))
+                   (loop (+ c 1) (cdr fs))))))))

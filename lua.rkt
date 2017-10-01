@@ -124,29 +124,40 @@
     [(null? (cdr xs)) (newvarid (car xs))]
     [else (stream (newvarid (car xs)) "," (mkss (cdr xs)))]))
 
+(define (bh ms xs)
+  (if (null? xs)
+      '()
+      (let ([x (macroexpand ms (car xs))])
+        (if (and (pair? x) (eq? (car x) 'begin))
+            (append (bh ms (cdr x)) (bh ms (cdr xs)))
+            (cons x (bh ms (cdr xs)))))))
+
 (define (BEGIN me ms xs)
-  (let ([xs (filter-not (λ (x) (equal? x '(void)))
-                        (map (λ (x) (macroexpand ms x)) xs))])
-    (if (null? (cdr xs))
-        (EVAL me ms (car xs))
-        (let ([me me])
-          (block
-           (map (λ (x)
-                  (var me (second x)))
-                (filter (λ (x) (and (pair? x) (eq? (car x) 'def))) xs))
-           (let loop ([x (car xs)] [xs (cdr xs)])
-             (if (and (pair? x) (or (eq? (car x) 'set!) (eq? (car x) 'def)))
-                 (stream
-                  (setc me ms (second x) (third x))
-                  (if (null? xs)
-                      "return void"
-                      (loop (car xs) (cdr xs))))
-                 (if (null? xs)
-                     (stream
-                      "return " (EVAL me ms x))
-                     (stream
-                      "ig(" (EVAL me ms x) ")\n"
-                      (loop (car xs) (cdr xs)))))))))))
+  (let ([xs (bh ms xs)])
+    (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)]
+          [b (equal? (last xs) '(void))])
+      (if (null? (cdr xs))
+          (EVAL me ms (car xs))
+          (let ([me me])
+            (block
+             (map (λ (x)
+                    (var me (second x)))
+                  (filter (λ (x) (and (pair? x) (eq? (car x) 'def))) xs))
+             (let loop ([x (car xs)] [xs (cdr xs)])
+               (if (and (pair? x) (or (eq? (car x) 'set!) (eq? (car x) 'def)))
+                   (stream
+                    (setc me ms (second x) (third x))
+                    (if (null? xs)
+                        "return void"
+                        (loop (car xs) (cdr xs))))
+                   (if (null? xs)
+                       (if b
+                           "return void"
+                           (stream
+                            "return " (EVAL me ms x)))
+                       (stream
+                        "ig(" (EVAL me ms x) ")\n"
+                        (loop (car xs) (cdr xs))))))))))))
 
 (define (upme me x)
   (if (macrosym? x)
