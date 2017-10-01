@@ -78,16 +78,16 @@
 (define-syntax-rule (block x ...)
   (stream (exp "function()"
                x ...
-               " end") "()"))
+               "\nend") "()"))
 
 (define-syntax-rule (var nme xc)
   (let ([x xc])
     (begin
       (set! nme (upme nme x))
-      (stream "local " (newvarid x) "=nil "))))
+      (stream "local " (newvarid x) "=nil\n"))))
 
 (define-syntax-rule (setc me ms x v)
-  (stream (id me x) "=" (EVAL me ms v) " "))
+  (stream (id me x) "=" (EVAL me ms v) "\n"))
 
 (define (APPLY me ms f xs)
   (let ([f (macroexpand ms f)])
@@ -98,13 +98,13 @@
            (set! me (upme me x)))
          (exp "function(" (mkss (car xs)) ")"
               "return " (BEGIN me ms (cdr xs))
-              " end"))]
+              "\nend"))]
       [(eq? f 'letrec) (LETREC me ms xs)]
       [(eq? f 'if)
        (block "if " (EVAL me ms (car xs))
-              " then return " (EVAL me ms (second xs))
-              " else return " (EVAL me ms (third xs))
-              " end")]
+              " then\nreturn " (EVAL me ms (second xs))
+              "\nelse\nreturn " (EVAL me ms (third xs))
+              "\nend")]
       [(eq? f 'begin) (BEGIN me ms xs)]
       [(eq? f 'set!) (setc me ms (car xs) (second xs))]
       [(eq? f 'ffi) (FFI (car xs))]
@@ -145,7 +145,7 @@
                      (stream
                       "return " (EVAL me ms x))
                      (stream
-                      "ig(" (EVAL me ms x) ")"
+                      "ig(" (EVAL me ms x) ")\n"
                       (loop (car xs) (cdr xs)))))))))))
 
 (define (upme me x)

@@ -49,7 +49,7 @@ local function eq(x,y)
 		return eq(x[2],y[2]) and eq(x[3],y[3])
 	elseif t==symbolt then
 		return x[2]==y[2]
-	elseif t==vectort
+	elseif t==vectort then
 		return veceq(x[2],y[2])
 	end
 	return false
@@ -72,3 +72,4 @@ local function force(x)
 	end
 	return x[3]
 end
+
