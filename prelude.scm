@@ -18,6 +18,8 @@
         `(def ,f
            ,@v))))
 
+(define (zero? x) (= x 0))
+
 (define first car)
 (define (second x) (car (cdr x)))
 (define cadr second)
@@ -26,6 +28,17 @@
 (define (third x) (car (cdr (cdr x))))
 (define caddr third)
 (define (cadar x) (car (cdr (car x))))
+
+(define (map f xs)
+  (if (null? xs)
+      '()
+      (cons (f (car xs)) (map f (cdr xs)))))
+(define (filter f xs)
+  (if (null? xs)
+      '()
+      (if (f (car xs))
+          (cons (car xs) (filter f (cdr xs)))
+          (filter f (cdr xs)))))
 
 (defmacro and
   (λ xs
@@ -37,6 +50,16 @@
                  (if ,a
                      (and ,@(cdr xs))
                      #f)))])))
+(defmacro or
+  (λ xs
+    (cond
+      [(null? xs) #f]
+      [(null? (cdr xs)) (car xs)]
+      [else (let ([a (mcsym 'a)])
+              `(let ([,a ,(car xs)])
+                 (if ,a
+                     ,a
+                     (or ,@(cdr xs)))))])))
 
 (defmacro vector
   (λ xs
@@ -85,6 +108,8 @@
             (car xs)))))
 (define (hash-set h k v)
   (hashv (cons (cons k v) (hashv-v h))))
+(define hasheq hash)
+(define make-immutable-hasheq make-immutable-hash)
 
 (define-macro (with-handlers hs x)
   `(catch* ,x
