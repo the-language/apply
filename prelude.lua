@@ -4,6 +4,7 @@ local vectort={}
 local symbolt={}
 local void={}
 local atomt={}
+local promiset={}
 local function add(x,y)return x+y end
 local function sub(x,y)return x-y end
 local function mul(x,y)return x*y end
@@ -63,3 +64,11 @@ local function gt(x,y)return x>y end
 local function lt(x,y)return x<y end
 local function gteq(x,y)return x>=y end
 local function lteq(x,y)return x<=y end
+local function is_promise(x)return(is_table(x)and x[1]==promiset)end
+local function force(x)
+	if x[3]==nil then
+		x[3]=x[2]()
+		x[2]=nil
+	end
+	return x[3]
+end

@@ -68,7 +68,9 @@
              [atom-map! atom_map]
              [atom-set! atom_set]
              [atom-get atom_get]
-             [assert assert]))
+             [assert assert]
+             [promise? is_promise]
+             [force force]))
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
@@ -107,6 +109,7 @@
       [(eq? f 'set!) (setc me ms (car xs) (second xs))]
       [(eq? f 'ffi) (FFI (car xs))]
       [(eq? f 'quote) (QUOTE (car xs))]
+      [(eq? f 'delay) (stream "{promiset,function()return " (EVAL me ms (car xs)) " end}")]
       [else (stream (EVAL me ms f) "(" (%apply me ms xs) ")")])))
 
 (define (%apply me ms xs)
@@ -168,9 +171,8 @@
     [else (id me (macrosym-sym x))]))
 
 (define evalr
-  (make-evaluator
-   'racket
-   '(begin
+  (make-module-evaluator
+   '(module m racket
       (struct macrosym (id sym))
       (define mcsym
         (let ([midc 0])
