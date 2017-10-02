@@ -112,6 +112,7 @@
             (car xs)))))
 (define (hash-set h k v)
   (hashv (cons (cons k v) (hashv-v h))))
+(define (hash-has-key? h k) (assoc k (hashv-v h)))
 (define hasheq hash)
 (define make-immutable-hasheq make-immutable-hash)
 
