@@ -39,6 +39,10 @@
       (if (f (car xs))
           (cons (car xs) (filter f (cdr xs)))
           (filter f (cdr xs)))))
+(define (foldl f x xs)
+  (if (null? xs)
+      x
+      (foldl f (f (car xs) x) (cdr xs))))
 
 (defmacro and
   (λ xs
