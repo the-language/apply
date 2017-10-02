@@ -77,7 +77,8 @@
              [procedure? is_procedure]
              [wrtie write]
              [writeln writeln]
-             [raise raise]))
+             [raise raise]
+             [apply apply]))
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))

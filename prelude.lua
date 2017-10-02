@@ -176,4 +176,16 @@ local function spcall(x,f)
 		error(r)
 	end
 end
+local function list2lua(xs)
+	local t={}
+	local xs=xs
+	while not is_null(xs) do
+		t[#t+1]=car(xs)
+		xs=cdr(xs)
+	end
+	return t
+end
+local function apply(f,xs)
+	return f(unpack(list2lua(xs)))
+end
 

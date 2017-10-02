@@ -71,7 +71,7 @@
   (assert (>= x 0))
   (vec-ref x (+ 1 n)))
 
-(define-macro (struct n fs)
+(define-macro (struct n fs . conf)
   (let ([is (string->symbol (string-append (symbol->string n) "?"))])
   `(begin
      (define (,is x) (and (vec? x) (equal? (vec-ref x 0) (quote ,n))))
