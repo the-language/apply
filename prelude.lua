@@ -114,6 +114,7 @@ local function write(x)
 			write(car(xs))
 			xs=cdr(xs)
 		end
+		putstr(")")
 	else
 		if not is_table(x)then return putstr(tostring(x)) end
 		local t=x[1]
