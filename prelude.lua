@@ -189,4 +189,91 @@ end
 local function apply(f,xs)
 	return f(unpack(list2lua(xs)))
 end
+local toscm=nil
+local function scmto(x)
+	if x==void then
+		return nil
+	elseif is_list(x) then
+		local t=list2lua(x)
+		for i=1,#t do
+			t[i]=scmto(t[i])
+		end
+		return t
+	elseif x==null or is_pair(x) then
+		error("NULL/PAIR!")
+	elseif is_vector(x) then
+		local t=sym2str(vector_ref(x,0))
+		if t=="_v" then
+			local v=x[2]
+			local r={}
+			for i=2,#v do
+				r[i-1]=scmto(v[i])
+			end
+			return r
+		elseif t=="hashv" then
+			local v=vector_ref(x,1)
+			local r={}
+			while not is_null(v) do
+				local x=car(v)
+				local k=tostr(car(x))
+				if r[k]==nil then
+					r[k]=scmto(cdr(x))
+				end
+				local v=cdr(v)
+			end
+			return r
+		else
+			error("STRUCT!")
+		end
+	elseif is_symbol(x) then
+		return sym2str(x)
+	elseif is_atom(x) then
+		return scmto(atom_get(x))
+	elseif is_promise(x) then
+		return scmto(force(x))
+	elseif is_procedure(x) then
+		return function(...)
+				local xs={...}
+				for i=1,#xs do
+					xs[i]=toscm(xs[i])
+				end
+				return scmto(x(unpack(xs)))
+				end
+	else
+		return x
+	end
+end
+local function is_table_list(v)
+	for i, v in pairs(v) do
+		if type(i) ~= "number" then
+			return false
+		end
+	end
+	return true
+end
+toscm=function(x)
+	if x==nil then
+		return void
+	elseif is_table(x) then
+		if is_table_list(x) then
+			return list(unpack(x))
+		else
+			local r=null
+			for k,v in pairs(x) do
+				r=cons(cons(symbol(tostring(x)),toscm(v)),r)
+			end
+			return vector(symbol("hashv"),r)
+		end
+	elseif is_procedure(x) then
+		return function(...)
+				local xs={...}
+				for i=1,#xs do
+					xs[i]=scmto(xs[i])
+				end
+				return toscm(x(unpack(xs)))
+				end
+	else
+		return x
+	end
+end
 

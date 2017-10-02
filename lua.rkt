@@ -76,6 +76,7 @@
              [force force]
              [procedure? is_procedure]
              [wrtie write]
+             [newline newline]
              [writeln writeln]
              [raise raise]
              [apply apply]))
@@ -279,10 +280,10 @@
 (define (endc x)
   (string-append
    pre
-   "return " x))
+   "return scmto(" x ")"))
 
 (define (FFI x)
-  (stream "l2sv(" (symbol->string x) ")"))
+  (stream "toscm(" x ")"))
 
 (define (macroexpand ms x)
   (cond
