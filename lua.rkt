@@ -123,6 +123,22 @@
               " then\nreturn " (EVAL me ms (second xs))
               "\nelse\nreturn " (EVAL me ms (third xs))
               "\nend")]
+      [(eq? f 'cond)
+       (let ([a (car xs)] [d (cdr xs)])
+         (if (eq? (car a) 'else)
+             (BEGIN me ms (cdr a))
+             (block
+              "if " (EVAL me ms (car a)) " then\n"
+              "return " (BEGIN me ms (cdr a)) "\n"
+              (let loop ([xs d])
+                (if (null? xs)
+                    (error 'cond-else)
+                    (let ([a (car xs)])
+                      (if (eq? (car a) 'else)
+                          (stream "else\nreturn " (BEGIN me ms (cdr a)) "\nend")
+                          (stream "elseif " (EVAL me ms (car a)) " then\n"
+                                  "return " (BEGIN me ms (cdr a)) "\n"
+                                  (loop (cdr xs))))))))))]
       [(eq? f 'begin) (BEGIN me ms xs)]
       [(eq? f 'set!) (setc me ms (car xs) (second xs))]
       [(eq? f 'ffi) (FFI (car xs))]
