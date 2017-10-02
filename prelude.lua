@@ -276,4 +276,12 @@ toscm=function(x)
 		return x
 	end
 end
+local function string2list(s)
+	local r={}
+	for i=1,#s do
+		r[i]=str:sub(i,i)
+	end
+	return list(unpack(r))
+end
+local function is_char(x)return is_string(x)and#x==1 end
 

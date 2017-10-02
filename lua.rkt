@@ -79,7 +79,9 @@
              [newline newline]
              [writeln writeln]
              [raise raise]
-             [apply apply]))
+             [apply apply]
+             [string->list string2list]
+             [char? is_char]))
 
 (define-syntax-rule (exp x ...)
   (stream "(" x ... ")"))
@@ -106,13 +108,13 @@
          (cond
            [(null? as)
             (exp "function(" ss ")"
-              "return " (BEGIN me ms (cdr xs))
-              "\nend")]
+                 "return " (BEGIN me ms (cdr xs))
+                 "\nend")]
            [(symbol? as)
             (exp "function(" (if (null? ss) "..." (list ss ",...")) ")"
                  "local " (newvarid as) "=list(...)\n"
-              "return " (BEGIN (upme me as) ms (cdr xs))
-              "\nend")]
+                 "return " (BEGIN (upme me as) ms (cdr xs))
+                 "\nend")]
            [else (let ([s (car as)])
                    (loop (cdr as)
                          (if (null? ss)
@@ -254,7 +256,8 @@
       [(number? x) (number->string x)]
       [(eq? x #t) "true"]
       [(eq? x #f) "false"]
-      [(string? x) (stream "\"" x "\"")]
+      [(string? x) (format "~s" x)]
+      [(char? x) (format "~s" (string #\" x #\"))]
       [else (error)])))
 
 (define (e x)
@@ -301,7 +304,8 @@
     [(eq? x #t) "true"]
     [(eq? x #f) "false"]
     [(number? x) (number->string x)]
-    [(string? x) (stream "\"" x "\"")]
+    [(string? x) (format "~s" x)]
+    [(char? x) (format "~s" (string #\" x #\"))]
     [(macrosym? x) (QUOTE (macrosym-sym x))]
     [else (error)]))
 
