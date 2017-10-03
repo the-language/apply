@@ -75,9 +75,10 @@
              [promise? is_promise]
              [force force]
              [procedure? is_procedure]
-             [wrtie write]
+             [write write]
              [newline newline]
              [writeln writeln]
+             [read-line readline]
              [raise raise]
              [apply apply]
              [string->list string2list]
@@ -211,7 +212,7 @@
 (define (id me x)
   (cond
     [(set-member? me x) (newvarid x)]
-    [(symbol? x) (hash-ref! ids x (λ () (mknewid x)))]
+    [(symbol? x) (hash-ref ids x)]
     [else (id me (macrosym-sym x))]))
 
 (define evalr
@@ -236,7 +237,7 @@
 
 (define (newvarid x)
   (if (symbol? x)
-      (id (set) x)
+      (hash-ref! ids x (λ () (mknewid x)))
       (string-append
        "zsm"
        (number->string (macrosym-id x))

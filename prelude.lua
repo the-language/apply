@@ -284,4 +284,5 @@ local function string2list(s)
 	return list(unpack(r))
 end
 local function is_char(x)return is_string(x)and#x==1 end
+local function readline()error()end
 

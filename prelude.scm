@@ -126,3 +126,8 @@
                       `(if (,(car h) e)
                            (,(second h) e)
                            ,(loop (cdr hs)))))))))
+
+(define (curry) (raise 'curry))
+(define true #t)
+(define false #f)
+(define eq? equal?)
