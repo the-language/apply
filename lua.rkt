@@ -253,13 +253,7 @@
       [(symbol? x) (id me x)]
       [(macrosym? x) (id me x)]
       [(pair? x) (APPLY me ms (car x) (cdr x))]
-      [(null? x) "null"]
-      [(number? x) (number->string x)]
-      [(eq? x #t) "true"]
-      [(eq? x #f) "false"]
-      [(string? x) (format "~s" x)]
-      [(char? x) (format "~s" (string #\" x #\"))]
-      [else (error)])))
+      [else (QUOTE x)])))
 
 (define (e x)
   (cond
