@@ -1,4 +1,5 @@
 #lang racket
+(provide expand-program)
 ;; alexpander.scm: a macro expander for scheme.
 ;; [RCS tag expunged: this is alexpander 1.58 from petrofsky.org/src]
 
@@ -1498,7 +1499,12 @@
 	    (syntax-rules ()
 	      ((_) #f)
 	      ((_ test) (let () test))
-	      ((_ test . tests) (let ((x test)) (if x x (or . tests)))))))
+	      ((_ test . tests) (let ((x test)) (if x x (or . tests))))))
+          (define-syntax define-syntax-rule
+            (syntax-rules ()
+              ((_ (f . args) x) (define-syntax f
+                                  (syntax-rules ()
+                                    ((_ . args) x)))))))
 	;; Quasiquote uses let-syntax scope so that it can recognize
 	;; nested uses of itself using a syntax-rules literal (that
 	;; is, the quasiquote binding that is visible in the
