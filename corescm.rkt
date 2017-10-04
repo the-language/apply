@@ -60,6 +60,12 @@
                 (equal? (cdr x) (cdr y)))
            (eq? x y)))
      (define eqv? equal?)
+     (define (list-ref xs k)
+       (cond
+         [(< k 0) (error "list-ref: isn't exact-nonnegative-integer?" xs k)]
+         [(null? xs) (error "list-ref: index is out of range" xs k)]
+         [(zero? k) (car xs)]
+         [else (list-ref (cdr xs) k)]))
      ,@(if (set-member? fe 'vector)
            '()
            '((define-syntax-rule (vec) '_vector_)
@@ -79,6 +85,18 @@
                  [(< k 0) (error "vector-ref: isn't exact-nonnegative-integer?" v k)]
                  [else (%vector-ref v k (cdr xs) (- x 1))]))))
      )
-   '()))
+   '((define-syntax %define-record-type
+       (syntax-rules ()
+         [(_ pred x) (void)]
+         [(_ pred c (f a) fs ...)
+          (let ([c2 (+ 1 c)])
+            (define (a x) (if (pred x) (list-ref x c) (error "type error" (quote f) x)))
+            (%define-record-type pred c2 fs ...))]))
+     (define-syntax-rule (define-record-type name (constructor cf ...) pred (f a) ...)
+       (let ([id (list '_struct:_ 'name)])
+         (define (constructor cf ...) (list id f ...))
+         (define (pred x) (and (pair? x) (equal? (car x) id)))
+         (%define-record-type pred 1 (f a) ...)))
+     )))
 (init (set))
 (expand-program '())
