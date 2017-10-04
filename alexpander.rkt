@@ -1,5 +1,5 @@
 #lang racket
-(provide expand-program)
+(provide expand-program set-null-prog!)
 ;; alexpander.scm: a macro expander for scheme.
 ;; [RCS tag expunged: this is alexpander 1.58 from petrofsky.org/src]
 
@@ -1375,549 +1375,245 @@
 ;; are in the null-store.  (The "null-" name prefix was chosen to
 ;; correspond to the name of r5rs's null-environment procedure, even
 ;; though the null-store is far from empty.)
-(define null-prog
-  '((define-syntax letrec-syntax
-      (let-syntax ((let-syntax let-syntax) (define-syntax define-syntax))
-        (syntax-rules ()
-          ((_ ((kw init) ...) . body)
-           (let-syntax ()
-             (define-syntax kw init) ... (let-syntax () . body))))))
-    (let-syntax ()
-      (define-syntax multi-define
-        (syntax-rules ()
-          ((_ definer (id ...) (init ...))
-           (begin (definer id init) ...))))
-      ;; Define-protected-macros defines a set of macros with a
-      ;; private set of bindings for some keywords and variables.  If
-      ;; any of the keywords or variables are later redefined at
-      ;; top-level, the macros will continue to work.  The first
-      ;; argument to define-protected-macros is let-syntax or
-      ;; letrec-syntax; if it is letrec-syntax, then the macros will
-      ;; also have a private set of bindings for one another, and
-      ;; recursive calls made by the macros to themselves or to one
-      ;; another will not be affected by later top-level
-      ;; redefinitions.
-      ;;
-      ;; The private binding for a saved variable is created by a
-      ;; let-syntax, using a dummy syntax as the initializer.  We
-      ;; later assign a value to it using a top-level define (and thus
-      ;; change the status of the binding from keyword to variable).
-      (define-syntax dummy (syntax-rules ()))
-      (define-syntax define-protected-macros
-        (syntax-rules (define-syntax)
-          ((_ let/letrec-syntax (saved-kw ...) (saved-var ...)
-              (define-syntax kw syntax) ...)
-           ((let-syntax ((saved-kw saved-kw) ... (saved-var dummy) ...)
-              (let/letrec-syntax ((kw syntax) ...)
-                                 (syntax-rules ()
-                                   ((_ top-level-kws top-level-vars)
-                                    (begin
-                                      (multi-define define (saved-var ...) top-level-vars)
-                                      (multi-define define-syntax top-level-kws (kw ...)))))))
-            (kw ...) (saved-var ...)))))
-      (begin
-        ;; Prototype-style define and lambda with internal definitions
-        ;; are implemented in define-protected-macros with let-syntax
-        ;; scope so that they can access the builtin define and lambda.
-        (define-protected-macros let-syntax (lambda define let-syntax) ()
-          (define-syntax lambda
-            (syntax-rules ()
-              ((lambda args . body)
-               (lambda args (let-syntax () . body)))))
-          (define-syntax define
-            (syntax-rules ()
-              ((_ expr) (define expr))
-              ((_ (var . args) . body)
-               (define var (lambda args (let-syntax () . body))))
-              ((_ var init) (define var init)))))
-        (define-protected-macros letrec-syntax
-          (if lambda quote begin define) (eqv?)
-          (define-syntax let
-            (syntax-rules ()
-              ((_ ((var init) ...) . body)
-               ((lambda (var ...) . body)
-                init ...))
-              ((_ name ((var init) ...) . body)
-               ((letrec ((name (lambda (var ...) . body)))
-                  name)
-                init ...))))
-          (define-syntax let*
-            (syntax-rules ()
-              ((_ () . body) (let () . body))
-              ((let* ((var init) . bindings) . body)
-               (let ((var init)) (let* bindings . body)))))
-          (define-syntax letrec
-            (syntax-rules ()
-              ((_ ((var init) ...) . body)
-               (let () (define var init) ... (let () . body))))) 
-          (define-syntax do
-            (let-syntax ((do-step (syntax-rules () ((_ x) x) ((_ x y) y))))
-              (syntax-rules ()
-                ((_ ((var init step ...) ...)
-                    (test expr ...)
-                    command ...)
-                 (let loop ((var init) ...)
-                   (if test
-                       (begin (if #f #f) expr ...)
-                       (begin command ...
-                              (loop (do-step var step ...) ...))))))))
-          (define-syntax case
-            (letrec-syntax
-                ((compare
-                  (syntax-rules ()
-                    ((_ key ()) #f)
-                    ((_ key (datum . data))
-                     (if (eqv? key 'datum) #t (compare key data)))))
-                 (case
-                     (syntax-rules (else)
-                       ((case key) (if #f #f))
-                       ((case key (else result1 . results))
-                        (begin result1 . results))
-                       ((case key ((datum ...) result1 . results) . clauses)
-                        (if (compare key (datum ...))
-                            (begin result1 . results)
-                            (case key . clauses))))))
-              (syntax-rules ()
-                ((_ expr clause1 clause ...)
-                 (let ((key expr))
-                   (case key clause1 clause ...))))))
-          (define-syntax cond
-            (syntax-rules (else =>)
-              ((_) (if #f #f))
-              ((_ (else . exps)) (let () (begin . exps)))
-              ((_ (x) . rest) (or x (cond . rest)))
-              ((_ (x => proc) . rest)
-               (let ((tmp x)) (cond (tmp (proc tmp)) . rest)))
-              ((_ (x . exps) . rest)
-               (if x (begin . exps) (cond . rest)))))
-          (define-syntax and
-            (syntax-rules ()
-              ((_) #t)
-              ((_ test) (let () test))
-              ((_ test . tests) (if test (and . tests) #f))))
-          (define-syntax or
-            (syntax-rules ()
-              ((_) #f)
-              ((_ test) (let () test))
-              ((_ test . tests) (let ((x test)) (if x x (or . tests)))))))
-        ;; Quasiquote uses let-syntax scope so that it can recognize
-        ;; nested uses of itself using a syntax-rules literal (that
-        ;; is, the quasiquote binding that is visible in the
-        ;; environment of the quasiquote transformer must be the same
-        ;; binding that is visible where quasiquote is used).
-        (define-protected-macros let-syntax
-          (lambda quote let) (cons append list vector list->vector map)
-          (define-syntax quasiquote
-            (let-syntax
-                ((tail-preserving-syntax-rules
-                  (syntax-rules ()
-                    ((_ literals
-                        ((subpattern ...) (subtemplate ...))
-                        ...)
-                     (syntax-rules literals
-                       ((subpattern ... . tail) (subtemplate ... . tail))
-                       ...)))))
+(define (mknull-prog h d t)
+  (let ([qq '(define-protected-macros let-syntax
+               (lambda quote let) (cons append list vector list->vector map)
+               (define-syntax quasiquote
+                 (let-syntax
+                     ((tail-preserving-syntax-rules
+                       (syntax-rules ()
+                         ((_ literals
+                             ((subpattern ...) (subtemplate ...))
+                             ...)
+                          (syntax-rules literals
+                            ((subpattern ... . tail) (subtemplate ... . tail))
+                            ...)))))
 
-              (define-syntax qq
-                (tail-preserving-syntax-rules
-                 (unquote unquote-splicing quasiquote)
-                 ((_ ,x        ())      (do-next x))
-                 ((_ (,@x . y) ())      (qq y () make-splice x))
-                 ((_ `x         depth)  (qq x (depth) make-list 'quasiquote))
-                 ((_ ,x        (depth)) (qq x  depth  make-list 'unquote))
-                 ((_ (,x  . y) (depth)) (qq-nested-unquote (,x  . y) (depth)))
-                 ((_ (,@x . y) (depth)) (qq-nested-unquote (,@x . y) (depth)))
-                 ((_ ,@x        depth)  (unquote-splicing-error ,@x))
-                 ((_ (x . y)    depth)  (qq x depth qq-cdr y depth make-pair))
-                 ((_ #(x y ...) depth)  (qq (x) depth qq-cdr #(y ...) depth
-                                            make-vector-splice))
-                 ((_ x          depth)  (do-next 'x))))
+                   (define-syntax qq
+                     (tail-preserving-syntax-rules
+                      (unquote unquote-splicing quasiquote)
+                      ((_ ,x        ())      (do-next x))
+                      ((_ (,@x . y) ())      (qq y () make-splice x))
+                      ((_ `x         depth)  (qq x (depth) make-list 'quasiquote))
+                      ((_ ,x        (depth)) (qq x  depth  make-list 'unquote))
+                      ((_ (,x  . y) (depth)) (qq-nested-unquote (,x  . y) (depth)))
+                      ((_ (,@x . y) (depth)) (qq-nested-unquote (,@x . y) (depth)))
+                      ((_ ,@x        depth)  (unquote-splicing-error ,@x))
+                      ((_ (x . y)    depth)  (qq x depth qq-cdr y depth make-pair))
+                      ((_ #(x y ...) depth)  (qq (x) depth qq-cdr #(y ...) depth
+                                                 make-vector-splice))
+                      ((_ x          depth)  (do-next 'x))))
 
-              (define-syntax do-next
-                (syntax-rules ()
-                  ((_ expr original-template) expr)
-                  ((_ expr next-macro . tail) (next-macro expr . tail))))
+                   (define-syntax do-next
+                     (syntax-rules ()
+                       ((_ expr original-template) expr)
+                       ((_ expr next-macro . tail) (next-macro expr . tail))))
 
-              (define-syntax unquote-splicing-error
-                (syntax-rules ()
-                  ((_ ,@x stack ... original-template)
-                   (unquote-splicing-error (,@x in original-template)))))
+                   (define-syntax unquote-splicing-error
+                     (syntax-rules ()
+                       ((_ ,@x stack ... original-template)
+                        (unquote-splicing-error (,@x in original-template)))))
 	      
-              (define-syntax qq-cdr
-                (tail-preserving-syntax-rules ()
-                                              ((_ car cdr depth combiner) (qq cdr depth combiner car))))
+                   (define-syntax qq-cdr
+                     (tail-preserving-syntax-rules ()
+                                                   ((_ car cdr depth combiner) (qq cdr depth combiner car))))
 	      
-              (define-syntax qq-nested-unquote
-                (tail-preserving-syntax-rules ()
-                                              ((_ ((sym x) . y) (depth))
-                                               (qq (x) depth make-map sym qq-cdr y (depth) make-splice))))
+                   (define-syntax qq-nested-unquote
+                     (tail-preserving-syntax-rules ()
+                                                   ((_ ((sym x) . y) (depth))
+                                                    (qq (x) depth make-map sym qq-cdr y (depth) make-splice))))
 	      
-              (define-syntax make-map
-                (tail-preserving-syntax-rules (quote list map lambda)
-                                              ((_ '(x) sym) (do-next '((sym x))))
-                                              ((_ (list x) sym) (do-next (list (list 'sym x))))
-                                              ((_ (map (lambda (x) y) z) sym)
-                                               (do-next (map (lambda (x) (list 'sym y)) z)))
-                                              ((_ expr sym)
-                                               (do-next (map (lambda (x) (list 'sym x)) expr)))))
+                   (define-syntax make-map
+                     (tail-preserving-syntax-rules (quote list map lambda)
+                                                   ((_ '(x) sym) (do-next '((sym x))))
+                                                   ((_ (list x) sym) (do-next (list (list 'sym x))))
+                                                   ((_ (map (lambda (x) y) z) sym)
+                                                    (do-next (map (lambda (x) (list 'sym y)) z)))
+                                                   ((_ expr sym)
+                                                    (do-next (map (lambda (x) (list 'sym x)) expr)))))
 								     
-              (define-syntax make-pair
-                (tail-preserving-syntax-rules (quote list)
-                                              ((_ 'y 'x) (do-next '(x . y)))
-                                              ((_ '() x) (do-next (list x)))
-                                              ((_ (list . elts) x) (do-next (list x . elts)))
-                                              ((_ y x) (do-next (cons x y)))))
+                   (define-syntax make-pair
+                     (tail-preserving-syntax-rules (quote list)
+                                                   ((_ 'y 'x) (do-next '(x . y)))
+                                                   ((_ '() x) (do-next (list x)))
+                                                   ((_ (list . elts) x) (do-next (list x . elts)))
+                                                   ((_ y x) (do-next (cons x y)))))
 						  
-              (define-syntax make-list
-                (tail-preserving-syntax-rules (quote)
-                                              ((_ y x) (make-pair '() y make-pair x))))
+                   (define-syntax make-list
+                     (tail-preserving-syntax-rules (quote)
+                                                   ((_ y x) (make-pair '() y make-pair x))))
 							   
-              (define-syntax make-splice
-                (tail-preserving-syntax-rules ()
-                                              ((_ '() x) (do-next x))
-                                              ((_ y x) (do-next (append x y)))))
+                   (define-syntax make-splice
+                     (tail-preserving-syntax-rules ()
+                                                   ((_ '() x) (do-next x))
+                                                   ((_ y x) (do-next (append x y)))))
 						    
-              (define-syntax make-vector-splice
-                (tail-preserving-syntax-rules (quote list vector list->vector)
-                                              ((_ '#(y ...) '(x))     (do-next '#(x y ...)))
-                                              ((_ '#(y ...) (list x)) (do-next (vector x 'y ...)))
-                                              ((_ '#()      x)        (do-next (list->vector x)))
-                                              ((_ '#(y ...) x)        (do-next (list->vector
-                                                                                (append x '(y ...)))))
-                                              ((_ y '(x))             (make-vector-splice y (list 'x)))
-                                              ((_ (vector y ...) (list x)) (do-next (vector x y ...)))
-                                              ((_ (vector y ...) x)   (do-next (list->vector
-                                                                                (append x (list y ...)))))
-                                              ((_ (list->vector y) (list x)) (do-next (list->vector
-                                                                                       (cons x y))))
-                                              ((_ (list->vector y) x) (do-next (list->vector
-                                                                                (append x y))))))
+                   (define-syntax make-vector-splice
+                     (tail-preserving-syntax-rules (quote list vector list->vector)
+                                                   ((_ '#(y ...) '(x))     (do-next '#(x y ...)))
+                                                   ((_ '#(y ...) (list x)) (do-next (vector x 'y ...)))
+                                                   ((_ '#()      x)        (do-next (list->vector x)))
+                                                   ((_ '#(y ...) x)        (do-next (list->vector
+                                                                                     (append x '(y ...)))))
+                                                   ((_ y '(x))             (make-vector-splice y (list 'x)))
+                                                   ((_ (vector y ...) (list x)) (do-next (vector x y ...)))
+                                                   ((_ (vector y ...) x)   (do-next (list->vector
+                                                                                     (append x (list y ...)))))
+                                                   ((_ (list->vector y) (list x)) (do-next (list->vector
+                                                                                            (cons x y))))
+                                                   ((_ (list->vector y) x) (do-next (list->vector
+                                                                                     (append x y))))))
 							   
+                   (syntax-rules ()
+                     ((_ template) (let () (qq template () template)))))))])
+    `(,@h
+      (define-syntax letrec-syntax
+        (let-syntax ((let-syntax let-syntax) (define-syntax define-syntax))
+          (syntax-rules ()
+            ((_ ((kw init) ...) . body)
+             (let-syntax ()
+               (define-syntax kw init) ... (let-syntax () . body))))))
+      (let-syntax ()
+        (define-syntax multi-define
+          (syntax-rules ()
+            ((_ definer (id ...) (init ...))
+             (begin (definer id init) ...))))
+        ;; Define-protected-macros defines a set of macros with a
+        ;; private set of bindings for some keywords and variables.  If
+        ;; any of the keywords or variables are later redefined at
+        ;; top-level, the macros will continue to work.  The first
+        ;; argument to define-protected-macros is let-syntax or
+        ;; letrec-syntax; if it is letrec-syntax, then the macros will
+        ;; also have a private set of bindings for one another, and
+        ;; recursive calls made by the macros to themselves or to one
+        ;; another will not be affected by later top-level
+        ;; redefinitions.
+        ;;
+        ;; The private binding for a saved variable is created by a
+        ;; let-syntax, using a dummy syntax as the initializer.  We
+        ;; later assign a value to it using a top-level define (and thus
+        ;; change the status of the binding from keyword to variable).
+        (define-syntax dummy (syntax-rules ()))
+        (define-syntax define-protected-macros
+          (syntax-rules (define-syntax)
+            ((_ let/letrec-syntax (saved-kw ...) (saved-var ...)
+                (define-syntax kw syntax) ...)
+             ((let-syntax ((saved-kw saved-kw) ... (saved-var dummy) ...)
+                (let/letrec-syntax ((kw syntax) ...)
+                                   (syntax-rules ()
+                                     ((_ top-level-kws top-level-vars)
+                                      (begin
+                                        (multi-define define (saved-var ...) top-level-vars)
+                                        (multi-define define-syntax top-level-kws (kw ...)))))))
+              (kw ...) (saved-var ...)))))
+        (begin
+          ;; Prototype-style define and lambda with internal definitions
+          ;; are implemented in define-protected-macros with let-syntax
+          ;; scope so that they can access the builtin define and lambda.
+          (define-protected-macros let-syntax (lambda define let-syntax begin) ()
+            (define-syntax lambda
               (syntax-rules ()
-                ((_ template) (let () (qq template () template)))))))))
-    
-    (define-syntax define-syntax-rule
-      (syntax-rules ()
-        ((_ (f . args) x) (define-syntax f
-                            (syntax-rules ()
-                              ((_ . args) x))))))
-    (define-syntax-rule (λ . xs) (lambda . xs))))
+                ((lambda args . body)
+                 (lambda args (let-syntax () . body)))))
+            (define-syntax define
+              (syntax-rules ()
+                ((_ expr) (define expr))
+                ((_ (var . args) . body)
+                 (define var (lambda args (let-syntax () . body))))
+                ((_ var init) (define var init))))
+            (define-syntax let
+              (syntax-rules ()
+                ((_ ((var init) ...) . body)
+                 ((lambda (var ...) . body)
+                  init ...))
+                ((_ name ((var init) ...) . body)
+                 ((letrec ((name (lambda (var ...) . body)))
+                    name)
+                  init ...))))
+            (define-syntax let*
+              (syntax-rules ()
+                ((_ () . body) (let () . body))
+                ((let* ((var init) . bindings) . body)
+                 (let ((var init)) (let* bindings . body)))))
+            (define-syntax letrec
+              (syntax-rules ()
+                ((_ ((var init) ...) . body)
+                 (let () (define var init) ... (let () . body)))))
+            (define-syntax and
+              (syntax-rules ()
+                ((_) #t)
+                ((_ test) (let () test))
+                ((_ test . tests) (if test (and . tests) #f))))
+            (define-syntax or
+              (syntax-rules ()
+                ((_) #f)
+                ((_ test) (let () test))
+                ((_ test . tests) (let ((x test)) (if x x (or . tests))))))
+            (define-syntax cond
+              (syntax-rules (else =>)
+                ((_) (if #f #f))
+                ((_ (else . exps)) (let () (begin . exps)))
+                ((_ (x) . rest) (or x (cond . rest)))
+                ((_ (x => proc) . rest)
+                 (let ((tmp x)) (cond (tmp (proc tmp)) . rest)))
+                ((_ (x . exps) . rest)
+                 (if x (begin . exps) (cond . rest))))))
+          ,@d
+          (define-protected-macros letrec-syntax
+            (if lambda quote begin define let) (eqv?) 
+            (define-syntax do
+              (let-syntax ((do-step (syntax-rules () ((_ x) x) ((_ x y) y))))
+                (syntax-rules ()
+                  ((_ ((var init step ...) ...)
+                      (test expr ...)
+                      command ...)
+                   (let loop ((var init) ...)
+                     (if test
+                         (begin (if #f #f) expr ...)
+                         (begin command ...
+                                (loop (do-step var step ...) ...))))))))
+            (define-syntax case
+              (letrec-syntax
+                  ((compare
+                    (syntax-rules ()
+                      ((_ key ()) #f)
+                      ((_ key (datum . data))
+                       (if (eqv? key 'datum) #t (compare key data)))))
+                   (case
+                       (syntax-rules (else)
+                         ((case key) (if #f #f))
+                         ((case key (else result1 . results))
+                          (begin result1 . results))
+                         ((case key ((datum ...) result1 . results) . clauses)
+                          (if (compare key (datum ...))
+                              (begin result1 . results)
+                              (case key . clauses))))))
+                (syntax-rules ()
+                  ((_ expr clause1 clause ...)
+                   (let ((key expr))
+                     (case key clause1 clause ...)))))))
+          ;; Quasiquote uses let-syntax scope so that it can recognize
+          ;; nested uses of itself using a syntax-rules literal (that
+          ;; is, the quasiquote binding that is visible in the
+          ;; environment of the quasiquote transformer must be the same
+          ;; binding that is visible where quasiquote is used).
+          ,qq
+          ))
+      ,@t)))
+(define null-prog (mknull-prog '() '() '()))
 
 (define null-stuff (expand-top-level-forms null-prog builtins-store 0 list))
 (define null-output (car null-stuff))
 (define null-store  (cadr null-stuff))
 (define null-loc-n  (caddr null-stuff))
 
+(define (set-null-prog! h d t)
+  (set! null-prog (mknull-prog h d t))
+  (set! null-stuff (expand-top-level-forms null-prog builtins-store 0 list))
+  (set! null-output (car null-stuff))
+  (set! null-store (cadr null-stuff))
+  (set! null-loc-n (caddr null-stuff)))
+
 (define (expand-program forms)
   (expand-top-level-forms forms null-store null-loc-n
                           (lambda (outputs store loc-n) (append null-output outputs))))
-
-;; an mstore is a mutable store.
-(define (null-mstore) (cons null-store null-loc-n))
-
-(define-syntax-rule (expand-top-level-forms! forms mstore)
-  (expand-top-level-forms forms (car mstore) (cdr mstore)
-                          (lambda (outputs store loc-n)
-                            (set! mstore (cons store loc-n))
-                            outputs)))
-
-(define repl-mstore (null-mstore))
-
-;; alexpander-repl: a read-expand-print loop.
-;; If called with an argument, resumes a previous session.
-;; Top-level vectors are interpreted as directives to the repl:
-;;   #(show loc ...) shows values stored in the locations.
-;;   #(dump) dumps the whole store.
-;;   #(restart) restarts.
-
-(define (alexpander-repl . resume?)
-  ;;(define (pp x) (write x) (newline))
-  (define (pp x) (pretty-print x))
-  (define (restart)
-    (set! repl-mstore (null-mstore))
-    (for-each pp null-output))
-  (define (repl)
-    (display "expander> ")
-    (let ((form (read)))
-      (when (not (eof-object? form))
-        (begin
-          (if (vector? form)
-              (let ((l (vector->list form)))
-                (case (car l)
-                  ((dump) (pp (car repl-mstore)))
-                  ((show)
-                   (for-each (lambda (loc)
-                               (pp (assv loc (car repl-mstore))))
-                             (cdr l)))
-                  ((restart) (restart))))
-              (for-each pp (expand-top-level-forms! (list form)
-                                                    repl-mstore)))
-          (repl)))))
-  (begin
-    (when (null? resume?) (restart))
-    (repl)))
-
-
-;; Rest of file is a junkyard of thoughts.
-
-
-'
-(begin
-  (define (file->list file)
-    (define (f) (let ((x (read))) (if (eof-object? x) '() (cons x (f)))))
-    (with-input-from-file file f))
-
-  (define (check-expander filename)
-    (let* ((src (file->list filename))
-           (out1 (begin (for-each eval src) (expand-program src))))
-      (begin (for-each eval out1) (equal? out1 (expand-program src))))))
-
-;; r2rs-style currying define.
-'(define-syntax define
-   (let-syntax ((old-define define))
-     (letrec-syntax
-         ((new-define
-           (syntax-rules ()
-             ((_ (var-or-prototype . args) . body)
-              (new-define var-or-prototype (lambda args . body)))
-             ((_ var expr) (old-define var expr)))))
-       new-define)))
-
-'(define-syntax define
-   (let-syntax ((old-define define))
-     (define-syntax new-define
-       (syntax-rules ()
-         ((_ (var-or-prototype . args) . body)
-          (new-define var-or-prototype (lambda args . body)))
-         ((_ var expr) (old-define var expr))))
-     new-define))
-
-'(let ((multiplier 2))
-   (define ((curried-* x) y) (* x y))
-   (map (curried-* multiplier) '(3 4 5)))
-
-;; Notes:
-
-;; TODO:
-;;
-;; * allow expressions among internal definitions.
-;; * fluid-let-syntax
-;; * revamp error handling:
-;;     add an error continuation to expand-top-level-forms.
-;;     keep a backtrace.
-
-
-;; Are these legal in r5rs?
-;;   (let () (define if 1) (+ if) if) => 1
-;;   (let () (define if 1) (set! if 2) if) => 2
-;; The 2002 version of the expander didn't allow them.
-;;
-;; First solution to above problem didn't fix this:
-;;   (let () (define if 1) ((let-syntax () if +)) if) => 1
-;;
-;; 2003-10-05:
-;; New semantics:
-;;
-;;   (let ((a 1) (b 1))
-;;     (define a 2)
-;;     ((syntax-rules () ((_ m) (define (m) (list a b)))) m)
-;;     (define b 2)
-;;     (m))
-;;   => (1 2)
-;;
-;;   (let ((a 1) (b 1))
-;;     (define a 2)
-;;     (define-syntax m (syntax-rules () ((_) (list a b))))
-;;     (define b 2)
-;;     (m))
-;;   => (2 2)
-
-
-;; Idea for syntax-rules extension to provide automatic gensym sequences:
-
-;; (syntax-rules with-id-sequence ()
-;;   ((letrec ((var init) ... (with-id-sequence temp)) . body)
-;;    (let ((var 'undefined) ...)
-;;      (let ((temp init) ...)
-;;        (set! var temp) ... (let () . body)))))
-
-;; (syntax-rules with-ids ()
-;;   ((letrec-values (((var ... (with-ids tmp)) init) ... (with-ids thunk))
-;;      . body)
-;;    (let ()
-;;      (begin (define var 'undefined) ...)
-;;      ...
-;;      (define thunk (call-with-values (lambda () init)
-;; 		        (lambda (tmp ...) (lambda () #f (set! var tmp) ...))))
-;;      ...
-;;      (thunk) ... (let () . body))))
-
-;; (syntax-rules with-ids ()
-;;   ((set!-values (var ... (with-ids tmp)) expr)
-;;    (call-with-values (lambda () expr)
-;;      (lambda (tmp ...) (if #f #f) (set! var tmp) ...))))
-
-;; (let ()
-;;   (define n 0)
-;;   (define (inc) (set! n (+ n 1)) n)
-;;   (define-syntax x (inc))
-;;   (begin x x x x x))
-;; => 5
-
-;; (let-syntax ((real-x #f)
-;;              (real-set! set!))
-;;   (begin
-;;     (define real-x #f)
-;;     (define-syntax x
-;;       (begin (display "x accessed")
-;;              real-x))
-;;     (define-syntax set!
-;;       (syntax-rules (x)
-;;         ((set! x foo)
-;;          (begin (display "x set")
-;;                 (real-set! real-x foo)))
-;;         ((set! . whatever)
-;;          (real-set! . whatever))))))
-
-;; At top-level, (define-identifier-syntax id arg ...)
-;; is equivalent to chez's (define-syntax id (identifier-syntax id arg ...))
-'
-(define-syntax define-identifier-syntax
-  (syntax-rules (set!)
-    ((_ id e)
-     (define-syntax id e))
-    ((_ id (id* e1) ((set! id** pat) tmpl)) ;; id* and id** are ignored
-     (begin
-       (define-syntax id e1)
-       (define-syntax set!
-         (let-syntax ((real-set! set!))
-           (syntax-rules (id)
-             ((set! id pat) tmpl)
-             ((set! . whatever)
-              (real-set! . whatever)))))))))
-
-
-;; Safe-letrec is a letrec that does its own run-time error-checking
-;; for premature variable accesses.  It signals errors by calling
-;; letrec-set!-error or letrec-access-error.
-;; We're careful not to signal an error for cases like:
-;; (call/cc (lambda (k) (letrec ((x (set! x (k 1)))) 2))) => 1
-'(define-syntax safe-letrec
-   (let-syntax ()
-     (define-syntax safe-letrec-with-alt-names
-       (syntax-rules ()
-         ((safe-letrec-with-alt-names (var* ...) ((var init) ...) . body)
-          (let ((var #f) ... (ready? #f))
-            (define (set-em! var* ...)
-              (set! var var*) ... (set! ready? #t))
-            (define (var* new-val)
-              (if ready? (set! var new-val) (letrec-set!-error 'var new-val)))
-            ...
-            (begin
-              (let-syntax ((var (if ready? var (letrec-access-error 'var))) ...)
-                (define-syntax new-set!
-                  (let-syntax ((set! set!))
-                    (syntax-rules no-ellipsis (var ...)
-                      ((new-set! var x) (var* x)) ...
-                      ((new-set! . other) (set! . other)))))
-                (fluid-let-syntax ((set! new-set!))
-                  (set-em! init ...)))
-              (let () . body))))))
-     (syntax-rules ()
-       ((safe-letrec ((var init) ...) . body)
-        ((syntax-rules no-ellipsis ()
-           ((_ . args) (safe-letrec-with-alt-names (var ...) . args)))
-         ((var init) ...) . body)))))
-
-;; Similarly, an error-checking letrec*.
-'(define-syntax safe-letrec*
-   (let-syntax ()
-     (define-syntax process-bindings
-       (syntax-rules ()
-         ((process-bindings) #f)
-         ((process-bindings binding ... (var init))
-          (let ((ready? #f))
-            (define (finish val) (set! var val) (set! ready? #t))
-            (define (safe-setter new-val)
-              (if ready? (set! var new-val) (letrec-set!-error 'var new-val)))
-            (let-syntax ((var (if ready? var (letrec-access-error 'var))))
-              (define-syntax new-set!
-                (let-syntax ((set! set!))
-                  (syntax-rules no-ellipsis (var)
-                    ((new-set! var x) (safe-setter x))
-                    ((new-set! . other) (set! . other)))))
-              (fluid-let-syntax ((set! new-set!))
-                (process-bindings binding ...)
-                (finish init)))))))
-     (syntax-rules ()
-       ((safe-letrec* ((var init) ...) . body)
-        (let ((var #f) ...)
-          (process-bindings (var init) ...)
-          (let () . body))))))
-
-
-;; If we wanted to simplify the primitive let-syntax by saying the
-;; first argument must by (), then the full let-syntax could be
-;; written this way:
-'(define-syntax let-syntax
-   (let-syntax ()
-     (define-syntax original-let-syntax let-syntax)
-     (define-syntax original-define-syntax define-syntax)
-     (define-syntax original-syntax-rules syntax-rules)
-     (define-syntax let-syntax-with-temps
-       (syntax-rules ()
-         ((_ (temp ...) ((kw syn) ...) . body)
-          (original-let-syntax ()
-                               (original-define-syntax temp syn) ...
-                               (original-let-syntax ()
-                                                    (original-define-syntax kw temp) ...
-                                                    (original-let-syntax () . body))))))
-     (syntax-rules ()
-       ((_ ((kw syn) ...) . body)
-        ((original-syntax-rules no-ellipsis ()
-                                ((_ . args) (let-syntax-with-temps (kw ...) . args)))
-         ((kw syn) ...) . body)))))
-
-
-;; Example of how an error-checking letrec would be written if we
-;; support an extra slot in keyword bindings such that if we bind a
-;; keyword with (foo expr/syntax1 expr/syntax2) then the form (set!
-;; foo datum ...) gets expanded as (expr/syntax2 datum ...).
-'
-(define-syntax letrec
-  (syntax-rules ()
-    ((_ ((var init) ...) . body)
-     (let ((var #f) ... (ready? #f))
-       (let-syntax
-           ((var (if ready? var (letrec-access-error 'var))
-                 (syntax-rules ()
-                   ((set!_var expr)
-                    (let ((val expr))
-                      (if ready?
-                          (set! var val)
-                          (letrec-set!-error 'var val))))))
-            ...)
-         (let ((var (let ((tmp init)) (lambda () (set! var tmp))))
-               ...)
-           (var) ... (set! ready? #t)))
-       (let () . body)))))
-
-
-;; Nested unquote-splicing:
-;;
-;; (define x '(a b c))
-;; (define a 1) (define b 2) (define c 3)
-;;
-;; scheme:
-;; ``(,,@x)
-;; expands=>   (list 'quasiquote (map (lambda (y) (list 'unquote y)) x))
-;; evaluates=> `(,a ,b ,c)
-;; expands=>   (list a b c)
-;; evaluates=> (1 2 3)
-;;
-;; lisp:
-;; ``(,,@x)
-;; expands=>   `(list ,@x)
-;; expands=>   (cons 'list x)
-;; evaluates=> (list a b c)
-;; evaluates=> (1 2 3)

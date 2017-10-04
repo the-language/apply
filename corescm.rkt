@@ -13,20 +13,36 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(define
-  prog
-  '((let-syntax ((def define))
-      (define-syntax define
-        (syntax-rules ()
-          ((_ var init) (def var init))
-          ((_ (var . args) . body) (define var (λ args . body))))))
-    (define (append xs ys)
-      (if (null? xs)
-          ys
-          (cons (car xs) (append (cdr xs) ys))))
-    (define (list . xs)
-      xs)
-    (define (map f xs)
-      (if (null? xs)
-          '()
-          (cons (f (car xs)) (map f (cdr xs)))))))
+(require "alexpander.rkt")
+(set-null-prog!
+ '((define-syntax define-syntax-rule
+     (syntax-rules ()
+       ((_ (f . args) x) (define-syntax f
+                           (syntax-rules ()
+                             ((_ . args) x))))))
+   (define-syntax-rule (λ . xs) (lambda . xs))
+   (let-syntax ((def define))
+     (define-syntax define
+       (syntax-rules ()
+         ((_ var init) (def var init))
+         ((_ (var . args) . body) (define var (λ args . body))))))
+   )
+ '((define (append xs ys)
+     (if (null? xs)
+         ys
+         (cons (car xs) (append (cdr xs) ys))))
+   (define (list . xs)
+     xs)
+   (define (map f xs)
+     (if (null? xs)
+         '()
+         (cons (f (car xs)) (map f (cdr xs)))))
+   (define (equal? x y)
+     (if (pair? x)
+         (and (pair? y)
+              (equal? (car x) (car y))
+              (equal? (cdr x) (cdr y)))
+         (eq? x y)))
+   (define eqv? equal?))
+ '())
+(expand-program '())
