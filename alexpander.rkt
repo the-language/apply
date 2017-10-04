@@ -1560,7 +1560,21 @@
                  (if x (begin . exps) (cond . rest))))))
           ,@d
           (define-protected-macros letrec-syntax
-            (if lambda quote begin define let) (eqv?) 
+            (if lambda quote begin define let) (eqv? list list-ref pair? equal? car void)
+            (define-syntax %define-record-type
+              (syntax-rules ()
+                [(_ pred x) (void)]
+                [(_ pred c (f a) fs ...)
+                 (begin
+                   (define (a x) (if (pred x) (list-ref x c) (error "type error" (quote f) x)))
+                   (%define-record-type pred (+ 1 c) fs ...))]))
+            (define-syntax define-record-type
+              (syntax-rules ()
+                [(_ name (constructor cf ...) pred (f a) ...)
+                 (begin
+                   (define (constructor cf ...) (list (list '_struct:_ 'name) f ...))
+                   (define (pred x) (and (pair? x) (equal? (car x) (list '_struct:_ 'name))))
+                   (%define-record-type pred 1 (f a) ...))]))
             (define-syntax do
               (let-syntax ((do-step (syntax-rules () ((_ x) x) ((_ x y) y))))
                 (syntax-rules ()

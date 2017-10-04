@@ -85,18 +85,6 @@
                  [(< k 0) (error "vector-ref: isn't exact-nonnegative-integer?" v k)]
                  [else (%vector-ref v k (cdr xs) (- x 1))]))))
      )
-   '((define-syntax %define-record-type
-       (syntax-rules ()
-         [(_ pred x) (void)]
-         [(_ pred c (f a) fs ...)
-          (let ([c2 (+ 1 c)])
-            (define (a x) (if (pred x) (list-ref x c) (error "type error" (quote f) x)))
-            (%define-record-type pred c2 fs ...))]))
-     (define-syntax-rule (define-record-type name (constructor cf ...) pred (f a) ...)
-       (let ([id (list '_struct:_ 'name)])
-         (define (constructor cf ...) (list id f ...))
-         (define (pred x) (and (pair? x) (equal? (car x) id)))
-         (%define-record-type pred 1 (f a) ...)))
-     )))
+   '()))
 (init (set))
 (expand-program '())
