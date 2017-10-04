@@ -617,14 +617,14 @@
   ;; mv2 returns #f if there are no vectors in x.
   (define (mv2 x)
     (if (vector? x)
-	(f x)
-	(and (pair? x)
-	     (let ((a (car x)) (b (cdr x)))
-	       (let ((a-mapped (mv2 a)))
-		 (if a-mapped
-		     (cons a-mapped (mv b))
-		     (let ((b-mapped (mv2 b)))
-		       (and b-mapped (cons a b-mapped)))))))))
+        (f x)
+        (and (pair? x)
+             (let ((a (car x)) (b (cdr x)))
+               (let ((a-mapped (mv2 a)))
+                 (if a-mapped
+                     (cons a-mapped (mv b))
+                     (let ((b-mapped (mv2 b)))
+                       (and b-mapped (cons a b-mapped)))))))))
   (define (mv x) (or (mv2 x) x))
   (mv x))
 
@@ -669,8 +669,8 @@
 ;;      literal that created it was bound.
 (define (lookup-sid sid env)
   (cond ((assv (sid-id sid) env) => cdr)
-	;; This works for both cases 1 and 2 above.
-	(else (sid-location sid))))
+        ;; This works for both cases 1 and 2 above.
+        (else (sid-location sid))))
 
 ;; Lookup-location looks up a location in the store.
 ;; If there is no value explictly listed in the store, then:
@@ -681,14 +681,14 @@
 ;;      e.g. (letrec-syntax ((x x)) 1).
 (define (lookup-location location store)
   (cond ((assv location store) => cdr)
-	((symbol? location) (symloc->var location))
-	(else #f)))
+        ((symbol? location) (symloc->var location))
+        (else #f)))
 
 (define (lookup2 sid env store)
   (or (lookup-location (lookup-sid sid env) store)
       (error (string-append "Premature use of keyword bound by letrec-syntax"
-			    " (or an internal define-syntax): ")
-	     sid)))
+                            " (or an internal define-syntax): ")
+             sid)))
 
 (define (extend-env env id location) (acons id location env))
 (define (extend-store store loc val) (acons loc val store))
@@ -702,15 +702,15 @@
 ;; size of the store to make it more easily printed and examined.
 (define (substitute-in-store store loc val)
   (let ((store (if (assv loc store)
-		   (let loop ((store store))
-		     (let ((p (car store)))
-		       (if (eqv? loc (car p))
-			   (cdr store)
-			   (cons p (loop (cdr store))))))
-		   store)))
+                   (let loop ((store store))
+                     (let ((p (car store)))
+                       (if (eqv? loc (car p))
+                           (cdr store)
+                           (cons p (loop (cdr store))))))
+                   store)))
     (if (and (symbol? loc) (eq? val (symloc->var loc)))
-	store
-	(acons loc val store))))
+        store
+        (acons loc val store))))
 
 ;; Top-level variables must be renamed if they conflict with the
 ;; primitives or local variable names we use in the output.
@@ -720,9 +720,9 @@
   (case sym
     ((begin define delay if lambda letrec quote set!) (rename))
     (else (if (and (positive? (string-length str))
-		   (char=? #\_ (string-ref str 0)))
-	      (rename)
-	      sym))))
+                   (char=? #\_ (string-ref str 0)))
+              (rename)
+              sym))))
 
 ;; intloc->var:
 ;; A simple (string->symbol (string-append "_" (number->string intloc)))
@@ -748,48 +748,48 @@
   (define (dot-flattened x)
     (if (null? (cdr x)) (car x) (cons (car x) (dot-flattened (cdr x)))))
   (let* ((dotted? (not (list? formals)))
-	 (flattened (if dotted? (flatten-dotted formals) formals)))
+         (flattened (if dotted? (flatten-dotted formals) formals)))
     (define (check x)
       (or (sid? x) (error "Non-identifier: " x " in lambda formals: " formals))
       (when (member x (cdr (member x flattened)))
-	  (error "Duplicate variable: " x " in lambda formals: " formals)))
+        (error "Duplicate variable: " x " in lambda formals: " formals)))
     (begin
       (for-each check flattened)
       (let loop ((formals flattened) (rvars '())
-		 (env env) (store store) (loc-n loc-n))
-	(if (not (null? formals))
-	    (let* ((var (intloc->var loc-n (car formals)))
-		   (env (extend-env env (sid-id (car formals)) loc-n))
-		   (store (extend-store store loc-n var)))
-	      (loop (cdr formals) (cons var rvars) env store (+ 1 loc-n)))
-	    (let* ((vars (reverse rvars))
-		   (vars (if dotted? (dot-flattened vars) vars)))
-	      (list vars (expand-expr expr id-n env store loc-n))))))))
+                                     (env env) (store store) (loc-n loc-n))
+        (if (not (null? formals))
+            (let* ((var (intloc->var loc-n (car formals)))
+                   (env (extend-env env (sid-id (car formals)) loc-n))
+                   (store (extend-store store loc-n var)))
+              (loop (cdr formals) (cons var rvars) env store (+ 1 loc-n)))
+            (let* ((vars (reverse rvars))
+                   (vars (if dotted? (dot-flattened vars) vars)))
+              (list vars (expand-expr expr id-n env store loc-n))))))))
 
 (define (check-syntax-bindings bindings)
   (or (list? bindings) (error "Non-list syntax bindings list: " bindings))
   (for-each (lambda (b) (or (and (list2? b) (sid? (car b)))
-			    (error "Malformed syntax binding: " b)))
-	    bindings)
+                            (error "Malformed syntax binding: " b)))
+            bindings)
   (do ((bs bindings (cdr bs)))
-      ((null? bs))
+    ((null? bs))
     (let ((dup (assoc (caar bs) (cdr bs))))
       (when dup (error "Duplicate bindings for a keyword: "
-		     (car bs) " and: " dup)))))
+                       (car bs) " and: " dup)))))
 
 ;; returns (k store loc-n)
 (define (expand-syntax-bindings bindings id-n syntax-env ienv store loc-n k)
   (let loop ((bs bindings) (vals '()) (store store) (loc-n loc-n))
     (if (not (null? bs))
-	(expand-val (cadar bs) id-n syntax-env store loc-n
-	  (lambda (val store loc-n)
-	    (loop (cdr bs) (cons val vals) store loc-n)))
-	(let loop ((store store) (vals (reverse vals)) (bs bindings))
-	  (if (not (null? vals))
-	      (let* ((loc (lookup-sid (caar bs) ienv))
-		     (store (extend-store store loc (car vals))))
-		(loop store (cdr vals) (cdr bs)))
-	      (k store loc-n))))))
+        (expand-val (cadar bs) id-n syntax-env store loc-n
+                    (lambda (val store loc-n)
+                      (loop (cdr bs) (cons val vals) store loc-n)))
+        (let loop ((store store) (vals (reverse vals)) (bs bindings))
+          (if (not (null? vals))
+              (let* ((loc (lookup-sid (caar bs) ienv))
+                     (store (extend-store store loc (car vals))))
+                (loop store (cdr vals) (cdr bs)))
+              (k store loc-n))))))
 
 
 ;; (expand-any sexp id-n env store loc-n lsd? ek sk dk bk)
@@ -828,7 +828,7 @@
 (define (expand-any sexp id-n env store loc-n lsd? ek sk dk bk)
   (define (get-k k sexp name)
     (or k (error (string-append name " used in bad context: ")
-		 sexp)))
+                 sexp)))
   (define (get-ek sexp) (get-k ek sexp "Expression"))
   (define (get-sk sexp) (get-k sk sexp "Syntax"))
   (define (get-dk sexp) (get-k dk sexp "Definition"))
@@ -836,96 +836,96 @@
     (define (expand-subexpr sexp) (expand-expr sexp id-n env store loc-n))
     (define (handle-syntax-use syntax head store loc-n)
       (let* ((tail (cdr sexp)) (sexp (cons head tail)))
-	(if (transformer? syntax)
-	    (apply-transformer syntax sexp id-n env
-	      (lambda (sexp id-n) (again sexp id-n store loc-n)))
-	    (let ((builtin (builtin-name syntax)) (len (length tail)))
-	      (define (handle-macro-block)
-		(or ek sk lsd?
-		    (error "Macro block used in bad context: " sexp))
-		(or (>= len 2) (error "Malformed macro block: " sexp))
-		(let ((bindings (car tail)) (body (cdr tail)))
-		  (check-syntax-bindings bindings)
-		  (let loop ((bs bindings) (loc-n loc-n) (ienv env))
-		    (if (not (null? bs))
-			(loop (cdr bs) (+ loc-n 1)
-			      (extend-env ienv (sid-id (caar bs)) loc-n))
-			(expand-syntax-bindings
-			  bindings id-n env ienv store loc-n
-			  (lambda (store loc-n)
-			    (expand-body body id-n ienv store loc-n
-					 lsd? ek sk
-					 (and lsd? dk) (and lsd? bk))))))))
-	      (define (handle-expr-builtin)
-		(define (expr-assert test)
-		  (or test (error "Malformed " builtin " expression: " sexp)))
-		(cons builtin
-		      (case builtin
-			((lambda)
-			 (expr-assert (= len 2))
-			 (expand-lambda (car tail) (cadr tail)
-					id-n env store loc-n))
-			((quote)
-			 (expr-assert (= len 1))
-			 (list (unwrap-vecs (car tail))))
-			((set!)
-			 (expr-assert (and (= len 2) (sid? (car tail))))
-			 (let ((var (lookup2 (car tail) env store)))
-			   (or (variable? var)
-			       (error "Attempt to set a keyword: " sexp))
-			   (list var (expand-subexpr (cadr tail)))))
-			((if)
-			 (expr-assert (<= 2 len 3))
-			 (map expand-subexpr tail))
-			((delay)
-			 (expr-assert (= len 1))
-			 (list (expand-subexpr (car tail)))))))
-	      (case builtin
-		((let-syntax) (handle-macro-block))
-		((syntax-rules)
-		 (when (< len 1) (error "Empty syntax-rules form: " sexp))
-		 (let ((syn (compile-syntax-rules sexp env)))
-		   ((get-sk sexp) syn sexp store loc-n)))
-		((begin)
-		 (cond (bk (bk sexp id-n env store loc-n))
-		       ((null? tail) (error "Empty begin expression: " sexp))
-		       (else (make-begin (map expand-subexpr tail)))))
-		((define define-syntax)
-		 (or (and (= 2 len) (sid? (car tail)))
-		     (and (= 1 len) (eq? builtin 'define))
-		     (error "Malformed definition: " sexp))
-		 ((get-dk sexp) builtin sexp id-n env store loc-n))
-		(else ((get-ek sexp) (handle-expr-builtin))))))))
+        (if (transformer? syntax)
+            (apply-transformer syntax sexp id-n env
+                               (lambda (sexp id-n) (again sexp id-n store loc-n)))
+            (let ((builtin (builtin-name syntax)) (len (length tail)))
+              (define (handle-macro-block)
+                (or ek sk lsd?
+                    (error "Macro block used in bad context: " sexp))
+                (or (>= len 2) (error "Malformed macro block: " sexp))
+                (let ((bindings (car tail)) (body (cdr tail)))
+                  (check-syntax-bindings bindings)
+                  (let loop ((bs bindings) (loc-n loc-n) (ienv env))
+                    (if (not (null? bs))
+                        (loop (cdr bs) (+ loc-n 1)
+                              (extend-env ienv (sid-id (caar bs)) loc-n))
+                        (expand-syntax-bindings
+                         bindings id-n env ienv store loc-n
+                         (lambda (store loc-n)
+                           (expand-body body id-n ienv store loc-n
+                                        lsd? ek sk
+                                        (and lsd? dk) (and lsd? bk))))))))
+              (define (handle-expr-builtin)
+                (define (expr-assert test)
+                  (or test (error "Malformed " builtin " expression: " sexp)))
+                (cons builtin
+                      (case builtin
+                        ((lambda)
+                         (expr-assert (= len 2))
+                         (expand-lambda (car tail) (cadr tail)
+                                        id-n env store loc-n))
+                        ((quote)
+                         (expr-assert (= len 1))
+                         (list (unwrap-vecs (car tail))))
+                        ((set!)
+                         (expr-assert (and (= len 2) (sid? (car tail))))
+                         (let ((var (lookup2 (car tail) env store)))
+                           (or (variable? var)
+                               (error "Attempt to set a keyword: " sexp))
+                           (list var (expand-subexpr (cadr tail)))))
+                        ((if)
+                         (expr-assert (<= 2 len 3))
+                         (map expand-subexpr tail))
+                        ((delay)
+                         (expr-assert (= len 1))
+                         (list (expand-subexpr (car tail)))))))
+              (case builtin
+                ((let-syntax) (handle-macro-block))
+                ((syntax-rules)
+                 (when (< len 1) (error "Empty syntax-rules form: " sexp))
+                 (let ((syn (compile-syntax-rules sexp env)))
+                   ((get-sk sexp) syn sexp store loc-n)))
+                ((begin)
+                 (cond (bk (bk sexp id-n env store loc-n))
+                       ((null? tail) (error "Empty begin expression: " sexp))
+                       (else (make-begin (map expand-subexpr tail)))))
+                ((define define-syntax)
+                 (or (and (= 2 len) (sid? (car tail)))
+                     (and (= 1 len) (eq? builtin 'define))
+                     (error "Malformed definition: " sexp))
+                 ((get-dk sexp) builtin sexp id-n env store loc-n))
+                (else ((get-ek sexp) (handle-expr-builtin))))))))
     (define (handle-combination output)
       (ek (if (and (pair? output) (eq? 'lambda (car output))
-		   (null? (cadr output)) (null? (cdr sexp)))
-	      ;; simplifies ((lambda () <expr>)) to <expr>
-	      (caddr output)
-	      (cons output (map expand-subexpr (cdr sexp))))))
+                   (null? (cadr output)) (null? (cdr sexp)))
+              ;; simplifies ((lambda () <expr>)) to <expr>
+              (caddr output)
+              (cons output (map expand-subexpr (cdr sexp))))))
     ;;(pretty-print `(expand-any/again ,sexp))
     (cond ((sid? sexp)
-	   (let ((val (lookup2 sexp env store)))
-	     (if (syntax? val)
-		 ((get-sk sexp) val sexp store loc-n)
-		 ((get-ek sexp) (if (code? val) (code-output val) val)))))
-	  ((null? sexp) (error "Null used as an expression or syntax: " sexp))
-	  ((list? sexp)
-	   (expand-any (car sexp) id-n env store loc-n #f
-	     (and ek handle-combination) handle-syntax-use #f #f))
-	  ((or (number? sexp) (boolean? sexp) (string? sexp) (char? sexp))
-	   ((get-ek sexp) sexp))
-	  (else (error (cond ((pair? sexp) "Improper list: ")
-			     ((vector? sexp) "Vector: ")
-			     (else "Non-S-Expression: "))
-		       sexp
-		       " used as an expression, syntax, or definition.")))))
+           (let ((val (lookup2 sexp env store)))
+             (if (syntax? val)
+                 ((get-sk sexp) val sexp store loc-n)
+                 ((get-ek sexp) (if (code? val) (code-output val) val)))))
+          ((null? sexp) (error "Null used as an expression or syntax: " sexp))
+          ((list? sexp)
+           (expand-any (car sexp) id-n env store loc-n #f
+                       (and ek handle-combination) handle-syntax-use #f #f))
+          ((or (number? sexp) (boolean? sexp) (string? sexp) (char? sexp))
+           ((get-ek sexp) sexp))
+          (else (error (cond ((pair? sexp) "Improper list: ")
+                             ((vector? sexp) "Vector: ")
+                             (else "Non-S-Expression: "))
+                       sexp
+                       " used as an expression, syntax, or definition.")))))
 
 ;; Expands an expression or syntax and returns (k val store loc-n).
 (define (expand-val sexp id-n env store loc-n k)
   (expand-any sexp id-n env store loc-n #f
-    (lambda (output) (k (make-code output) store loc-n))
-    (lambda (syn error-sexp store loc-n) (k syn store loc-n))
-    #f #f))
+              (lambda (output) (k (make-code output) store loc-n))
+              (lambda (syn error-sexp store loc-n) (k syn store loc-n))
+              #f #f))
 
 (define (expand-expr sexp id-n env store loc-n)
   (expand-any sexp id-n env store loc-n #f (lambda (x) x) #f #f #f))
@@ -941,71 +941,71 @@
   (define (expand-def sexp vds sds exprs id-n env store loc-n k ek)
     (define (dk builtin sexp id-n env store loc-n)
       (if (list2? sexp) ;; A (define <expression>) form.
-	  (if exprs
-	      (k vds sds (cons (cadr sexp) exprs) id-n env store loc-n)
-	      (error "Non-syntax definition in a syntax body: " sexp))
+          (if exprs
+              (k vds sds (cons (cadr sexp) exprs) id-n env store loc-n)
+              (error "Non-syntax definition in a syntax body: " sexp))
           (let* ((sid (cadr sexp))
-		 (id (sid-id sid))
-		 (env (extend-env env id loc-n)))
-	    (define (check def)
-	      (when (eqv? id (sid-id (cadr def)))
-		  (error "Duplicate internal definitions: "
-			 def " and: " sexp)))
-	    (begin
-	      (for-each check sds)
-	      (for-each check vds)
-	      (case builtin
-		((define-syntax)
-		 (k vds (cons sexp sds) exprs id-n env store (+ loc-n 1)))
-		((define)
-		 (or exprs
-		     (error "Variable definition in a syntax body: " sexp))
-		 (let* ((var (intloc->var loc-n sid))
-			(store (extend-store store loc-n var))
-			(loc-n (+ loc-n 1)))
-		   (k (cons sexp vds) sds exprs id-n env store loc-n))))))))
+                 (id (sid-id sid))
+                 (env (extend-env env id loc-n)))
+            (define (check def)
+              (when (eqv? id (sid-id (cadr def)))
+                (error "Duplicate internal definitions: "
+                       def " and: " sexp)))
+            (begin
+              (for-each check sds)
+              (for-each check vds)
+              (case builtin
+                ((define-syntax)
+                 (k vds (cons sexp sds) exprs id-n env store (+ loc-n 1)))
+                ((define)
+                 (or exprs
+                     (error "Variable definition in a syntax body: " sexp))
+                 (let* ((var (intloc->var loc-n sid))
+                        (store (extend-store store loc-n var))
+                        (loc-n (+ loc-n 1)))
+                   (k (cons sexp vds) sds exprs id-n env store loc-n))))))))
     (define (bk sexp id-n env store loc-n)
       (let loop ((sexps (cdr sexp)) (vds vds) (sds sds) (exprs exprs)
-		 (id-n id-n) (env env) (store store) (loc-n loc-n) (ek ek))
-	(if (null? sexps)
-	    (k vds sds exprs id-n env store loc-n)
-	    (expand-def (car sexps) vds sds exprs id-n env store loc-n
-	      (lambda (vds sds exprs id-n env store loc-n)
-		(loop (cdr sexps) vds sds exprs id-n env store loc-n #f))
-	      (and ek (lambda (out)
-			(define (expand-one sexp)
-			  (expand-expr sexp id-n env store loc-n))
-			(let ((rest (map expand-one (cdr sexps))))
-			  (ek (make-begin (cons out rest))))))))))
+                                    (id-n id-n) (env env) (store store) (loc-n loc-n) (ek ek))
+        (if (null? sexps)
+            (k vds sds exprs id-n env store loc-n)
+            (expand-def (car sexps) vds sds exprs id-n env store loc-n
+                        (lambda (vds sds exprs id-n env store loc-n)
+                          (loop (cdr sexps) vds sds exprs id-n env store loc-n #f))
+                        (and ek (lambda (out)
+                                  (define (expand-one sexp)
+                                    (expand-expr sexp id-n env store loc-n))
+                                  (let ((rest (map expand-one (cdr sexps))))
+                                    (ek (make-begin (cons out rest))))))))))
     (expand-any sexp id-n env store loc-n #f ek #f dk bk))
   (let loop ((first (car sexps)) (rest (cdr sexps))
-	     (vds '()) (sds '()) (exprs (and ek '()))
-	     (id-n id-n) (env env) (store store) (loc-n loc-n))
+                                 (vds '()) (sds '()) (exprs (and ek '()))
+                                 (id-n id-n) (env env) (store store) (loc-n loc-n))
     (define (finish-body boundary-exp-output)
       (expand-syntax-bindings (map cdr sds) id-n env env store loc-n
-	(lambda (store loc-n)
-	  (define (iexpand sexp) (expand-expr sexp id-n env store loc-n))
-	  (define (expand-vd vd)
-	    (list (lookup2 (cadr vd) env store) (iexpand (caddr vd))))
-	  (define (make-letrec bindings expr)
-	    (if (null? bindings) expr (list 'letrec bindings expr)))
-	  (if (and (null? rest) (null? vds) (not (pair? exprs)))
-	      (expand-any first id-n env store loc-n lsd? ek sk dk bk)
-	      (ek (make-letrec
-		    (map expand-vd (reverse vds))
-		    (let* ((body-exprs-output
-			    (if (null? rest)
-				(list (iexpand first))
-				(cons boundary-exp-output
-				      (map iexpand rest)))))
-		      (make-begin (append (map iexpand (reverse exprs))
-					  body-exprs-output)))))))))
+                              (lambda (store loc-n)
+                                (define (iexpand sexp) (expand-expr sexp id-n env store loc-n))
+                                (define (expand-vd vd)
+                                  (list (lookup2 (cadr vd) env store) (iexpand (caddr vd))))
+                                (define (make-letrec bindings expr)
+                                  (if (null? bindings) expr (list 'letrec bindings expr)))
+                                (if (and (null? rest) (null? vds) (not (pair? exprs)))
+                                    (expand-any first id-n env store loc-n lsd? ek sk dk bk)
+                                    (ek (make-letrec
+                                         (map expand-vd (reverse vds))
+                                         (let* ((body-exprs-output
+                                                 (if (null? rest)
+                                                     (list (iexpand first))
+                                                     (cons boundary-exp-output
+                                                           (map iexpand rest)))))
+                                           (make-begin (append (map iexpand (reverse exprs))
+                                                               body-exprs-output)))))))))
     (if (null? rest)
-	(finish-body #f)
-	(expand-def first vds sds exprs id-n env store loc-n
-	  (lambda (vds sds exprs id-n env store loc-n)
-	    (loop (car rest) (cdr rest) vds sds exprs id-n env store loc-n))
-	  (and ek finish-body)))))
+        (finish-body #f)
+        (expand-def first vds sds exprs id-n env store loc-n
+                    (lambda (vds sds exprs id-n env store loc-n)
+                      (loop (car rest) (cdr rest) vds sds exprs id-n env store loc-n))
+                    (and ek finish-body)))))
 
 
 ;; (returns (k outputs store loc-n))
@@ -1014,34 +1014,34 @@
     (k (reverse acc) store loc-n))
   ;; expand adds stuff to acc and returns (k store loc-n acc)
   (let expand ((sexps (wrap-vecs forms)) (id-n 0) (env empty-env)
-	       (store store) (loc-n loc-n) (acc '()) (k finalize))
+                                         (store store) (loc-n loc-n) (acc '()) (k finalize))
     (if (null? sexps)
-	(k store loc-n acc)
-	(let ((rest (cdr sexps)))
-	  (define (ek output)
-	    (expand rest id-n env store loc-n (cons output acc) k))
-	  (define (dk builtin sexp id-n* env* store loc-n)
-	    (if (list2? sexp) ;; A (define <expression>) form.
-		(ek (expand-expr (cadr sexp) id-n* env* store loc-n))
-	        (let* ((tail (cdr sexp))
-		       (sid (car tail))
-		       (loc (sid-location sid))
-		       (init (cadr tail)))
-		  (if (eq? builtin 'define)
-		      (let* ((expr (expand-expr init id-n* env* store loc-n))
-			     (var (loc->var loc sid))
-			     (acc (cons (list 'define var expr) acc))
-			     (store (substitute-in-store store loc var)))
-			(expand rest id-n env store loc-n acc k))
-		      (expand-val init id-n* env* store loc-n
-			(lambda (val store loc-n)
-			  (let ((store (substitute-in-store store loc val)))
-			    (expand rest id-n env store loc-n acc k))))))))
-	  (define (bk sexp id-n* env* store loc-n)
-	    (expand (cdr sexp) id-n* env* store loc-n acc
-		    (lambda (store loc-n acc)
-		      (expand rest id-n env store loc-n acc k))))
-	  (expand-any (car sexps) id-n env store loc-n #t ek #f dk bk)))))
+        (k store loc-n acc)
+        (let ((rest (cdr sexps)))
+          (define (ek output)
+            (expand rest id-n env store loc-n (cons output acc) k))
+          (define (dk builtin sexp id-n* env* store loc-n)
+            (if (list2? sexp) ;; A (define <expression>) form.
+                (ek (expand-expr (cadr sexp) id-n* env* store loc-n))
+                (let* ((tail (cdr sexp))
+                       (sid (car tail))
+                       (loc (sid-location sid))
+                       (init (cadr tail)))
+                  (if (eq? builtin 'define)
+                      (let* ((expr (expand-expr init id-n* env* store loc-n))
+                             (var (loc->var loc sid))
+                             (acc (cons (list 'define var expr) acc))
+                             (store (substitute-in-store store loc var)))
+                        (expand rest id-n env store loc-n acc k))
+                      (expand-val init id-n* env* store loc-n
+                                  (lambda (val store loc-n)
+                                    (let ((store (substitute-in-store store loc val)))
+                                      (expand rest id-n env store loc-n acc k))))))))
+          (define (bk sexp id-n* env* store loc-n)
+            (expand (cdr sexp) id-n* env* store loc-n acc
+                    (lambda (store loc-n acc)
+                      (expand rest id-n env store loc-n acc k))))
+          (expand-any (car sexps) id-n env store loc-n #t ek #f dk bk)))))
 
 ;; Compile-syntax-rules:
 ;; This doesn't actually compile, it just does verification.
@@ -1058,146 +1058,146 @@
 ;;   template ellipsis closes no variables.
 (define (compile-syntax-rules synrules env)
   (define ellipsis-id (and (pair? (cddr synrules))
-			   (sid? (cadr synrules))
-			   (sid-id (cadr synrules))))
+                           (sid? (cadr synrules))
+                           (sid-id (cadr synrules))))
   (define (ellipsis? x)
     (and (sid? x)
-	 (if ellipsis-id
-	     (eqv? ellipsis-id (sid-id x))
-	     (eq? '... (lookup-sid x env)))))
+         (if ellipsis-id
+             (eqv? ellipsis-id (sid-id x))
+             (eq? '... (lookup-sid x env)))))
 
   (define (check-lit lit)
     (or (sid? lit)
-	(error "Non-id: " lit " in literals list of: " synrules))
+        (error "Non-id: " lit " in literals list of: " synrules))
     (when (ellipsis? lit)
-	(error "Ellipsis " lit " in literals list of: " synrules)))
+      (error "Ellipsis " lit " in literals list of: " synrules)))
 
   (let* ((rest (if ellipsis-id (cddr synrules) (cdr synrules)))
-	 (pat-literal-sids (car rest))
-	 (rules (cdr rest))
-	 (pat-literals
-	  (begin (or (list? pat-literal-sids)
-		     (error "Pattern literals list is not a list: "
-			    pat-literal-sids))
-		 (for-each check-lit pat-literal-sids)
-		 (map sid-id pat-literal-sids))))
+         (pat-literal-sids (car rest))
+         (rules (cdr rest))
+         (pat-literals
+          (begin (or (list? pat-literal-sids)
+                     (error "Pattern literals list is not a list: "
+                            pat-literal-sids))
+                 (for-each check-lit pat-literal-sids)
+                 (map sid-id pat-literal-sids))))
 
     (define (ellipsis-pair? x)
       (and (pair? x) (ellipsis? (car x))))
 
     (define (check-ellipses pat/tmpl in-template?)
       (define (bad-ellipsis x reason)
-	(error (string-append reason ": ")
-	       x
-	       (if in-template? " in template: " " in pattern: ")
-	       pat/tmpl))
+        (error (string-append reason ": ")
+               x
+               (if in-template? " in template: " " in pattern: ")
+               pat/tmpl))
 
       (define (multi-ellipsis-error x)
-	(bad-ellipsis x "List or vector pattern with multiple ellipses"))
+        (bad-ellipsis x "List or vector pattern with multiple ellipses"))
 
       (define (ellipsis/tail-error x)
-	(bad-ellipsis x "Improper list pattern with an ellipsis"))
+        (bad-ellipsis x "Improper list pattern with an ellipsis"))
 
       (define (ellipsis-follows x thing)
-	(bad-ellipsis x (string-append "Ellipsis following " thing)))
+        (bad-ellipsis x (string-append "Ellipsis following " thing)))
       
       (let ((x (if in-template? pat/tmpl (cdr pat/tmpl))))
-	(if in-template?
-	    (when (ellipsis? x)
-		(ellipsis-follows x "nothing"))
-	    (cond ((ellipsis? x)
-		   (ellipsis-follows pat/tmpl "a '.'"))
-		  ((ellipsis-pair? x)
-		   (ellipsis-follows pat/tmpl "the pattern keyword"))))
-	(let check ((x x))
-	  (cond ((pair? x)
-		 (when (ellipsis? (car x)) (ellipsis-follows x "a '('"))
-		 (check (car x))
-		 (when (ellipsis? (cdr x)) (ellipsis-follows x "a '.'"))
-		 (if (ellipsis-pair? (cdr x))
-		     (cond ((ellipsis? (cddr x))
-			    (ellipsis-follows (cdr x) "a '.'"))
-			   ((ellipsis-pair? (cddr x))
-			    (ellipsis-follows (cdr x) "an ellipsis"))
-			   (in-template? (check (cddr x)))
-			   (else (or (list? x) (ellipsis/tail-error x))
-				 (for-each (lambda (y)
-					     (when (ellipsis? y)
-						 (multi-ellipsis-error x))
-					     (check y))
-				  (cddr x))))
+        (if in-template?
+            (when (ellipsis? x)
+              (ellipsis-follows x "nothing"))
+            (cond ((ellipsis? x)
+                   (ellipsis-follows pat/tmpl "a '.'"))
+                  ((ellipsis-pair? x)
+                   (ellipsis-follows pat/tmpl "the pattern keyword"))))
+        (let check ((x x))
+          (cond ((pair? x)
+                 (when (ellipsis? (car x)) (ellipsis-follows x "a '('"))
+                 (check (car x))
+                 (when (ellipsis? (cdr x)) (ellipsis-follows x "a '.'"))
+                 (if (ellipsis-pair? (cdr x))
+                     (cond ((ellipsis? (cddr x))
+                            (ellipsis-follows (cdr x) "a '.'"))
+                           ((ellipsis-pair? (cddr x))
+                            (ellipsis-follows (cdr x) "an ellipsis"))
+                           (in-template? (check (cddr x)))
+                           (else (or (list? x) (ellipsis/tail-error x))
+                                 (for-each (lambda (y)
+                                             (when (ellipsis? y)
+                                               (multi-ellipsis-error x))
+                                             (check y))
+                                           (cddr x))))
 			
-		     (check (cdr x))))
-		((svector? x)
-		 (let ((elts (svector->list x)))
-		   (if (ellipsis-pair? elts)
-		       (ellipsis-follows x "a '#('")
-		       (check elts))))))))
+                     (check (cdr x))))
+                ((svector? x)
+                 (let ((elts (svector->list x)))
+                   (if (ellipsis-pair? elts)
+                       (ellipsis-follows x "a '#('")
+                       (check elts))))))))
 
     ;; Returns an alist: ((pat-var . depth) ...)
     (define (make-pat-env pat)
       (let collect ((x (cdr pat)) (depth 0) (l '()))
-	(cond ((sid? x)
-	       (let ((id (sid-id x)))
-		 (cond ((memv id pat-literals) l)
-		       ((assv id l)
-			(error "Duplicate pattern var: " x
-			       " in pattern: " pat))
-		       (else (acons id depth l)))))
-	      ((vector? x) (collect (svector->list x) depth l))
-	      ((pair? x)
-	       (if (ellipsis-pair? (cdr x))
-		   (collect (car x) (+ 1 depth) (collect (cddr x) depth l))
-		   (collect (car x) depth (collect (cdr x) depth l))))
-	      (else l))))
+        (cond ((sid? x)
+               (let ((id (sid-id x)))
+                 (cond ((memv id pat-literals) l)
+                       ((assv id l)
+                        (error "Duplicate pattern var: " x
+                               " in pattern: " pat))
+                       (else (acons id depth l)))))
+              ((vector? x) (collect (svector->list x) depth l))
+              ((pair? x)
+               (if (ellipsis-pair? (cdr x))
+                   (collect (car x) (+ 1 depth) (collect (cddr x) depth l))
+                   (collect (car x) depth (collect (cdr x) depth l))))
+              (else l))))
 
     ;; Checks var depths.
     (define (check-var-depths tmpl pat-env)
       (define (depth-error x)
-	(error "Pattern var used at bad depth: " x " in template: " tmpl))
+        (error "Pattern var used at bad depth: " x " in template: " tmpl))
       (define (close-error x)
-	(error "Template ellipsis closes no variables: " x
-	       " in template: " tmpl))
+        (error "Template ellipsis closes no variables: " x
+               " in template: " tmpl))
       ;; collect returns #t if any vars occurred at DEPTH
       (let collect ((x tmpl) (depth 0))
-	(cond ((sid? x)
-	       (let ((p (assv (sid-id x) pat-env)))
-		 (and p
-		      (let* ((pat-depth (cdr p))
-			     (same-depth? (= depth pat-depth)))
-			(when (and (positive? pat-depth) (not same-depth?))
-			    (depth-error x))
-			same-depth?))))
-	      ((vector? x) (collect (svector->list x) depth))
-	      ((pair? x)
-	       (let* ((ellip? (ellipsis-pair? (cdr x)))
-		      (car-closed? (collect (car x)
-					    (if ellip? (+ 1 depth) depth)))
-		      (cdr-closed? (collect ((if ellip? cddr cdr) x)
-					    depth)))
-		 (and ellip? (not car-closed?) (close-error x))
-		 (or car-closed? cdr-closed?)))
-	      (else #f))))
+        (cond ((sid? x)
+               (let ((p (assv (sid-id x) pat-env)))
+                 (and p
+                      (let* ((pat-depth (cdr p))
+                             (same-depth? (= depth pat-depth)))
+                        (when (and (positive? pat-depth) (not same-depth?))
+                          (depth-error x))
+                        same-depth?))))
+              ((vector? x) (collect (svector->list x) depth))
+              ((pair? x)
+               (let* ((ellip? (ellipsis-pair? (cdr x)))
+                      (car-closed? (collect (car x)
+                                            (if ellip? (+ 1 depth) depth)))
+                      (cdr-closed? (collect ((if ellip? cddr cdr) x)
+                                            depth)))
+                 (and ellip? (not car-closed?) (close-error x))
+                 (or car-closed? cdr-closed?)))
+              (else #f))))
 
 			 
     ;; Checks rule and returns a list of the template literal ids.
     (define (check-rule rule)
       (or (list2? rule) (error "Malformed syntax rule: " rule))
       (let ((pat (car rule)) (tmpl (cadr rule)))
-	(or (and (pair? pat) (sid? (car pat)))
-	    (error "Malformed pattern: " pat))
-	(check-ellipses pat #f)
-	(check-ellipses tmpl #t)
-	(let ((pat-env (make-pat-env pat)))
-	  (check-var-depths tmpl pat-env)
-	  (let collect ((x tmpl) (lits '()))
-	    (cond ((ellipsis? x) lits)
-		  ((sid? x) (if (assv (sid-id x) pat-env)
-				lits
-				(cons (sid-id x) lits)))
-		  ((vector? x) (collect (svector->list x) lits))
-		  ((pair? x) (collect (car x) (collect (cdr x) lits)))
-		  (else lits))))))
+        (or (and (pair? pat) (sid? (car pat)))
+            (error "Malformed pattern: " pat))
+        (check-ellipses pat #f)
+        (check-ellipses tmpl #t)
+        (let ((pat-env (make-pat-env pat)))
+          (check-var-depths tmpl pat-env)
+          (let collect ((x tmpl) (lits '()))
+            (cond ((ellipsis? x) lits)
+                  ((sid? x) (if (assv (sid-id x) pat-env)
+                                lits
+                                (cons (sid-id x) lits)))
+                  ((vector? x) (collect (svector->list x) lits))
+                  ((pair? x) (collect (car x) (collect (cdr x) lits)))
+                  (else lits))))))
 
     ;; Reduce-env: this optional hack cuts down on the clutter when
     ;; manually examining the store.  Returns an environment with only
@@ -1207,45 +1207,45 @@
     ;; (let ((... 1)) ((syntax-rules () ((_) ...)))) => 1.
     (define (reduce-env lits)
       (define (list-dots-ids x ids)
-	(cond ((sid? x) (if (eq? '... (sid-location x))
-			    (cons (sid-id x) ids)
-			    ids))
-	      ((vector? x) (list-dots-ids (svector->list x) ids))
-	      ((pair? x) (list-dots-ids (car x) (list-dots-ids (cdr x) ids)))
-	      (else ids)))
+        (cond ((sid? x) (if (eq? '... (sid-location x))
+                            (cons (sid-id x) ids)
+                            ids))
+              ((vector? x) (list-dots-ids (svector->list x) ids))
+              ((pair? x) (list-dots-ids (car x) (list-dots-ids (cdr x) ids)))
+              (else ids)))
       (let loop ((ids (if ellipsis-id lits (list-dots-ids rules lits)))
-		 (reduced-env empty-env))
-	(if (null? ids)
-	    reduced-env
-	    (loop (cdr ids)
-		  (let ((id (car ids)))
-		    (cond ((and (not (assv id reduced-env)) (assv id env))
-			   => (lambda (binding) (cons binding reduced-env)))
-			  (else reduced-env)))))))
+                 (reduced-env empty-env))
+        (if (null? ids)
+            reduced-env
+            (loop (cdr ids)
+                  (let ((id (car ids)))
+                    (cond ((and (not (assv id reduced-env)) (assv id env))
+                           => (lambda (binding) (cons binding reduced-env)))
+                          (else reduced-env)))))))
 
     (let* ((lits (apply append pat-literals (map check-rule rules)))
-	   (env (reduce-env lits)))
+           (env (reduce-env lits)))
       (make-transformer synrules env))))
 
 
 ;; returns (k sexp id-n)
 (define (apply-transformer transformer sexp id-n env k)
   (let* ((synrules (transformer-synrules transformer))
-	 (mac-env (transformer-env transformer))
-	 (ellipsis-id (and (sid? (cadr synrules))
-			   (sid-id (cadr synrules))))
-	 (rest (if ellipsis-id (cddr synrules) (cdr synrules)))
-	 (pat-literals (map sid-id (car rest)))
-	 (rules (cdr rest)))
+         (mac-env (transformer-env transformer))
+         (ellipsis-id (and (sid? (cadr synrules))
+                           (sid-id (cadr synrules))))
+         (rest (if ellipsis-id (cddr synrules) (cdr synrules)))
+         (pat-literals (map sid-id (car rest)))
+         (rules (cdr rest)))
 
     (define (pat-literal? id)     (memv id pat-literals))
     (define (not-pat-literal? id) (not (pat-literal? id)))
     (define (ellipsis-pair? x)    (and (pair? x) (ellipsis? (car x))))
     (define (ellipsis? x)
       (and (sid? x)
-	   (if ellipsis-id
-	       (eqv? ellipsis-id (sid-id x))
-	       (eq? '... (lookup-sid x mac-env)))))
+           (if ellipsis-id
+               (eqv? ellipsis-id (sid-id x))
+               (eq? '... (lookup-sid x mac-env)))))
 
     ;; List-ids returns a list of the non-ellipsis ids in a
     ;; pattern or template for which (pred? id) is true.  If
@@ -1253,123 +1253,123 @@
     ;; within the scope of at least one ellipsis.
     (define (list-ids x include-scalars pred?)
       (let collect ((x x) (inc include-scalars) (l '()))
-	(cond ((sid? x) (let ((id (sid-id x)))
-			  (if (and inc (pred? id)) (cons id l) l)))
-	      ((vector? x) (collect (svector->list x) inc l))
-	      ((pair? x)
-	       (if (ellipsis-pair? (cdr x))
-		   (collect (car x) #t (collect (cddr x) inc l))
-		   (collect (car x) inc (collect (cdr x) inc l))))
-	      (else l))))
+        (cond ((sid? x) (let ((id (sid-id x)))
+                          (if (and inc (pred? id)) (cons id l) l)))
+              ((vector? x) (collect (svector->list x) inc l))
+              ((pair? x)
+               (if (ellipsis-pair? (cdr x))
+                   (collect (car x) #t (collect (cddr x) inc l))
+                   (collect (car x) inc (collect (cdr x) inc l))))
+              (else l))))
     
     
     (define (matches? pat)
       (let match ((pat pat) (sexp (cdr sexp)))
-	(cond ((sid? pat)
-	       (or (not (pat-literal? (sid-id pat)))
-		   (and (sid? sexp)
-			(eqv? (lookup-sid pat mac-env)
-			      (lookup-sid sexp env)))))
-	      ((svector? pat)
-	       (and (svector? sexp)
-		    (match (svector->list pat) (svector->list sexp))))
-	      ((not (pair? pat)) (equal? pat sexp))
-	      ((ellipsis-pair? (cdr pat))
-	       (let skip ((p (cddr pat)) (s sexp))
-		 (if (pair? p)
-		     (and (pair? s) (skip (cdr p) (cdr s)))
-		     (let match-cars ((sexp sexp) (s s))
-		       (if (pair? s)
-			   (and (match (car pat) (car sexp))
-				(match-cars (cdr sexp) (cdr s)))
-			   (match (cddr pat) sexp))))))
-	      (else (and (pair? sexp)
-			 (match (car pat) (car sexp))
-			 (match (cdr pat) (cdr sexp)))))))
+        (cond ((sid? pat)
+               (or (not (pat-literal? (sid-id pat)))
+                   (and (sid? sexp)
+                        (eqv? (lookup-sid pat mac-env)
+                              (lookup-sid sexp env)))))
+              ((svector? pat)
+               (and (svector? sexp)
+                    (match (svector->list pat) (svector->list sexp))))
+              ((not (pair? pat)) (equal? pat sexp))
+              ((ellipsis-pair? (cdr pat))
+               (let skip ((p (cddr pat)) (s sexp))
+                 (if (pair? p)
+                     (and (pair? s) (skip (cdr p) (cdr s)))
+                     (let match-cars ((sexp sexp) (s s))
+                       (if (pair? s)
+                           (and (match (car pat) (car sexp))
+                                (match-cars (cdr sexp) (cdr s)))
+                           (match (cddr pat) sexp))))))
+              (else (and (pair? sexp)
+                         (match (car pat) (car sexp))
+                         (match (cdr pat) (cdr sexp)))))))
 
     ;; Returns an alist binding pattern variables to parts of the input.
     ;; An ellipsis variable is bound to a list (or a list of lists, etc.).
     (define (make-bindings pat)
       (let collect ((pat pat) (sexp (cdr sexp)) (bindings '()))
-	(cond ((and (sid? pat) (not (pat-literal? (sid-id pat))))
-	       (acons (sid-id pat) sexp bindings))
-	      ((svector? pat)
-	       (collect (svector->list pat) (svector->list sexp) bindings))
-	      ((not (pair? pat)) bindings)
-	      ((ellipsis-pair? (cdr pat))
-	       (let* ((tail-len (length (cddr pat)))
-		      (tail (list-tail sexp (- (length sexp) tail-len)))
-		      (matches (reverse (list-tail (reverse sexp) tail-len)))
-		      (vars (list-ids (car pat) #t not-pat-literal?)))
-		 (define (collect1 match)
-		   (map cdr (collect (car pat) match '())))
-		 (append (apply map list vars (map collect1 matches))
-			 (collect (cddr pat) tail bindings))))
-	      (else (collect (car pat) (car sexp)
-			     (collect (cdr pat) (cdr sexp) bindings))))))
+        (cond ((and (sid? pat) (not (pat-literal? (sid-id pat))))
+               (acons (sid-id pat) sexp bindings))
+              ((svector? pat)
+               (collect (svector->list pat) (svector->list sexp) bindings))
+              ((not (pair? pat)) bindings)
+              ((ellipsis-pair? (cdr pat))
+               (let* ((tail-len (length (cddr pat)))
+                      (tail (list-tail sexp (- (length sexp) tail-len)))
+                      (matches (reverse (list-tail (reverse sexp) tail-len)))
+                      (vars (list-ids (car pat) #t not-pat-literal?)))
+                 (define (collect1 match)
+                   (map cdr (collect (car pat) match '())))
+                 (append (apply map list vars (map collect1 matches))
+                         (collect (cddr pat) tail bindings))))
+              (else (collect (car pat) (car sexp)
+                             (collect (cdr pat) (cdr sexp) bindings))))))
 
     ;; Remove duplicates from a list, using eqv?.
     (define (remove-dups l)
       (let loop ((l l) (result '()))
-	(if (null? l)
-	    result
-	    (loop (cdr l)
-		  (let ((elt (car l)))
-		    (if (memv elt result) result (cons elt result)))))))
+        (if (null? l)
+            result
+            (loop (cdr l)
+                  (let ((elt (car l)))
+                    (if (memv elt result) result (cons elt result)))))))
 
     (define (expand-template pat tmpl top-bindings)
       (define tmpl-literals
-	(remove-dups (list-ids tmpl #t
-			       (lambda (id) (not (assv id top-bindings))))))
+        (remove-dups (list-ids tmpl #t
+                               (lambda (id) (not (assv id top-bindings))))))
       (define ellipsis-vars (list-ids pat #f not-pat-literal?))
       (define (list-ellipsis-vars subtmpl)
-	(list-ids subtmpl #t (lambda (id) (memv id ellipsis-vars))))
+        (list-ids subtmpl #t (lambda (id) (memv id ellipsis-vars))))
       (define (expand tmpl bindings)
-	(let expand-part ((tmpl tmpl))
-	  (cond
-	   ((sid? tmpl)
-	    (let ((id (sid-id tmpl)))
-	      (cond ((assv id bindings) => cdr)
-		    ((assv id top-bindings) => cdr)
-		    (else
-		     (let ((index (+ -1 (length (memv id tmpl-literals))))
-			   (location (lookup-sid tmpl mac-env)))
-		       (make-sid (sid-name tmpl) (+ id-n index) location))))))
-	   ((vector? tmpl)
-	    (list->svector (expand-part (svector->list tmpl))))
-	   ((pair? tmpl)
-	    (if (ellipsis-pair? (cdr tmpl))
-		(let ((vars-to-iterate (list-ellipsis-vars (car tmpl))))
-		  (define (lookup var) (cdr (assv var bindings)))
-		  (define (expand-using-vals . vals)
-		    (expand (car tmpl) (map cons vars-to-iterate vals)))
-		  (let ((val-lists (map lookup vars-to-iterate)))
-		    (if (or (null? (cdr val-lists))
-			    (apply = (map length val-lists)))
-			(append (apply map expand-using-vals val-lists)
-				(expand-part (cddr tmpl)))
-			(error "Unequal sequence lengths for pattern vars: "
-			       vars-to-iterate " in macro call: " sexp))))
-		(cons (expand-part (car tmpl)) (expand-part (cdr tmpl)))))
-	   (else tmpl))))
+        (let expand-part ((tmpl tmpl))
+          (cond
+            ((sid? tmpl)
+             (let ((id (sid-id tmpl)))
+               (cond ((assv id bindings) => cdr)
+                     ((assv id top-bindings) => cdr)
+                     (else
+                      (let ((index (+ -1 (length (memv id tmpl-literals))))
+                            (location (lookup-sid tmpl mac-env)))
+                        (make-sid (sid-name tmpl) (+ id-n index) location))))))
+            ((vector? tmpl)
+             (list->svector (expand-part (svector->list tmpl))))
+            ((pair? tmpl)
+             (if (ellipsis-pair? (cdr tmpl))
+                 (let ((vars-to-iterate (list-ellipsis-vars (car tmpl))))
+                   (define (lookup var) (cdr (assv var bindings)))
+                   (define (expand-using-vals . vals)
+                     (expand (car tmpl) (map cons vars-to-iterate vals)))
+                   (let ((val-lists (map lookup vars-to-iterate)))
+                     (if (or (null? (cdr val-lists))
+                             (apply = (map length val-lists)))
+                         (append (apply map expand-using-vals val-lists)
+                                 (expand-part (cddr tmpl)))
+                         (error "Unequal sequence lengths for pattern vars: "
+                                vars-to-iterate " in macro call: " sexp))))
+                 (cons (expand-part (car tmpl)) (expand-part (cdr tmpl)))))
+            (else tmpl))))
       (k (expand tmpl top-bindings) (+ id-n (length tmpl-literals))))
 
     (let loop ((rules rules))
       (if (null? rules)
-	  (error "No matching rule for macro use: " sexp)
-	  (let* ((rule (car rules)) (pat (cdar rule)) (tmpl (cadr rule)))
-	    (if (matches? pat)
-		(expand-template pat tmpl (make-bindings pat))
-		(loop (cdr rules))))))))
+          (error "No matching rule for macro use: " sexp)
+          (let* ((rule (car rules)) (pat (cdar rule)) (tmpl (cadr rule)))
+            (if (matches? pat)
+                (expand-template pat tmpl (make-bindings pat))
+                (loop (cdr rules))))))))
 
 (define builtins-store
   (let loop ((bs '(begin define define-syntax if lambda quote set! delay
-			 let-syntax syntax-rules))
-	     (store empty-store))
+                         let-syntax syntax-rules))
+             (store empty-store))
     (if (null? bs)
-	store
-	(loop (cdr bs)
-	      (extend-store store (car bs) (make-builtin (car bs)))))))
+        store
+        (loop (cdr bs)
+              (extend-store store (car bs) (make-builtin (car bs)))))))
 
 ;; null-prog is the preamble that defines all the standard macros that
 ;; are in the null-store.  (The "null-" name prefix was chosen to
@@ -1378,15 +1378,15 @@
 (define null-prog
   '((define-syntax letrec-syntax
       (let-syntax ((let-syntax let-syntax) (define-syntax define-syntax))
-	(syntax-rules ()
-	  ((_ ((kw init) ...) . body)
-	   (let-syntax ()
-	     (define-syntax kw init) ... (let-syntax () . body))))))
+        (syntax-rules ()
+          ((_ ((kw init) ...) . body)
+           (let-syntax ()
+             (define-syntax kw init) ... (let-syntax () . body))))))
     (let-syntax ()
       (define-syntax multi-define
-	(syntax-rules ()
-	  ((_ definer (id ...) (init ...))
-	   (begin (definer id init) ...))))
+        (syntax-rules ()
+          ((_ definer (id ...) (init ...))
+           (begin (definer id init) ...))))
       ;; Define-protected-macros defines a set of macros with a
       ;; private set of bindings for some keywords and variables.  If
       ;; any of the keywords or variables are later redefined at
@@ -1404,202 +1404,204 @@
       ;; change the status of the binding from keyword to variable).
       (define-syntax dummy (syntax-rules ()))
       (define-syntax define-protected-macros
-	(syntax-rules (define-syntax)
-	  ((_ let/letrec-syntax (saved-kw ...) (saved-var ...)
-	      (define-syntax kw syntax) ...)
-	   ((let-syntax ((saved-kw saved-kw) ... (saved-var dummy) ...)
-	      (let/letrec-syntax ((kw syntax) ...)
-		(syntax-rules ()
-		  ((_ top-level-kws top-level-vars)
-		   (begin
-		     (multi-define define (saved-var ...) top-level-vars)
-		     (multi-define define-syntax top-level-kws (kw ...)))))))
-	    (kw ...) (saved-var ...)))))
+        (syntax-rules (define-syntax)
+          ((_ let/letrec-syntax (saved-kw ...) (saved-var ...)
+              (define-syntax kw syntax) ...)
+           ((let-syntax ((saved-kw saved-kw) ... (saved-var dummy) ...)
+              (let/letrec-syntax ((kw syntax) ...)
+                                 (syntax-rules ()
+                                   ((_ top-level-kws top-level-vars)
+                                    (begin
+                                      (multi-define define (saved-var ...) top-level-vars)
+                                      (multi-define define-syntax top-level-kws (kw ...)))))))
+            (kw ...) (saved-var ...)))))
       (begin
-	;; Prototype-style define and lambda with internal definitions
-	;; are implemented in define-protected-macros with let-syntax
-	;; scope so that they can access the builtin define and lambda.
-	(define-protected-macros let-syntax (lambda define let-syntax) ()
-	  (define-syntax lambda
-	    (syntax-rules ()
-	      ((lambda args . body)
-	       (lambda args (let-syntax () . body)))))
-	  (define-syntax define
-	    (syntax-rules ()
-	      ((_ expr) (define expr))
-	      ((_ (var . args) . body)
-	       (define var (lambda args (let-syntax () . body))))
-	      ((_ var init) (define var init)))))
-	(define-protected-macros letrec-syntax
-	    (if lambda quote begin define) (eqv?)
-	  (define-syntax let
-	    (syntax-rules ()
-	      ((_ ((var init) ...) . body)
-	       ((lambda (var ...) . body)
-		init ...))
-	      ((_ name ((var init) ...) . body)
-	       ((letrec ((name (lambda (var ...) . body)))
-		  name)
-		init ...))))
-	  (define-syntax let*
-	    (syntax-rules ()
-	      ((_ () . body) (let () . body))
-	      ((let* ((var init) . bindings) . body)
-	       (let ((var init)) (let* bindings . body)))))
-	  (define-syntax letrec
-	    (syntax-rules ()
-	      ((_ ((var init) ...) . body)
-	       (let () (define var init) ... (let () . body))))) 
-	  (define-syntax do
-	    (let-syntax ((do-step (syntax-rules () ((_ x) x) ((_ x y) y))))
-	      (syntax-rules ()
-		((_ ((var init step ...) ...)
-		    (test expr ...)
-		    command ...)
-		 (let loop ((var init) ...)
-		   (if test
-		       (begin (if #f #f) expr ...)
-		       (begin command ...
-			      (loop (do-step var step ...) ...))))))))
-	  (define-syntax case
-	    (letrec-syntax
-		((compare
-		  (syntax-rules ()
-		    ((_ key ()) #f)
-		    ((_ key (datum . data))
-		     (if (eqv? key 'datum) #t (compare key data)))))
-		 (case
-		  (syntax-rules (else)
-		    ((case key) (if #f #f))
-		    ((case key (else result1 . results))
-		     (begin result1 . results))
-		    ((case key ((datum ...) result1 . results) . clauses)
-		     (if (compare key (datum ...))
-			 (begin result1 . results)
-			 (case key . clauses))))))
-	      (syntax-rules ()
-		((_ expr clause1 clause ...)
-		 (let ((key expr))
-		   (case key clause1 clause ...))))))
-	  (define-syntax cond
-	    (syntax-rules (else =>)
-	      ((_) (if #f #f))
-	      ((_ (else . exps)) (let () (begin . exps)))
-	      ((_ (x) . rest) (or x (cond . rest)))
-	      ((_ (x => proc) . rest)
-	       (let ((tmp x)) (cond (tmp (proc tmp)) . rest)))
-	      ((_ (x . exps) . rest)
-	       (if x (begin . exps) (cond . rest)))))
-	  (define-syntax and
-	    (syntax-rules ()
-	      ((_) #t)
-	      ((_ test) (let () test))
-	      ((_ test . tests) (if test (and . tests) #f))))
-	  (define-syntax or
-	    (syntax-rules ()
-	      ((_) #f)
-	      ((_ test) (let () test))
-	      ((_ test . tests) (let ((x test)) (if x x (or . tests))))))
-          (define-syntax define-syntax-rule
+        ;; Prototype-style define and lambda with internal definitions
+        ;; are implemented in define-protected-macros with let-syntax
+        ;; scope so that they can access the builtin define and lambda.
+        (define-protected-macros let-syntax (lambda define let-syntax) ()
+          (define-syntax lambda
             (syntax-rules ()
-              ((_ (f . args) x) (define-syntax f
-                                  (syntax-rules ()
-                                    ((_ . args) x)))))))
-	;; Quasiquote uses let-syntax scope so that it can recognize
-	;; nested uses of itself using a syntax-rules literal (that
-	;; is, the quasiquote binding that is visible in the
-	;; environment of the quasiquote transformer must be the same
-	;; binding that is visible where quasiquote is used).
-	(define-protected-macros let-syntax
-	    (lambda quote let) (cons append list vector list->vector map)
-	  (define-syntax quasiquote
-	    (let-syntax
-		((tail-preserving-syntax-rules
-		  (syntax-rules ()
-		    ((_ literals
-			((subpattern ...) (subtemplate ...))
-			...)
-		     (syntax-rules literals
-		       ((subpattern ... . tail) (subtemplate ... . tail))
-		       ...)))))
+              ((lambda args . body)
+               (lambda args (let-syntax () . body)))))
+          (define-syntax define
+            (syntax-rules ()
+              ((_ expr) (define expr))
+              ((_ (var . args) . body)
+               (define var (lambda args (let-syntax () . body))))
+              ((_ var init) (define var init)))))
+        (define-protected-macros letrec-syntax
+          (if lambda quote begin define) (eqv?)
+          (define-syntax let
+            (syntax-rules ()
+              ((_ ((var init) ...) . body)
+               ((lambda (var ...) . body)
+                init ...))
+              ((_ name ((var init) ...) . body)
+               ((letrec ((name (lambda (var ...) . body)))
+                  name)
+                init ...))))
+          (define-syntax let*
+            (syntax-rules ()
+              ((_ () . body) (let () . body))
+              ((let* ((var init) . bindings) . body)
+               (let ((var init)) (let* bindings . body)))))
+          (define-syntax letrec
+            (syntax-rules ()
+              ((_ ((var init) ...) . body)
+               (let () (define var init) ... (let () . body))))) 
+          (define-syntax do
+            (let-syntax ((do-step (syntax-rules () ((_ x) x) ((_ x y) y))))
+              (syntax-rules ()
+                ((_ ((var init step ...) ...)
+                    (test expr ...)
+                    command ...)
+                 (let loop ((var init) ...)
+                   (if test
+                       (begin (if #f #f) expr ...)
+                       (begin command ...
+                              (loop (do-step var step ...) ...))))))))
+          (define-syntax case
+            (letrec-syntax
+                ((compare
+                  (syntax-rules ()
+                    ((_ key ()) #f)
+                    ((_ key (datum . data))
+                     (if (eqv? key 'datum) #t (compare key data)))))
+                 (case
+                     (syntax-rules (else)
+                       ((case key) (if #f #f))
+                       ((case key (else result1 . results))
+                        (begin result1 . results))
+                       ((case key ((datum ...) result1 . results) . clauses)
+                        (if (compare key (datum ...))
+                            (begin result1 . results)
+                            (case key . clauses))))))
+              (syntax-rules ()
+                ((_ expr clause1 clause ...)
+                 (let ((key expr))
+                   (case key clause1 clause ...))))))
+          (define-syntax cond
+            (syntax-rules (else =>)
+              ((_) (if #f #f))
+              ((_ (else . exps)) (let () (begin . exps)))
+              ((_ (x) . rest) (or x (cond . rest)))
+              ((_ (x => proc) . rest)
+               (let ((tmp x)) (cond (tmp (proc tmp)) . rest)))
+              ((_ (x . exps) . rest)
+               (if x (begin . exps) (cond . rest)))))
+          (define-syntax and
+            (syntax-rules ()
+              ((_) #t)
+              ((_ test) (let () test))
+              ((_ test . tests) (if test (and . tests) #f))))
+          (define-syntax or
+            (syntax-rules ()
+              ((_) #f)
+              ((_ test) (let () test))
+              ((_ test . tests) (let ((x test)) (if x x (or . tests)))))))
+        ;; Quasiquote uses let-syntax scope so that it can recognize
+        ;; nested uses of itself using a syntax-rules literal (that
+        ;; is, the quasiquote binding that is visible in the
+        ;; environment of the quasiquote transformer must be the same
+        ;; binding that is visible where quasiquote is used).
+        (define-protected-macros let-syntax
+          (lambda quote let) (cons append list vector list->vector map)
+          (define-syntax quasiquote
+            (let-syntax
+                ((tail-preserving-syntax-rules
+                  (syntax-rules ()
+                    ((_ literals
+                        ((subpattern ...) (subtemplate ...))
+                        ...)
+                     (syntax-rules literals
+                       ((subpattern ... . tail) (subtemplate ... . tail))
+                       ...)))))
 
-	      (define-syntax qq
-		(tail-preserving-syntax-rules
-		    (unquote unquote-splicing quasiquote)
-		  ((_ ,x        ())      (do-next x))
-		  ((_ (,@x . y) ())      (qq y () make-splice x))
-		  ((_ `x         depth)  (qq x (depth) make-list 'quasiquote))
-		  ((_ ,x        (depth)) (qq x  depth  make-list 'unquote))
-		  ((_ (,x  . y) (depth)) (qq-nested-unquote (,x  . y) (depth)))
-		  ((_ (,@x . y) (depth)) (qq-nested-unquote (,@x . y) (depth)))
-		  ((_ ,@x        depth)  (unquote-splicing-error ,@x))
-		  ((_ (x . y)    depth)  (qq x depth qq-cdr y depth make-pair))
-		  ((_ #(x y ...) depth)  (qq (x) depth qq-cdr #(y ...) depth
-					     make-vector-splice))
-		  ((_ x          depth)  (do-next 'x))))
+              (define-syntax qq
+                (tail-preserving-syntax-rules
+                 (unquote unquote-splicing quasiquote)
+                 ((_ ,x        ())      (do-next x))
+                 ((_ (,@x . y) ())      (qq y () make-splice x))
+                 ((_ `x         depth)  (qq x (depth) make-list 'quasiquote))
+                 ((_ ,x        (depth)) (qq x  depth  make-list 'unquote))
+                 ((_ (,x  . y) (depth)) (qq-nested-unquote (,x  . y) (depth)))
+                 ((_ (,@x . y) (depth)) (qq-nested-unquote (,@x . y) (depth)))
+                 ((_ ,@x        depth)  (unquote-splicing-error ,@x))
+                 ((_ (x . y)    depth)  (qq x depth qq-cdr y depth make-pair))
+                 ((_ #(x y ...) depth)  (qq (x) depth qq-cdr #(y ...) depth
+                                            make-vector-splice))
+                 ((_ x          depth)  (do-next 'x))))
 
-	      (define-syntax do-next
-		(syntax-rules ()
-		  ((_ expr original-template) expr)
-		  ((_ expr next-macro . tail) (next-macro expr . tail))))
+              (define-syntax do-next
+                (syntax-rules ()
+                  ((_ expr original-template) expr)
+                  ((_ expr next-macro . tail) (next-macro expr . tail))))
 
-	      (define-syntax unquote-splicing-error
-		(syntax-rules ()
-		  ((_ ,@x stack ... original-template)
-		   (unquote-splicing-error (,@x in original-template)))))
+              (define-syntax unquote-splicing-error
+                (syntax-rules ()
+                  ((_ ,@x stack ... original-template)
+                   (unquote-splicing-error (,@x in original-template)))))
 	      
-	      (define-syntax qq-cdr
-		(tail-preserving-syntax-rules ()
-		  ((_ car cdr depth combiner) (qq cdr depth combiner car))))
+              (define-syntax qq-cdr
+                (tail-preserving-syntax-rules ()
+                                              ((_ car cdr depth combiner) (qq cdr depth combiner car))))
 	      
-	      (define-syntax qq-nested-unquote
-		(tail-preserving-syntax-rules ()
-		  ((_ ((sym x) . y) (depth))
-		   (qq (x) depth make-map sym qq-cdr y (depth) make-splice))))
+              (define-syntax qq-nested-unquote
+                (tail-preserving-syntax-rules ()
+                                              ((_ ((sym x) . y) (depth))
+                                               (qq (x) depth make-map sym qq-cdr y (depth) make-splice))))
 	      
-	      (define-syntax make-map
-		(tail-preserving-syntax-rules (quote list map lambda)
-		  ((_ '(x) sym) (do-next '((sym x))))
-	          ((_ (list x) sym) (do-next (list (list 'sym x))))
-		  ((_ (map (lambda (x) y) z) sym)
-		   (do-next (map (lambda (x) (list 'sym y)) z)))
-		  ((_ expr sym)
-		   (do-next (map (lambda (x) (list 'sym x)) expr)))))
+              (define-syntax make-map
+                (tail-preserving-syntax-rules (quote list map lambda)
+                                              ((_ '(x) sym) (do-next '((sym x))))
+                                              ((_ (list x) sym) (do-next (list (list 'sym x))))
+                                              ((_ (map (lambda (x) y) z) sym)
+                                               (do-next (map (lambda (x) (list 'sym y)) z)))
+                                              ((_ expr sym)
+                                               (do-next (map (lambda (x) (list 'sym x)) expr)))))
 								     
-	      (define-syntax make-pair
-		(tail-preserving-syntax-rules (quote list)
-		  ((_ 'y 'x) (do-next '(x . y)))
-		  ((_ '() x) (do-next (list x)))
-		  ((_ (list . elts) x) (do-next (list x . elts)))
-		  ((_ y x) (do-next (cons x y)))))
+              (define-syntax make-pair
+                (tail-preserving-syntax-rules (quote list)
+                                              ((_ 'y 'x) (do-next '(x . y)))
+                                              ((_ '() x) (do-next (list x)))
+                                              ((_ (list . elts) x) (do-next (list x . elts)))
+                                              ((_ y x) (do-next (cons x y)))))
 						  
-	      (define-syntax make-list
-		(tail-preserving-syntax-rules (quote)
-		  ((_ y x) (make-pair '() y make-pair x))))
+              (define-syntax make-list
+                (tail-preserving-syntax-rules (quote)
+                                              ((_ y x) (make-pair '() y make-pair x))))
 							   
-	      (define-syntax make-splice
-		(tail-preserving-syntax-rules ()
-		  ((_ '() x) (do-next x))
-		  ((_ y x) (do-next (append x y)))))
+              (define-syntax make-splice
+                (tail-preserving-syntax-rules ()
+                                              ((_ '() x) (do-next x))
+                                              ((_ y x) (do-next (append x y)))))
 						    
-	      (define-syntax make-vector-splice
-		(tail-preserving-syntax-rules (quote list vector list->vector)
-		  ((_ '#(y ...) '(x))     (do-next '#(x y ...)))
-		  ((_ '#(y ...) (list x)) (do-next (vector x 'y ...)))
-		  ((_ '#()      x)        (do-next (list->vector x)))
-		  ((_ '#(y ...) x)        (do-next (list->vector
-						     (append x '(y ...)))))
-		  ((_ y '(x))             (make-vector-splice y (list 'x)))
-		  ((_ (vector y ...) (list x)) (do-next (vector x y ...)))
-		  ((_ (vector y ...) x)   (do-next (list->vector
-						     (append x (list y ...)))))
-		  ((_ (list->vector y) (list x)) (do-next (list->vector
-							    (cons x y))))
-		  ((_ (list->vector y) x) (do-next (list->vector
-						     (append x y))))))
+              (define-syntax make-vector-splice
+                (tail-preserving-syntax-rules (quote list vector list->vector)
+                                              ((_ '#(y ...) '(x))     (do-next '#(x y ...)))
+                                              ((_ '#(y ...) (list x)) (do-next (vector x 'y ...)))
+                                              ((_ '#()      x)        (do-next (list->vector x)))
+                                              ((_ '#(y ...) x)        (do-next (list->vector
+                                                                                (append x '(y ...)))))
+                                              ((_ y '(x))             (make-vector-splice y (list 'x)))
+                                              ((_ (vector y ...) (list x)) (do-next (vector x y ...)))
+                                              ((_ (vector y ...) x)   (do-next (list->vector
+                                                                                (append x (list y ...)))))
+                                              ((_ (list->vector y) (list x)) (do-next (list->vector
+                                                                                       (cons x y))))
+                                              ((_ (list->vector y) x) (do-next (list->vector
+                                                                                (append x y))))))
 							   
-	      (syntax-rules ()
-		((_ template) (let () (qq template () template)))))))))))
+              (syntax-rules ()
+                ((_ template) (let () (qq template () template)))))))))
+    
+    (define-syntax define-syntax-rule
+      (syntax-rules ()
+        ((_ (f . args) x) (define-syntax f
+                            (syntax-rules ()
+                              ((_ . args) x))))))
+    (define-syntax-rule (λ . xs) (lambda . xs))))
 
 (define null-stuff (expand-top-level-forms null-prog builtins-store 0 list))
 (define null-output (car null-stuff))
@@ -1608,16 +1610,16 @@
 
 (define (expand-program forms)
   (expand-top-level-forms forms null-store null-loc-n
-    (lambda (outputs store loc-n) (append null-output outputs))))
+                          (lambda (outputs store loc-n) (append null-output outputs))))
 
 ;; an mstore is a mutable store.
 (define (null-mstore) (cons null-store null-loc-n))
 
 (define-syntax-rule (expand-top-level-forms! forms mstore)
   (expand-top-level-forms forms (car mstore) (cdr mstore)
-    (lambda (outputs store loc-n)
-      (set! mstore (cons store loc-n))
-      outputs)))
+                          (lambda (outputs store loc-n)
+                            (set! mstore (cons store loc-n))
+                            outputs)))
 
 (define repl-mstore (null-mstore))
 
@@ -1638,19 +1640,19 @@
     (display "expander> ")
     (let ((form (read)))
       (when (not (eof-object? form))
-	  (begin
-	    (if (vector? form)
-		(let ((l (vector->list form)))
-		  (case (car l)
-		    ((dump) (pp (car repl-mstore)))
-		    ((show)
-		     (for-each (lambda (loc)
-				 (pp (assv loc (car repl-mstore))))
-			       (cdr l)))
-		    ((restart) (restart))))
-		(for-each pp (expand-top-level-forms! (list form)
-						      repl-mstore)))
-	    (repl)))))
+        (begin
+          (if (vector? form)
+              (let ((l (vector->list form)))
+                (case (car l)
+                  ((dump) (pp (car repl-mstore)))
+                  ((show)
+                   (for-each (lambda (loc)
+                               (pp (assv loc (car repl-mstore))))
+                             (cdr l)))
+                  ((restart) (restart))))
+              (for-each pp (expand-top-level-forms! (list form)
+                                                    repl-mstore)))
+          (repl)))))
   (begin
     (when (null? resume?) (restart))
     (repl)))
@@ -1667,27 +1669,27 @@
 
   (define (check-expander filename)
     (let* ((src (file->list filename))
-	   (out1 (begin (for-each eval src) (expand-program src))))
+           (out1 (begin (for-each eval src) (expand-program src))))
       (begin (for-each eval out1) (equal? out1 (expand-program src))))))
 
 ;; r2rs-style currying define.
 '(define-syntax define
    (let-syntax ((old-define define))
      (letrec-syntax
-	 ((new-define
-	   (syntax-rules ()
-	     ((_ (var-or-prototype . args) . body)
-	      (new-define var-or-prototype (lambda args . body)))
-	     ((_ var expr) (old-define var expr)))))
+         ((new-define
+           (syntax-rules ()
+             ((_ (var-or-prototype . args) . body)
+              (new-define var-or-prototype (lambda args . body)))
+             ((_ var expr) (old-define var expr)))))
        new-define)))
 
 '(define-syntax define
    (let-syntax ((old-define define))
      (define-syntax new-define
        (syntax-rules ()
-	 ((_ (var-or-prototype . args) . body)
-	  (new-define var-or-prototype (lambda args . body)))
-	 ((_ var expr) (old-define var expr))))
+         ((_ (var-or-prototype . args) . body)
+          (new-define var-or-prototype (lambda args . body)))
+         ((_ var expr) (old-define var expr))))
      new-define))
 
 '(let ((multiplier 2))
@@ -1801,80 +1803,80 @@
 ;; We're careful not to signal an error for cases like:
 ;; (call/cc (lambda (k) (letrec ((x (set! x (k 1)))) 2))) => 1
 '(define-syntax safe-letrec
-  (let-syntax ()
-    (define-syntax safe-letrec-with-alt-names
-      (syntax-rules ()
-	((safe-letrec-with-alt-names (var* ...) ((var init) ...) . body)
-	 (let ((var #f) ... (ready? #f))
-	   (define (set-em! var* ...)
-	     (set! var var*) ... (set! ready? #t))
-	   (define (var* new-val)
-	     (if ready? (set! var new-val) (letrec-set!-error 'var new-val)))
-	   ...
-	   (begin
-	     (let-syntax ((var (if ready? var (letrec-access-error 'var))) ...)
-	       (define-syntax new-set!
-		 (let-syntax ((set! set!))
-		   (syntax-rules no-ellipsis (var ...)
-		     ((new-set! var x) (var* x)) ...
-		     ((new-set! . other) (set! . other)))))
-	       (fluid-let-syntax ((set! new-set!))
-		 (set-em! init ...)))
-	     (let () . body))))))
-    (syntax-rules ()
-      ((safe-letrec ((var init) ...) . body)
-       ((syntax-rules no-ellipsis ()
-	  ((_ . args) (safe-letrec-with-alt-names (var ...) . args)))
-	((var init) ...) . body)))))
+   (let-syntax ()
+     (define-syntax safe-letrec-with-alt-names
+       (syntax-rules ()
+         ((safe-letrec-with-alt-names (var* ...) ((var init) ...) . body)
+          (let ((var #f) ... (ready? #f))
+            (define (set-em! var* ...)
+              (set! var var*) ... (set! ready? #t))
+            (define (var* new-val)
+              (if ready? (set! var new-val) (letrec-set!-error 'var new-val)))
+            ...
+            (begin
+              (let-syntax ((var (if ready? var (letrec-access-error 'var))) ...)
+                (define-syntax new-set!
+                  (let-syntax ((set! set!))
+                    (syntax-rules no-ellipsis (var ...)
+                      ((new-set! var x) (var* x)) ...
+                      ((new-set! . other) (set! . other)))))
+                (fluid-let-syntax ((set! new-set!))
+                  (set-em! init ...)))
+              (let () . body))))))
+     (syntax-rules ()
+       ((safe-letrec ((var init) ...) . body)
+        ((syntax-rules no-ellipsis ()
+           ((_ . args) (safe-letrec-with-alt-names (var ...) . args)))
+         ((var init) ...) . body)))))
 
 ;; Similarly, an error-checking letrec*.
 '(define-syntax safe-letrec*
-  (let-syntax ()
-    (define-syntax process-bindings
-      (syntax-rules ()
-	((process-bindings) #f)
-	((process-bindings binding ... (var init))
-	 (let ((ready? #f))
-	   (define (finish val) (set! var val) (set! ready? #t))
-	   (define (safe-setter new-val)
-	     (if ready? (set! var new-val) (letrec-set!-error 'var new-val)))
-	   (let-syntax ((var (if ready? var (letrec-access-error 'var))))
-	     (define-syntax new-set!
-	       (let-syntax ((set! set!))
-		 (syntax-rules no-ellipsis (var)
-		   ((new-set! var x) (safe-setter x))
-		   ((new-set! . other) (set! . other)))))
-	     (fluid-let-syntax ((set! new-set!))
-	       (process-bindings binding ...)
-	       (finish init)))))))
-    (syntax-rules ()
-      ((safe-letrec* ((var init) ...) . body)
-       (let ((var #f) ...)
-	 (process-bindings (var init) ...)
-	 (let () . body))))))
+   (let-syntax ()
+     (define-syntax process-bindings
+       (syntax-rules ()
+         ((process-bindings) #f)
+         ((process-bindings binding ... (var init))
+          (let ((ready? #f))
+            (define (finish val) (set! var val) (set! ready? #t))
+            (define (safe-setter new-val)
+              (if ready? (set! var new-val) (letrec-set!-error 'var new-val)))
+            (let-syntax ((var (if ready? var (letrec-access-error 'var))))
+              (define-syntax new-set!
+                (let-syntax ((set! set!))
+                  (syntax-rules no-ellipsis (var)
+                    ((new-set! var x) (safe-setter x))
+                    ((new-set! . other) (set! . other)))))
+              (fluid-let-syntax ((set! new-set!))
+                (process-bindings binding ...)
+                (finish init)))))))
+     (syntax-rules ()
+       ((safe-letrec* ((var init) ...) . body)
+        (let ((var #f) ...)
+          (process-bindings (var init) ...)
+          (let () . body))))))
 
 
 ;; If we wanted to simplify the primitive let-syntax by saying the
 ;; first argument must by (), then the full let-syntax could be
 ;; written this way:
 '(define-syntax let-syntax
-  (let-syntax ()
-    (define-syntax original-let-syntax let-syntax)
-    (define-syntax original-define-syntax define-syntax)
-    (define-syntax original-syntax-rules syntax-rules)
-    (define-syntax let-syntax-with-temps
-      (syntax-rules ()
-	((_ (temp ...) ((kw syn) ...) . body)
-	 (original-let-syntax ()
-	   (original-define-syntax temp syn) ...
-	   (original-let-syntax ()
-	     (original-define-syntax kw temp) ...
-	     (original-let-syntax () . body))))))
-    (syntax-rules ()
-      ((_ ((kw syn) ...) . body)
-       ((original-syntax-rules no-ellipsis ()
-	  ((_ . args) (let-syntax-with-temps (kw ...) . args)))
-	((kw syn) ...) . body)))))
+   (let-syntax ()
+     (define-syntax original-let-syntax let-syntax)
+     (define-syntax original-define-syntax define-syntax)
+     (define-syntax original-syntax-rules syntax-rules)
+     (define-syntax let-syntax-with-temps
+       (syntax-rules ()
+         ((_ (temp ...) ((kw syn) ...) . body)
+          (original-let-syntax ()
+                               (original-define-syntax temp syn) ...
+                               (original-let-syntax ()
+                                                    (original-define-syntax kw temp) ...
+                                                    (original-let-syntax () . body))))))
+     (syntax-rules ()
+       ((_ ((kw syn) ...) . body)
+        ((original-syntax-rules no-ellipsis ()
+                                ((_ . args) (let-syntax-with-temps (kw ...) . args)))
+         ((kw syn) ...) . body)))))
 
 
 ;; Example of how an error-checking letrec would be written if we
@@ -1887,17 +1889,17 @@
     ((_ ((var init) ...) . body)
      (let ((var #f) ... (ready? #f))
        (let-syntax
-	   ((var (if ready? var (letrec-access-error 'var))
-		 (syntax-rules ()
-		   ((set!_var expr)
-		    (let ((val expr))
-		      (if ready?
-			  (set! var val)
-			  (letrec-set!-error 'var val))))))
-	    ...)
-	 (let ((var (let ((tmp init)) (lambda () (set! var tmp))))
-	       ...)
-	   (var) ... (set! ready? #t)))
+           ((var (if ready? var (letrec-access-error 'var))
+                 (syntax-rules ()
+                   ((set!_var expr)
+                    (let ((val expr))
+                      (if ready?
+                          (set! var val)
+                          (letrec-set!-error 'var val))))))
+            ...)
+         (let ((var (let ((tmp init)) (lambda () (set! var tmp))))
+               ...)
+           (var) ... (set! ready? #t)))
        (let () . body)))))
 
 
