@@ -19,6 +19,13 @@ if
 quote
 symbol?
 eq?
+error
+begin
+void
+void?
+boolean?
+procedure?
+apply
 <CHAR>
 <NUMBER>
 <STRING>
