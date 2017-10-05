@@ -28,6 +28,8 @@ void : -> ...
 boolean?
 procedure?
 apply
+raise
+with-exception-handler
 <CHAR>
 <NUMBER>
 <STRING>

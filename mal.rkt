@@ -66,6 +66,8 @@
             [atom-get deref]
             [atom-set! reset!]
             [atom-map! swap!]
+            raise
+            with-exception-handler
             ))
 ;(define (id x) (hash-ref ns x))
 (define (id x) (newid x))
@@ -122,7 +124,20 @@
 (define pre
   '((def! error
       (fn* (& xs)
-           (throw xs)))
+           (throw (cons 'error xs))))
+    (def! raise
+      (fn* (x)
+           (throw (list 'raise x))))
+    (def! with-exception-handler
+      (fn* (handler thunk)
+           (try* (thunk)
+                 (catch* e (if (if (list? e)
+                               (if (not (empty? e))
+                                   (= (first e) 'raise)
+                                   false)
+                               false)
+                               (handler (first (rest e)))
+                               (throw e))))))
     (def! list->vector
       (fn* (xs)
            (if (list? xs)

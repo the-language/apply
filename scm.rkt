@@ -50,7 +50,10 @@
             error
             boolean?
             procedure?
-            apply))
+            apply
+            raise
+            with-exception-handler
+            ))
 ;(define (id x) (hash-ref ns x))
 (define (id x) (newid x))
 (define (newid x)
