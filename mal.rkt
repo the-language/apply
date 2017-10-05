@@ -76,7 +76,9 @@
 
 (define (EVAL x)
   (cond
+    [(eq? x 'host-language) "mal"]
     [(pair? x) (APPLY (car x) (cdr x))]
+    [(eq? x 'void) '(fn* () nil)]
     [(symbol? x) (id x)]
     [(eq? x #t) 'true]
     [(eq? x #f) 'false]

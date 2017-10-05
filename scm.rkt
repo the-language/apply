@@ -61,7 +61,9 @@
 
 (define (EVAL x)
   (cond
+    [(eq? x 'host-language) "scheme"]
     [(pair? x) (APPLY (car x) (cdr x))]
+    [(eq? x 'void) '(lambda () (if #f #f))]
     [(symbol? x) (id x)]
     [else x]))
 (define (APPLY f xs)
