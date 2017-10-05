@@ -60,7 +60,7 @@
 ;; atom
 ;; + atom?
 ;; + atom! : Any -> Atom
-;; + atom-map! : Atom -> (Any -> Any) -> Void
+;; + atom-map! : Atom -> (Any -> Any) -> Any
 ;; + atom-set! : Atom -> Any -> Void
 ;; + atom-get
 
@@ -280,13 +280,19 @@
            (λ ()
              body ...))]))
 
+     (define *gennum-counter* (atom! 0))
+     (define (gennum)
+       (atom-map! *gennum-counter* (λ (x) (+ x 1))))
+
      (define-record-type %call/cc-v
-       (%call/cc-v v)
+       (%call/cc-v id v)
        %call/cc-v?
-       (v %call/cc-v-v))
-     (define (call/cc p);Fix
-       (with-handlers ([%call/cc-v? %call/cc-v-v])
-         (p (λ (x) (raise (%call/cc-v x))))))
+       (v %call/cc-v-v)
+       (id %call/cc-id))
+     (define (call/cc p)
+       (let ([id (gennum)])
+         (with-handlers ([(λ (x) (and (%call/cc-v? x) (eq? (%call/cc-id x) id))) %call/cc-v-v])
+           (p (λ (x) (raise (%call/cc-v id x)))))))
      (define call-with-current-continuation call/cc)
      )))
 (define (c? x)
