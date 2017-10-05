@@ -48,7 +48,7 @@
                  [(null? xs) (error "vector-ref: index is out of range" v k)]
                  [(zero? x) (%car xs)]
                  [(< k 0) (error "vector-ref: isn't exact-nonnegative-integer?" v k)]
-                 [else (%vector-ref v k (%cdr xs) (- x 1))]))
+                 [else (%%vector-ref v k (%cdr xs) (- x 1))]))
              (define (pair? x) (and (%pair? x) (not (eq? (%car x) (vec)))))
              (define (%vector-length x)
                (if (%vector? x)
@@ -75,6 +75,8 @@
            (cons (car xs) (append (cdr xs) ys))))
      (define (list . xs)
        xs)
+     (define (list? xs)
+       (or (null? xs) (and (pair? xs) (list? (cdr xs)))))
      (define (map f xs)
        (if (null? xs)
            '()
@@ -151,7 +153,7 @@
 (define-syntax-rule (mkfs x ...) (make-hash (list (cons (quote x) x) ...)))
 (define fs
   (mkfs
-   + - * /))
+   + - * / < > <= >= =))
 (require racket/sandbox)
 (define evalp (make-evaluator	'racket))
 (define (EVAL x)

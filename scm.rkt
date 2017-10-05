@@ -34,6 +34,11 @@
             -
             *
             /
+            <
+            >
+            <=
+            >=
+            =
             number?
             char?
             string?
@@ -92,7 +97,7 @@
 (compiler c [] EVAL)
 
 (c '((define-record-type <pare>
-         (kons x y)
-         pare?
-         (x kar)
-         (y kdr))))
+       (kons x y)
+       pare?
+       (x kar)
+       (y kdr))))
