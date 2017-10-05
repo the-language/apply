@@ -13,9 +13,6 @@ local function add(x,y)return x+y end
 local function sub(x,y)return x-y end
 local function mul(x,y)return x*y end
 local function quo(x,y)return x/y end
-local function or2(x,y)return x or y end
-local function and2(x,y)return x and y end
-local function notf(x)return not x end
 local function is_null(x)return x==null end
 local function is_table(x)return type(x)=="table"end
 local function is_string(x)return type(x)=="string"end
@@ -35,6 +32,7 @@ local function list(...)
 	return r
 end
 local function is_list(x)return is_null(x)or(is_pair(x)and is_list(cdr(x)))end
+local function map(f,xs)if is_null(xs)then return null else return cons(f(car(xs)),map(f,cdr(xs)))end end
 local function char(x)return{chart,x}end
 local function is_char(x)return(is_table(x)and x[1]==chart)end
 local function vector(...)return{vectort,{...}}end
@@ -78,21 +76,11 @@ end
 local function atom(x)return{atomt,x}end
 local function is_atom(x)return(is_table(x)and x[1]==atomt)end
 local function atom_set(a,v)assert(is_atom(a))a[2]=v return void end
-local function atom_map(a,f)assert(is_atom(a))a[2]=f(a[2])return void end
+local function atom_map(a,f)assert(is_atom(a))a[2]=f(a[2])return a[2] end
 local function atom_get(a)assert(is_atom(a))return a[2]end
 local function eq(x,y)return x==y end
 local function gt(x,y)return x>y end
 local function lt(x,y)return x<y end
-local function gteq(x,y)return x>=y end
-local function lteq(x,y)return x<=y end
-local function is_promise(x)return(is_table(x)and x[1]==promiset)end
-local function force(x)
-	if x[3]==nil then
-		x[3]=x[2]()
-		x[2]=nil
-	end
-	return x[3]
-end
 local function display(x)
 	if x==null then
 		putstr("()")
@@ -144,7 +132,7 @@ local function display(x)
 			putstr(atom_get(x))
 			putstr(">")
 		elseif t==chart then
-			error("fix") -------------------------------------------Fix
+			putstr(x[2])
 		else
 			putstr("#<table")
 			for k,v in pairs(x) do
@@ -280,5 +268,15 @@ local function string2list(s)
 	end
 	return list(unpack(r))
 end
-local function readline()error()end
+local function vec2list(x)
+	assert(is_vector(x))
+	return list(unpack(x[2]))
+end
+local function list2vec(xs)
+	return apply(vector,xs)
+end
+local function veclen(x)
+	assert(is_vector(x))
+	return #x[2]
+end
 

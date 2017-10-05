@@ -40,3 +40,103 @@
 (define ns (newns
             [with-exception-handler withexceptionhandler]
             [raise raise]
+            [%+ add]
+            [%- sub]
+            [%* mul]
+            [%/ quo]
+            cons
+            [%car car]
+            [%cdr cdr]
+            [%pair? is_pair]
+            [null? is_null]
+            [%< lt]
+            [%> gt]
+            [%= eq]
+            [number? is_number]
+            [char? is_char]
+            [string? is_string]
+            [string->list string2list]
+            [symbol? is_symbol]
+            [eq? equal]
+            [equal? equal]
+            [%vector->list vec2list]
+            [list->vector list2vec]
+            vector
+            [%vector? is_vector]
+            [%vector-length veclen]
+            [%vector-ref vector_ref]
+            [atom? is_atom]
+            [atom! atom]
+            [atom-map! atom_map]
+            [atom-set! atom_set]
+            [atom-get atom_get]
+            [void voidf]
+            displayln))
+
+(define (id x) (newid x))
+(define (newid x)
+  (hash-ref!
+   ns
+   (λ ()
+     (symbol->string
+      (gensym
+       (list->string
+        (map
+         (λ (x) (if (or (char-alphabetic? x) (char-numeric? x)) x #\_))
+         (string->list (symbol->string x)))))))))
+
+(define ++ string-append)
+(define-syntax-rule (exp x ...)
+  (++ "(" x ... ")"))
+(define (function xs . vs)
+  (exp "function(" (apply %function xs) ")"
+       (apply ++ vs) "\nend"))
+(define (function... xs rest . vs)
+  (exp "function(" (apply %function (append xs (list "..."))) ")"
+       "local " rest "=list(...)\n"
+       (apply ++ vs) "\nend"))
+(define %function
+  (case-lambda
+    [() ""]
+    [(a . xs) (++ a (apply %%function xs))]))
+(define %%function
+  (case-lambda
+    [(a) a]
+    [(a . xs) (++ a "," (apply %%function xs))]))
+(define-syntax-rule (var x)
+  (++ "local " x "\n"))
+(define-syntax-rule (var-set x v)
+  (++ x "=" v "\n"))
+(define-syntax-rule (return x)
+  (++ "return " x "\n"))
+(define-syntax-rule (cmd-if b x y)
+  (++ "if " b " then\n"
+      x
+      "\nelse\n"
+      y
+      "\nend\n"))
+(define-syntax-rule (cmd-apply f x ...)
+  (++ f "(" (%%function x ...) ")"))
+(define-syntax-rule (cmd-eval x)
+  (++ "ig(" x ")"))
+(define (block . xs)
+  (cmd-apply (apply function (cons '() xs))))
+
+(define (EVAL x)
+  (cond
+    [(eq? x 'host-language) "\"lua\""]
+    [(pair? x) (APPLY (car x) (cdr x))]
+    [(symbol? x) (id x)]
+    [else (QUOTE x)]))
+(define (APPLY f xs)
+  (cond
+    [(eq? f 'void) "void"]
+    [(eq? f '%if)
+     (block
+      (cmd-if (EVAL (first xs))
+              (return (EVAL (second xs)))
+              (return (EVAL (third xs)))))]
+    [(eq? f 'lambda)
+
+(compiler c [ffi atom vector list display]
+          
