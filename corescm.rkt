@@ -243,7 +243,7 @@
            (error "vector-ref: isn't vector?" x)))
 
      (define-record-type delay-v
-       (%delay-v f)
+       (%delay-v lazy)
        promise?
        (lazy %lazydelay-vv))
      (define-syntax-rule (delay x) (%delay-v (lambda () x)))
@@ -267,6 +267,27 @@
      ,@(if (set-member? feature 'ffi)
            '()
            '((define-syntax-rule (ffi x) (error "ffi: doesn't support" (quote x)))))
+
+     (define-syntax with-handlers
+       (syntax-rules ()
+         [(_ () body ...) (begin body ...)]
+         [(_ ([pred-expr handler-expr] ph ...) body ...)
+          (call-with-exception-handler
+           (λ (e)
+             (if (pred-expr e)
+                 (handler-expr e)
+                 (with-handlers (ph ...) (raise e))))
+           (λ ()
+             body ...))]))
+
+     (define-record-type %call/cc-v
+       (%call/cc-v v)
+       %call/cc-v?
+       (v %call/cc-v-v))
+     (define (call/cc p)
+       (with-handlers ([%call/cc-v? %call/cc-v-v])
+         (p (λ (x) (raise (%call/cc-v x))))))
+     (define call-with-current-continuation call/cc)
      )))
 (define (c? x)
   (not
