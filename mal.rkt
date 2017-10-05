@@ -68,7 +68,7 @@
                          (error "APPLY: lambda" f xs))]
     [(eq? f 'begin) (BEGIN xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
-    [(eq? f 'void) '(if #f #f)]
+    [(eq? f 'void) '(if false false)]
     [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
     [else (cons (EVAL f) (map EVAL xs))]))
 (define (QUOTE x) (list 'quote x))
@@ -77,23 +77,19 @@
     [(null? xs) (EVAL '(void))]
     [(null? (cdr xs)) (EVAL (car xs))]
     [else
-     (cons 'begin
+     (cons 'do
            (map (λ (x)
                   (if (and (pair? x) (eq? (car x) 'define))
                       (if (null? (cdddr x))
-                          `(define ,(newid (cadr x)) ,(EVAL (caddr x)))
+                          `(def! ,(newid (cadr x)) ,(EVAL (caddr x)))
                           (error "BEGIN: define" xs))
                       (EVAL x))) xs))]))
 (define (LAMBDA args x)
-  `(lambda ,(%LAMBDA args)
-     ,(EVAL x)))
-(define (%LAMBDA x)
-  (cond
-    [(null? x) '()]
-    [(symbol? x) (newid x)]
-    [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
-    [else (error "%LAMBDA" x)]))
-
+  (let loop ([a '()] [args args])
+    (cond
+      [(null? args) `(fn* ,a ,(EVAL x))]
+      [(symbol? args) (loop (append a (list '& (newid args))) '())]
+      [else (loop (append a (list (newid (car args)))) (cdr args))])))
 (compiler c [number] EVAL)
 
 (c '((define-record-type <pare>
