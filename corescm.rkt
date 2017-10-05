@@ -15,7 +15,16 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (provide run compiler)
 (require "alexpander.rkt")
-(define (init fe)
+;; feature:
+
+;; vector
+;; %vector->list
+;; list->vector
+;; vector
+;; %vector?
+;; %vector-length
+;; %vector-ref
+(define (init feature)
   (set-null-prog!
    '((define-syntax define-syntax-rule
        (syntax-rules ()
@@ -29,11 +38,13 @@
            ((_ var init) (def var init))
            ((_ (var . args) . body) (define var (λ args . body))))))
      )
-   `(,@(if (set-member? fe 'vector)
+   `(,@(if (set-member? feature 'vector)
            '((define pair? %pair?)
              (define car %car)
              (define cdr %cdr)
-             (define (%vector-length-0? x) (zero? (%vecotr-length x))))
+             (define (%vector-length-0? x) (zero? (%vecotr-length x)))
+             (define (vector->list x) (if (vector? x) (%vector->list x) (error "vector->list: isn't vector?" x)))
+             )
            '((define-syntax-rule (vec) '_vector_)
              (define (vector . xs) (cons (vec) xs))
              (define (%vector? x) (and (%pair? x) (eq? (%car x) (vec))))
