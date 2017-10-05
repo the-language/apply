@@ -121,7 +121,9 @@
                (error "list->vector: isn't list?" xs))))
     (def! vector->list
       (fn* (xs)
-           (apply list xs)))
+           (if (vvector? xs)
+               (apply list xs)
+               (error "vector->list: isn't vector?" xs))))
     (def! pcons
       (fn* (x xs)
            (if (or (list? xs) (vector? xs))
