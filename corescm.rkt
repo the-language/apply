@@ -152,6 +152,8 @@
 (define fs
   (mkfs
    + - * /))
+(require racket/sandbox)
+(define evalp (make-evaluator	'racket))
 (define (EVAL x)
   (cond
     [(pair? x) (APPLY (car x) (cdr x))]
@@ -162,6 +164,7 @@
     [(eq? f 'begin) (BEGIN xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
     [(eq? f 'quote) (if (null? (cdr xs)) (car xs) (error "APPLY: quote" f xs))]
+    [(eq? f '_EVAL_) (if (null? (cdr xs)) (evalp (car xs)) (error "APPLY: _EVAL_" f xs))]
     [else
      (let ([nxs (map EVAL xs)])
        (if (and (hash-has-key? fs f) (andmap c? nxs))
