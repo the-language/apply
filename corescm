@@ -1,10 +1,10 @@
-lambda
+lambda # (list 'lambda x y)
 cons
 %car
 %cdr
 %pair?
 null?
-define
+define # (define <SYMBOL> x)
 %+ : Num -> Num -> Num
 %- : Num -> Num -> Num
 %* : Num -> Num -> Num

@@ -136,7 +136,7 @@
       (cmd-if (EVAL (first xs))
               (return (EVAL (second xs)))
               (return (EVAL (third xs)))))]
-    [(eq? f 'lambda)
+    [(eq? f 'lambda) (LAMBDA (first xs) (second xs))]
 
 (compiler c [ffi atom vector list display]
           
