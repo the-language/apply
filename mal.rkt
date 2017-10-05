@@ -108,7 +108,10 @@
        (y kdr))))
 
 (define pre
-  '((def! list->vector
+  '((def! error
+      (fn* (& xs)
+           (throw xs)))
+    (def! list->vector
       (fn* (xs)
            (apply vector xs)))
     (def! vector->list
