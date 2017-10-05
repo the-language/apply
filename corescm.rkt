@@ -42,6 +42,10 @@
 ;; - %>
 ;; - %=
 
+;; if
+;; - %if
+;; + if
+
 (define (init feature)
   (set-null-prog!
    '((define-syntax define-syntax-rule
@@ -56,10 +60,12 @@
            ((_ var init) (def var init))
            ((_ (var . args) . body) (define var (λ args . body))))))
      )
-   `((define-syntax if
-       (syntax-rules ()
-         [(_ c x) (if c x (void))]
-         [(_ c x y) (%if c x y)]))
+   `(,(if (set-member? feature 'if)
+          '()
+          '(define-syntax if
+             (syntax-rules ()
+               [(_ c x) (if c x (void))]
+               [(_ c x y) (%if c x y)])))
      ,@(if (set-member? feature 'vector)
            '((define pair? %pair?)
              (define car %car)
