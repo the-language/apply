@@ -66,7 +66,7 @@
     [(eq? f 'void) '(if #f #f)]
     [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
     [else (cons (EVAL f) (map EVAL xs))]))
-(define (QUOTE x) x)
+(define (QUOTE x) (list 'quote x))
 (define (BEGIN xs)
   (cond
     [(null? xs) (EVAL '(void))]

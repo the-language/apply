@@ -163,8 +163,7 @@
     [(eq? f 'lambda) `(lambda ,(car xs) ,(BEGIN (cdr xs)))]
     [(eq? f 'begin) (BEGIN xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
-    [(eq? f 'quote) (if (null? (cdr xs)) (car xs) (error "APPLY: quote" f xs))]
-    [(eq? f '_EVAL_) (if (null? (cdr xs)) (evalp (car xs)) (error "APPLY: _EVAL_" f xs))]
+    [(eq? f 'quote) (if (null? (cdr xs)) (list 'quote (car xs)) (error "APPLY: quote" f xs))]
     [else
      (let ([nxs (map EVAL xs)])
        (if (and (hash-has-key? fs f) (andmap c? nxs))
@@ -193,6 +192,48 @@
              '())))))
 (define (run fe x)
   (init fe)
-  (EVAL (cons 'begin (expand-program x))))
+  (EVAL (cons 'begin (expand-program (runmacro (append pre x))))))
 (define-syntax-rule (compiler name [fe ...] evalf)
   (define (name p) (evalf (run (set (quote fe) ...) p))))
+
+(define (runmacro xs)
+  (let ([x (EVALmacro (cons 'begin xs))])
+    (if (and (pair? x) (eq? (car x) 'begin))
+        (cdr x)
+        (list x))))
+(define ms (make-hash))
+(define (EVALmacro x)
+  (let ([x (macroexpand x)])
+    (cond
+      [(pair? x) (APPLYmacro (car x) (cdr x))]
+      [else x])))
+(define (macroexpand x)
+  (cond
+    [(and (pair? x) (eq? (car x) 'defmacro))
+     (hash-set! ms (second x) (evalp (third x)))
+     '(void)]
+    [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand (apply mf (cdr x))))]
+    [else x]))
+(define (APPLYmacro f xs)
+  (cond
+    [(eq? f 'lambda) `(lambda ,(car xs) ,(BEGINmacro (cdr xs)))]
+    [(eq? f 'begin) (BEGINmacro xs)]
+    [(eq? f 'define) (error "APPLYmacro: define" f xs)]
+    [(eq? f 'quote) (if (null? (cdr xs)) (list 'quote (car xs)) (error "APPLYmacro: quote" f xs))]
+    [else (cons (EVALmacro f) (map EVALmacro xs))]))
+(define (BEGINmacro xs)
+  (if (null? (cdr xs))
+      (EVALmacro (car xs))
+      (cons
+       'begin
+       (map
+        (λ (x)
+          (if (and (pair? x) (eq? (car x) 'define))
+              (if (null? (cdddr x))
+                  `(define ,(cadr x) ,(EVALmacro (caddr x)))
+                  (error "BEGINmacro: define" xs))
+              (EVALmacro x)))
+        xs))))
+(define pre
+  '(
+    ))
