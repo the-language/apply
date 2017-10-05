@@ -78,7 +78,7 @@
            '((define pair? %pair?)
              (define car %car)
              (define cdr %cdr)
-             (define (%vector-length-0? x) (zero? (%vecotr-length x)))
+             (define (%vector-length-0? x) (zero? (%vector-length x)))
              (define (vector->list x) (if (vector? x) (%vector->list x) (error "vector->list: isn't vector?" x)))
              )
            '((define-syntax-rule (vec) '_vector_)

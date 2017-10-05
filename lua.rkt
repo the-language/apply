@@ -13,3 +13,27 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+;(provide c)
+(require "corescm.rkt")
+(define-syntax %newns
+  (syntax-rules ()
+    [(_) '()]
+    [(_ [r s] x ...) (cons (cons (quote r) (symbol->string (quote s))) (%newns x ...))]
+    [(_ r x ...) (cons (cons (quote r) (symbol->string (quote r))) (%newns x ...))]))
+(define-syntax-rule (newns x ...)
+  (make-hasheq
+   (%newns x ...)))
+(define-syntax-rule (includes f)
+  (include/reader
+   f
+   (λ (source-name in)
+     (let ([x (read-line in)])
+       (if (eof-object? x)
+           eof
+           (let loop ([s x])
+             (let ([x (read-line in)])
+               (if (eof-object? x)
+                   (datum->syntax #f s)
+                   (loop (string-append s "\n" x))))))))))
+(define pre (includes "lua.lua"))
+(define ns (newns

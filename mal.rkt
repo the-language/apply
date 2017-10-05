@@ -139,7 +139,7 @@
                    false)
                false)))
     (def! vvector?
-      (fn* (v)
+      (fn* (x)
            (if (vector? x)
                (not (jpair? x))
                false)))
