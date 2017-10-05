@@ -43,7 +43,7 @@
             char?
             string?
             string->list
-            if
+            [%if if]
             quote
             symbol?
             eq?

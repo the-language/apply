@@ -16,7 +16,7 @@ number?（可能是float）
 char?
 string?
 string->list
-if
+%if : Bool -> Any -> Any -> Any
 #t
 #f
 quote
@@ -24,7 +24,7 @@ symbol?
 eq?
 error
 begin
-void
+void : -> ...
 boolean?
 procedure?
 apply

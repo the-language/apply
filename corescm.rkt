@@ -56,7 +56,11 @@
            ((_ var init) (def var init))
            ((_ (var . args) . body) (define var (λ args . body))))))
      )
-   `(,@(if (set-member? feature 'vector)
+   `((define-syntax if
+       (syntax-rules ()
+         [(_ c x) (if c x (void))]
+         [(_ c x y) (%if c x y)]))
+     ,@(if (set-member? feature 'vector)
            '((define pair? %pair?)
              (define car %car)
              (define cdr %cdr)
