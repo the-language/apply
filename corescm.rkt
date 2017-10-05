@@ -235,5 +235,13 @@
               (EVALmacro x)))
         xs))))
 (define pre
-  '(
+  '((defmacro struct
+      (λ (name fs)
+        `(define-record-type ,name
+           (,name ,@fs)
+           ,(string->symbol (string-append (symbol->string name) "?"))
+           ,@(map
+              (λ (f)
+                (list f (string->symbol (string-append (symbol->string name) "-" (symbol->string f)))))
+              fs))))
     ))
