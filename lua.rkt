@@ -38,3 +38,5 @@
 (define pre (includes "lua.lua"))
 
 (define ns (newns
+            [with-exception-handler withexceptionhandler]
+            [raise raise]

@@ -4,6 +4,7 @@ local vectort={}
 local symbolt={}
 local void={}
 local atomt={}
+local chart={}
 local promiset={}
 local linebuff=""
 local function newline()print(linebuff)linebuff=""end
@@ -34,6 +35,8 @@ local function list(...)
 	return r
 end
 local function is_list(x)return is_null(x)or(is_pair(x)and is_list(cdr(x)))end
+local function char(x)return{chart,x}end
+local function is_char(x)return(is_table(x)and x[1]==chart)end
 local function vector(...)return{vectort,{...}}end
 local function is_vector(x)return(is_table(x)and x[1]==vectort)end
 local function vector_ref(x,n)
@@ -67,6 +70,8 @@ equal=function(x,y)
 		return x[2]==y[2]
 	elseif t==vectort then
 		return veceq(x[2],y[2])
+	elseif t==chart then
+		return x[2]==y[2]
 	end
 	return false
 end
@@ -138,6 +143,8 @@ local function display(x)
 			putstr("#<atom!")
 			putstr(atom_get(x))
 			putstr(">")
+		elseif t==chart then
+			error("fix") -------------------------------------------Fix
 		else
 			putstr("#<table")
 			for k,v in pairs(x) do
@@ -155,7 +162,7 @@ local function displayln(x)display(x)newline()end
 local errorv=nil
 local serr="SchemeError"
 local function raise(x)errorv=x error(serr)end
-local function spcall(x,f)
+local function withexceptionhandler(f,x)
 	local s,r=pcall(x)
 	if s then
 		return r
@@ -269,10 +276,9 @@ end
 local function string2list(s)
 	local r={}
 	for i=1,#s do
-		r[i]=str:sub(i,i)
+		r[i]=char(str:sub(i,i))
 	end
 	return list(unpack(r))
 end
-local function is_char(x)return is_string(x)and#x==1 end
 local function readline()error()end
 
