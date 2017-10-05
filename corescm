@@ -22,7 +22,6 @@ eq?
 error
 begin
 void
-void?
 boolean?
 procedure?
 apply
