@@ -147,6 +147,11 @@
       (function (map newid xs) (EVAL x))
       (let-values ([(h t) (ends xs)])
         (function... (map newid h) (newid t) (EVAL x)))))
+(define (ends xs)
+  (if (symbol? xs)
+      (values '() xs)
+      (let-values ([(h t) (ends (cdr xs))])
+        (values (cons (car xs) h) t))))
     
 
 (compiler c [ffi atom vector list display]
