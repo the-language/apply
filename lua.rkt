@@ -137,6 +137,17 @@
               (return (EVAL (second xs)))
               (return (EVAL (third xs)))))]
     [(eq? f 'lambda) (LAMBDA (first xs) (second xs))]
+    [(eq? f 'begin) (BEGIN xs)]
+    [(eq? f 'define) (error "APPLY: define" f xs)]
+    [(eq? f 'void) "void"]
+    [(eq? f 'quote) (QUOTE (first xs))]
+    [else (cmd-apply (EVAL f) (map EVAL xs))]))
+(define (LAMBDA xs x)
+  (if (list? xs)
+      (function (map newid xs) (EVAL x))
+      (let-values ([(h t) (ends xs)])
+        (function... (map newid h) (newid t) (EVAL x)))))
+    
 
 (compiler c [ffi atom vector list display]
           
