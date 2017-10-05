@@ -5,16 +5,13 @@ cons
 %pair?
 null?
 define
-+
--
-*
-/
-=
-<
->
-<=
->=
-=
+%+ : Num -> Num -> Num
+%- : Num -> Num -> Num
+%* : Num -> Num -> Num
+%/ : Num -> Num -> Num
+%< : Num -> Num -> Bool
+%> : Num -> Num -> Bool
+%= : Num -> Num -> Bool
 number?（可能是float）
 char?
 string?

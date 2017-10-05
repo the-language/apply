@@ -24,6 +24,17 @@
 ;; %vector?
 ;; %vector-length
 ;; %vector-ref
+
+;; number
+;; +
+;; -
+;; *
+;; /
+;; <
+;; >
+;; <=
+;; >=
+
 (define (init feature)
   (set-null-prog!
    '((define-syntax define-syntax-rule
@@ -79,8 +90,41 @@
                    (%cdr p)
                    (error "cdr: isn't pair?" p)))
              ))
+     ,@(if (set-member? feature 'number)
+           '()
+           '((define (+ . xs) (foldl %+ 0 xs))
+             (define (* . xs) (foldl %* 1 xs))
+             (define (- x . xs)
+               (if (null? xs)
+                   (%- 0 x)
+                   (foldl (λ (n x) (%- x n)) x xs)))
+             (define (/ x . xs)
+               (if (null? xs)
+                   (%/ 1 x)
+                   (foldl (λ (n x) (%/ x n)) x xs)))
+             (define (%<= x y) (or (%< x y) (%= x y)))
+             (define (%>= x y) (or (%> x y) (%= x y)))
+             (define-syntax-rule (%def<>= n f)
+               (begin
+                 (define (comt x y xs)
+                   (if (null? xs)
+                       (f x y)
+                       (and (f x y) (f y (car xs) (cdr xs)))))
+                 (define (f x y . xs) (comt x y xs))))
+             (%def<>= < %<)
+             (%def<>= > %>)
+             (%def<>= >= %>=)
+             (%def<>= <= %<=)
+             (%def<>= = %=)
+             ))
      (define (not x) (if x #f #t))
      (define (zero? x) (eq? x 0))
+     (define (positive? x) (> x 0))
+     (define (negative? x) (< x 0))
+     (define (%max x y) (if (> x y) x y))
+     (define (max x . xs) (foldl %max x xs))
+     (define (%min x y) (if (< x y) x y))
+     (define (min x . xs) (foldl %min x xs))
      (define (append xs ys)
        (if (null? xs)
            ys

@@ -94,7 +94,7 @@
     [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
     [else (error "%LAMBDA" x)]))
 
-(compiler c [] EVAL)
+(compiler c [number] EVAL)
 
 (c '((define-record-type <pare>
        (kons x y)
