@@ -1,8 +1,8 @@
 lambda
 cons
-car
-cdr
-pair?
+%car
+%cdr
+%pair?
 null?
 define
 +
