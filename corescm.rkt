@@ -49,6 +49,11 @@
 ;; equal
 ;; + equal?
 
+;; list
+;; + list?
+;; + list
+;; + map
+
 (define (init feature)
   (set-null-prog!
    '((define-syntax define-syntax-rule
@@ -79,7 +84,10 @@
            '((define-syntax-rule (vec) '_vector_)
              (define (vector . xs) (cons (vec) xs))
              (define (%vector? x) (and (%pair? x) (eq? (%car x) (vec))))
-             (define (list->vector xs) (cons (vec) xs))
+             (define (list->vector xs)
+               (if (list? xs)
+                   (cons (vec) xs)
+                   (error "list->vector: isn't list?" xs)))
              (define (vector->list x) (if (vector? x) (%cdr x) (error "vector->list: isn't vector?" x)))
              (define (%vector-ref v k)
                (cond
@@ -149,14 +157,16 @@
        (if (null? xs)
            ys
            (cons (car xs) (append (cdr xs) ys))))
-     (define (list . xs)
-       xs)
-     (define (list? xs)
-       (or (null? xs) (and (pair? xs) (list? (cdr xs)))))
-     (define (map f xs)
-       (if (null? xs)
+     ,@(if (set-member? feature 'list)
            '()
-           (cons (f (car xs)) (map f (cdr xs)))))
+           '((define (list . xs)
+               xs)
+             (define (list? xs)
+               (or (null? xs) (and (pair? xs) (list? (cdr xs)))))
+             (define (map f xs)
+               (if (null? xs)
+                   '()
+                   (cons (f (car xs)) (map f (cdr xs)))))))
      (define (filter f xs)
        (if (null? xs)
            '()
