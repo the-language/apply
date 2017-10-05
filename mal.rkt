@@ -25,11 +25,11 @@
    (%newns x ...)))
 
 (define ns (newns
-            cons
-            [%car car]
-            [%cdr cdr]
+            [cons pcons]
+            [%car pcar]
+            [%cdr pcdr]
             [%pair? pair?]
-            null?
+            [null? empty?]
             +
             -
             *
@@ -43,14 +43,21 @@
             char?
             string?
             string->list
-            [%if if]
+            if
             quote
             symbol?
-            eq?
+            [eq? =]
+            [equal? =]
             error
             boolean?
             procedure?
-            apply))
+            apply
+            [%vector->list vector->list]
+            [list->vector list->vector]
+            vector
+            [%vector? vector?];Fix
+            [%vector-length count]
+            [%vector-ref nth]))
 ;(define (id x) (hash-ref ns x))
 (define (id x) (newid x))
 (define (newid x)
@@ -60,6 +67,8 @@
   (cond
     [(pair? x) (APPLY (car x) (cdr x))]
     [(symbol? x) (id x)]
+    [(eq? x #t) 'true]
+    [(eq? x #f) 'false]
     [else x]))
 (define (APPLY f xs)
   (cond
@@ -68,7 +77,7 @@
                          (error "APPLY: lambda" f xs))]
     [(eq? f 'begin) (BEGIN xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
-    [(eq? f 'void) '(if false false)]
+    [(eq? f 'void) 'nil]
     [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
     [else (cons (EVAL f) (map EVAL xs))]))
 (define (QUOTE x) (list 'quote x))
@@ -90,7 +99,7 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number] EVAL)
+(compiler c [number equal if vector] EVAL)
 
 (c '((define-record-type <pare>
        (kons x y)
@@ -99,5 +108,16 @@
        (y kdr))))
 
 (define pre
-  '(
+  '((def! list->vector
+      (fn* (xs)
+           (apply vector xs)))
+    (def! vector->list
+      (fn* (xs)
+           (apply list xs)))
+    (def! pcons
+      (fn* (x xs)
+           (if (or (list? xs) (vector? xs))
+               (cons x xs)
+               (vector '_pair_ x xs))))
+      )
     

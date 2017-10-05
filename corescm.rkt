@@ -46,6 +46,9 @@
 ;; - %if
 ;; + if
 
+;; equal
+;; + equal?
+
 (define (init feature)
   (set-null-prog!
    '((define-syntax define-syntax-rule
@@ -60,12 +63,12 @@
            ((_ var init) (def var init))
            ((_ (var . args) . body) (define var (λ args . body))))))
      )
-   `(,(if (set-member? feature 'if)
-          '()
-          '(define-syntax if
-             (syntax-rules ()
-               [(_ c x) (if c x (void))]
-               [(_ c x y) (%if c x y)])))
+   `(,@(if (set-member? feature 'if)
+           '()
+           '((define-syntax if
+               (syntax-rules ()
+                 [(_ c x) (if c x (void))]
+                 [(_ c x y) (%if c x y)]))))
      ,@(if (set-member? feature 'vector)
            '((define pair? %pair?)
              (define car %car)
@@ -168,12 +171,14 @@
        (if (null? xs)
            0
            (+ 1 (length (cdr xs)))))
-     (define (equal? x y)
-       (if (pair? x)
-           (and (pair? y)
-                (equal? (car x) (car y))
-                (equal? (cdr x) (cdr y)))
-           (eq? x y)))
+     ,@(if (set-member? feature 'equal)
+           '()
+           '((define (equal? x y)
+               (if (pair? x)
+                   (and (pair? y)
+                        (equal? (car x) (car y))
+                        (equal? (cdr x) (cdr y)))
+                   (eq? x y)))))
      (define eqv? equal?)
      (define (list-ref xs k)
        (cond
