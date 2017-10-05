@@ -284,7 +284,7 @@
        (%call/cc-v v)
        %call/cc-v?
        (v %call/cc-v-v))
-     (define (call/cc p)
+     (define (call/cc p);Fix
        (with-handlers ([%call/cc-v? %call/cc-v-v])
          (p (λ (x) (raise (%call/cc-v x))))))
      (define call-with-current-continuation call/cc)
@@ -382,7 +382,17 @@
               (EVALmacro x)))
         xs))))
 (define pre
-  '((defmacro struct
+  '((defmacro gensymmacro
+      (λ xs
+        (let ([s (if (null? xs)
+                     "g"
+                     (if (and (pair? s) (null? (cddr s)) (eq? (car s) 'quote))
+                         (symbol->string (cadr s))
+                         (if (string? s)
+                             s
+                             (error "gensym"))))])
+          (gensym s))))
+    (defmacro struct
       (λ (name fs)
         `(define-record-type ,name
            (,name ,@fs)
