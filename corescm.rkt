@@ -57,6 +57,12 @@
 ;; display
 ;; + displayln : String -> Void
 
+;; atom
+;; atom?
+;; atom! : Any -> Atom
+;; atom-map! : Atom -> (Any -> Any) -> Void
+;; atom-set! : Atom -> Any -> Void
+
 (define (init feature)
   (set-null-prog!
    '((define-syntax define-syntax-rule
@@ -243,8 +249,15 @@
 
      ,@(if (set-member? feature 'display)
            '()
-           '((define (displayln x) (error "can't displayln" x))))
+           '((define (displayln x) (error "displayln: can't displayln" x))))
      (define (newline) (displayln ""))
+
+     ,@(if (set-member? feature 'atom)
+           '()
+           '((define (atom? x) #f)
+             (define (atom! x) (error "atom!: doesn't support atom" x))
+             (define (atom-map! x f) (error "atom-map!: doesn't support atom" x f))
+             (define (atom-set! a x) (error "atom-set!: doesn't support atom" a x))))
      )))
 (define (c? x)
   (not
