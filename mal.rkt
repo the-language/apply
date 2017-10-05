@@ -51,7 +51,7 @@
             error
             boolean?
             procedure?
-            apply
+            [apply papply]
             [%vector->list vector->list]
             [list->vector list->vector]
             vector
@@ -126,7 +126,7 @@
                (error "vector->list: isn't vector?" xs))))
     (def! pcons
       (fn* (x xs)
-           (if (or (list? xs) (vector? xs))
+           (if (list? xs)
                (cons x xs)
                (vector '_pair_ x xs))))
     (def! jpair?
@@ -143,7 +143,7 @@
                false)))
     (def! pair?
       (fn* (x)
-           (or (vector? x) (list? x))))
+           (or (jpair? x) (list? x))))
     (def! car
       (fn* (x)
            (if (jpair? x)
@@ -154,4 +154,9 @@
            (if (jpair? x)
                (nth x 2)
                (rest x))))
+    (def! papply
+      (fn* (f xs)
+           (if (list? xs)
+               (apply f xs)
+               (error "apply: isn't list?" f xs))))
     ))
