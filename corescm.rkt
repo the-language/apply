@@ -54,6 +54,9 @@
 ;; + list
 ;; + map
 
+;; display
+;; + displayln : String -> Void
+
 (define (init feature)
   (set-null-prog!
    '((define-syntax define-syntax-rule
@@ -237,6 +240,11 @@
      (define (force x) ((%lazydelay-vv x))) ;Fix: memorize
      (define-syntax-rule (delay-force x) (delay (force x)))
      (define (make-promise x) (if (promise? x) x (delay x)))
+
+     ,@(if (set-member? feature 'display)
+           '()
+           '((define (displayln x) (error "can't displayln" x))))
+     (define (newline) (displayln ""))
      )))
 (define (c? x)
   (not

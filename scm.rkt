@@ -94,7 +94,7 @@
     [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
     [else (error "%LAMBDA" x)]))
 
-(compiler c [number] feval)
+(compiler c [number display] feval)
 
 (define (feval x) (unbegin (EVAL x)))
 (define (unbegin x)
