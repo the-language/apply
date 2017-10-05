@@ -13,6 +13,7 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(provide run)
 (require "alexpander.rkt")
 (define (init fe)
   (set-null-prog!
@@ -132,10 +133,40 @@
            (%vector-ref v k)
            (error "vector-ref: isn't vector?" x)))
      )))
-(init (set))
-;(expand-program '())
-(expand-program '((define-record-type <pare>
-                    (kons x y)
-                    pare?
-                    (x kar)
-                    (y kdr))))
+(define (EVAL x)
+  (cond
+    [(pair? x) (APPLY (car x) (cdr x))]
+    [else x]))
+(define (APPLY f xs)
+  (cond
+    [(eq? f 'lambda) `(lambda ,(car xs) ,(BEGIN (cdr xs)))]
+    [(eq? f 'begin) (BEGIN xs)]
+    [(eq? f 'define) (error "APPLY: define" f xs)]
+    [(eq? f 'quote) (if (null? (cdr xs)) (car xs) (error "APPLY: quote" f xs))]
+    [else (cons (EVAL f) (map EVAL xs))]))
+(define (BEGIN xs)
+  (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)]
+        [b (equal? (last xs) '(void))])
+    (append
+     (cons
+      'begin
+      (map
+       (λ (x)
+         (if (and (pair? x) (eq? (car x) 'define))
+             (if (null? (cdddr x))
+                 `(define ,(cadr x) ,(EVAL (caddr x)))
+                 (error "BEGIN: define" xs))
+             (EVAL x)))
+       xs))
+     (if b
+         '((void))
+         '()))))
+(define (run fe x)
+  (init fe)
+  (EVAL (cons 'begin (expand-program x))))
+(run (set)
+     '((define-record-type <pare>
+         (kons x y)
+         pare?
+         (x kar)
+         (y kdr))))

@@ -56,7 +56,9 @@
     [else x]))
 (define (APPLY f xs)
   (cond
-    [(eq? f 'lambda) (LAMBDA xs)]
+    [(eq? f 'lambda) (if (null? (cddr xs))
+                         (LAMBDA (car xs) (cadr xs))
+                         (error "APPLY: lambda" f xs))]
     [(eq? f 'begin) (BEGIN xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
     [(eq? f 'void) '(if #f #f)]
@@ -75,9 +77,9 @@
                           `(define ,(newid (cadr x)) ,(EVAL (caddr x)))
                           (error "BEGIN: define" xs))
                       (EVAL x))) xs))]))
-(define (LAMBDA xs)
-  `(lambda ,(%LAMBDA (car xs))
-     ,(BEGIN (cdr xs))))
+(define (LAMBDA args x)
+  `(lambda ,(%LAMBDA args)
+     ,(EVAL x)))
 (define (%LAMBDA x)
   (cond
     [(null? x) '()]
