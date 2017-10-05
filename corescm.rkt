@@ -133,9 +133,9 @@
            (error "vector-ref: isn't vector?" x)))
      )))
 (init (set))
-(expand-program '())
-;(expand-program '((define-record-type <pare>
-;                    (kons x y)
-;                    pare?
-;                    (x kar)
-;                    (y kdr))))
+;(expand-program '())
+(expand-program '((define-record-type <pare>
+                    (kons x y)
+                    pare?
+                    (x kar)
+                    (y kdr))))
