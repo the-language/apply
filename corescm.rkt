@@ -13,7 +13,7 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide run compiler unbegin)
+(provide run compiler)
 (require "alexpander.rkt")
 ;; feature:
 
@@ -291,7 +291,7 @@
 (define-syntax-rule (compiler name [fe ...] evalf)
   (define (name p) (evalf (run (set (quote fe) ...) p))))
 
-(define (unbegin xs)
+(define (unbegin x)
   (if (and (pair? x) (eq? (car x) 'begin))
       (cdr x)
       (list x)))

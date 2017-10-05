@@ -102,13 +102,15 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number equal if vector list] EVAL)
+(compiler c [number equal if vector list] feval)
 
-(c '((define-record-type <pare>
-       (kons x y)
-       pare?
-       (x kar)
-       (y kdr))))
+(define (unbegin x)
+  (if (eq? (car x) 'do)
+      (cdr x)
+      (error "unbegin")))
+
+(define (feval xs)
+  (append pre (unbegin (EVAL xs))))
 
 (define pre
   '((def! error
@@ -160,3 +162,9 @@
                (apply f xs)
                (error "apply: isn't list?" f xs))))
     ))
+
+(c '((define-record-type <pare>
+       (kons x y)
+       pare?
+       (x kar)
+       (y kdr))))

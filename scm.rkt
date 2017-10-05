@@ -94,7 +94,13 @@
     [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
     [else (error "%LAMBDA" x)]))
 
-(compiler c [number] EVAL)
+(compiler c [number] feval)
+
+(define (feval x) (unbegin (EVAL x)))
+(define (unbegin x)
+  (if (eq? (car x) 'begin)
+      (cdr x)
+      (error "unbegin")))
 
 (c '((define-record-type <pare>
        (kons x y)
