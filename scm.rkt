@@ -70,6 +70,7 @@
     [(eq? f 'define) (error "APPLY: define" f xs)]
     [(eq? f 'void) '(if #f #f)]
     [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
+    [(eq? f 'ffi) (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
     [else (cons (EVAL f) (map EVAL xs))]))
 (define (QUOTE x) (list 'quote x))
 (define (BEGIN xs)
@@ -94,7 +95,7 @@
     [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
     [else (error "%LAMBDA" x)]))
 
-(compiler c [number display] feval)
+(compiler c [number display ffi] feval)
 
 (define (feval x) (unbegin (EVAL x)))
 (define (unbegin x)

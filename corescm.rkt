@@ -58,11 +58,14 @@
 ;; + displayln : String -> Void
 
 ;; atom
-;; atom?
-;; atom! : Any -> Atom
-;; atom-map! : Atom -> (Any -> Any) -> Void
-;; atom-set! : Atom -> Any -> Void
-;; atom-get
+;; + atom?
+;; + atom! : Any -> Atom
+;; + atom-map! : Atom -> (Any -> Any) -> Void
+;; + atom-set! : Atom -> Any -> Void
+;; + atom-get
+
+;; ffi
+;; + ffi
 
 (define (init feature)
   (set-null-prog!
@@ -260,6 +263,10 @@
              (define (atom-map! x f) (error "atom-map!: doesn't support atom" x f))
              (define (atom-set! a x) (error "atom-set!: doesn't support atom" a x))
              (define (atom-get a) (error "atom-get: doesn't support atom" a x))))
+
+     ,@(if (set-member? feature 'ffi)
+           '()
+           '((define-syntax-rule (ffi x) (error "ffi: doesn't support" (quote x)))))
      )))
 (define (c? x)
   (not

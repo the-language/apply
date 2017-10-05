@@ -88,6 +88,7 @@
     [(eq? f 'define) (error "APPLY: define" f xs)]
     [(eq? f 'void) 'nil]
     [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
+    [(eq? f 'ffi) (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
     [else (cons (EVAL f) (map EVAL xs))]))
 (define (QUOTE x) (list 'quote x))
 (define (BEGIN xs)
@@ -108,7 +109,7 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number equal if vector list display atom] feval)
+(compiler c [number equal if vector list display atom ffi] feval)
 
 (define (unbegin x)
   (if (eq? (car x) 'do)

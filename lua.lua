@@ -88,15 +88,13 @@ local function force(x)
 	end
 	return x[3]
 end
-local function write(x)
+local function display(x)
 	if x==null then
 		putstr("()")
 	elseif x==void then
 		putstr("#<void>")
 	elseif is_string(x) then
-		putstr("\"")
 		putstr(x)
-		putstr("\"")
 	elseif is_number(x) then
 		putstr(tostring(x))
 	elseif is_boolean(x) then
@@ -108,10 +106,10 @@ local function write(x)
 	elseif is_list(x) then
 		local xs=cdr(x)
 		putstr("(")
-		write(car(x))
+		display(car(x))
 		while not is_null(xs) do
 			putstr(" ")
-			write(car(xs))
+			display(car(xs))
 			xs=cdr(xs)
 		end
 		putstr(")")
@@ -120,9 +118,9 @@ local function write(x)
 		local t=x[1]
 		if t==pairt then
 			putstr("(")
-			write(car(x))
+			display(car(x))
 			putstr(" . ")
-			write(cdr(x))
+			display(cdr(x))
 			putstr(")")
 		elseif t==symbolt then
 			putstr("'")
@@ -130,38 +128,30 @@ local function write(x)
 		elseif t==vectort then
 			putstr("#(")
 			local t=x[2]
-			if t[1]~=nil then write(t[1])end
+			if t[1]~=nil then display(t[1])end
 			for i=2,#t do
 				putstr(" ")
-				write(t[i])
+				display(t[i])
 			end
 			putstr(")")
 		elseif t==atomt then
 			putstr("#<atom!")
 			putstr(atom_get(x))
 			putstr(">")
-		elseif t==promiset then
-			if x[3]==nil then
-				putstr("#<promise>")
-			else
-				putstr("#<promise!")
-				putstr(x[3])
-				putstr(">")
-			end
 		else
 			putstr("#<table")
 			for k,v in pairs(x) do
 				putstr("(")
-				write(k)
+				display(k)
 				putstr(" ")
-				write(v)
+				display(v)
 				putstr(")")
 			end
 			putstr(">")
 		end
 	end
 end
-local function writeln(x)write(x)newline()end
+local function displayln(x)display(x)newline()end
 local errorv=nil
 local serr="SchemeError"
 local function raise(x)errorv=x error(serr)end
