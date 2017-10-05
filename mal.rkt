@@ -57,7 +57,10 @@
             vector
             [%vector? vvector?]
             [%vector-length count]
-            [%vector-ref nth]))
+            [%vector-ref nth]
+            list
+            list?
+            map))
 ;(define (id x) (hash-ref ns x))
 (define (id x) (newid x))
 (define (newid x)
@@ -99,7 +102,7 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number equal if vector] EVAL)
+(compiler c [number equal if vector list] EVAL)
 
 (c '((define-record-type <pare>
        (kons x y)
@@ -113,7 +116,9 @@
            (throw xs)))
     (def! list->vector
       (fn* (xs)
-           (apply vector xs)))
+           (if (list? xs)
+               (apply vector xs)
+               (error "list->vector: isn't list?" xs))))
     (def! vector->list
       (fn* (xs)
            (apply list xs)))
@@ -147,5 +152,4 @@
            (if (jpair? x)
                (nth x 2)
                (rest x))))
-      ))
-    
+    ))
