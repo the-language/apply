@@ -143,6 +143,15 @@
            (%vector-ref v k)
            (error "vector-ref: isn't vector?" x)))
      )))
+(define (c? x)
+  (not
+   (or
+    (pair? x)
+    (symbol? x))))
+(define-syntax-rule (mkfs x ...) (make-hash (list (cons (quote x) x) ...)))
+(define fs
+  (mkfs
+   + - * /))
 (define (EVAL x)
   (cond
     [(pair? x) (APPLY (car x) (cdr x))]
@@ -153,7 +162,11 @@
     [(eq? f 'begin) (BEGIN xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
     [(eq? f 'quote) (if (null? (cdr xs)) (car xs) (error "APPLY: quote" f xs))]
-    [else (cons (EVAL f) (map EVAL xs))]))
+    [else
+     (let ([nxs (map EVAL xs)])
+       (if (and (hash-has-key? fs f) (andmap c? nxs))
+           (apply (hash-ref fs f) nxs)
+           (cons (EVAL f) (map EVAL xs))))]))
 (define (BEGIN xs)
   (if (null? (cdr xs))
       (EVAL (car xs))
