@@ -207,6 +207,15 @@
        (if (vector? v)
            (%vector-ref v k)
            (error "vector-ref: isn't vector?" x)))
+
+     (define-record-type delay-v
+       (%delay-v f)
+       promise?
+       (lazy %lazydelay-vv))
+     (define-syntax-rule (delay x) (%delay-v (lambda () x)))
+     (define (force x) ((%lazydelay-vv x))) ;Fix: memorize
+     (define-syntax-rule (delay-force x) (delay (force x)))
+     (define (make-promise x) (if (promise? x) x (delay x)))
      )))
 (define (c? x)
   (not
