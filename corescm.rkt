@@ -13,7 +13,7 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide run)
+(provide run compiler)
 (require "alexpander.rkt")
 (define (init fe)
   (set-null-prog!
@@ -107,7 +107,7 @@
          [(zero? k) (car xs)]
          [else (list-ref (cdr xs) k)]))
      )
-   '((define-syntax %define-record-type
+   `((define-syntax %define-record-type
        (syntax-rules ()
          [(_ pred x) (void)]
          [(_ pred c (f a) fs ...)
@@ -121,9 +121,19 @@
             (define (constructor cf ...) (vector (cons '_struct:_ 'name) f ...))
             (define (pred x) (and (%vector? x) (equal? (%vector-ref x 0) (cons '_struct:_ 'name))))
             (%define-record-type pred 1 (f a) ...))]))
-     (define (vector? x) (and (%vector? x) (or (%vector-length-0? x) (not (let ([x (%vector-ref x 0)])
-                                                                            (and (pair? x)
-                                                                                 (eq? (car x) '_struct:_)))))))
+     ,(if (set-member? fe 'vector)
+          '(define (vector? x)
+             (and (%vector? x)
+                  (or (zero? (%vector-length x))
+                      (not (let ([x (%vector-ref x 0)])
+                             (and (pair? x)
+                                  (eq? (car x) '_struct:_)))))))
+          '(define (vector? x)
+             (and (%vector? x)
+                  (or (%vector-length-0? x)
+                      (not (let ([x (%vector-ref x 0)])
+                             (and (pair? x)
+                                  (eq? (car x) '_struct:_))))))))
      (define (vector-length x)
        (if (vector? x)
            (%vector-length x)
@@ -145,28 +155,28 @@
     [(eq? f 'quote) (if (null? (cdr xs)) (car xs) (error "APPLY: quote" f xs))]
     [else (cons (EVAL f) (map EVAL xs))]))
 (define (BEGIN xs)
-  (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)]
-        [b (equal? (last xs) '(void))])
-    (append
-     (cons
-      'begin
-      (map
-       (λ (x)
-         (if (and (pair? x) (eq? (car x) 'define))
-             (if (null? (cdddr x))
-                 `(define ,(cadr x) ,(EVAL (caddr x)))
-                 (error "BEGIN: define" xs))
-             (EVAL x)))
-       xs))
-     (if b
-         '((void))
-         '()))))
+  (if (null? (cdr xs))
+      (EVAL (car xs))
+      (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)]
+            [b (let ([x (take-right xs 2)])
+                 (and (equal? (second x) '(void))
+                      (not (and (pair? (first x)) (eq? (car (first x)) 'define)))))])
+        (append
+         (cons
+          'begin
+          (map
+           (λ (x)
+             (if (and (pair? x) (eq? (car x) 'define))
+                 (if (null? (cdddr x))
+                     `(define ,(cadr x) ,(EVAL (caddr x)))
+                     (error "BEGIN: define" xs))
+                 (EVAL x)))
+           xs))
+         (if b
+             '((void))
+             '())))))
 (define (run fe x)
   (init fe)
   (EVAL (cons 'begin (expand-program x))))
-(run (set)
-     '((define-record-type <pare>
-         (kons x y)
-         pare?
-         (x kar)
-         (y kdr))))
+(define-syntax-rule (compiler name [fe ...] evalf)
+  (define (name p) (evalf (run (set (quote fe) ...) p))))
