@@ -26,8 +26,8 @@
 
 (define ns (newns
             [cons pcons]
-            [%car pcar]
-            [%cdr pcdr]
+            [%car car]
+            [%cdr cdr]
             [%pair? pair?]
             [null? empty?]
             +
@@ -55,7 +55,7 @@
             [%vector->list vector->list]
             [list->vector list->vector]
             vector
-            [%vector? vector?];Fix
+            [%vector? vvector?]
             [%vector-length count]
             [%vector-ref nth]))
 ;(define (id x) (hash-ref ns x))
@@ -119,5 +119,30 @@
            (if (or (list? xs) (vector? xs))
                (cons x xs)
                (vector '_pair_ x xs))))
-      )
+    (def! jpair?
+      (fn* (x)
+           (if (vector? x)
+               (if (> (count x) 0)
+                   (= (nth x 0) '_pair_)
+                   false)
+               false)))
+    (def! vvector?
+      (fn* (v)
+           (if (vector? x)
+               (not (jpair? x))
+               false)))
+    (def! pair?
+      (fn* (x)
+           (or (vector? x) (list? x))))
+    (def! car
+      (fn* (x)
+           (if (jpair? x)
+               (nth x 1)
+               (first x))))
+    (def! cdr
+      (fn* (x)
+           (if (jpair? x)
+               (nth x 2)
+               (rest x))))
+      ))
     
