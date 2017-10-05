@@ -62,6 +62,7 @@
 ;; atom! : Any -> Atom
 ;; atom-map! : Atom -> (Any -> Any) -> Void
 ;; atom-set! : Atom -> Any -> Void
+;; atom-get
 
 (define (init feature)
   (set-null-prog!
@@ -257,7 +258,8 @@
            '((define (atom? x) #f)
              (define (atom! x) (error "atom!: doesn't support atom" x))
              (define (atom-map! x f) (error "atom-map!: doesn't support atom" x f))
-             (define (atom-set! a x) (error "atom-set!: doesn't support atom" a x))))
+             (define (atom-set! a x) (error "atom-set!: doesn't support atom" a x))
+             (define (atom-get a) (error "atom-get: doesn't support atom" a x))))
      )))
 (define (c? x)
   (not

@@ -61,7 +61,12 @@
             list
             list?
             map
-            [displayln println]))
+            [displayln println]
+            [atom! atom]
+            [atom-get deref]
+            [atom-set! reset!]
+            [atom-map! swap!]
+            ))
 ;(define (id x) (hash-ref ns x))
 (define (id x) (newid x))
 (define (newid x)
@@ -103,7 +108,7 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number equal if vector list display] feval)
+(compiler c [number equal if vector list display atom] feval)
 
 (define (unbegin x)
   (if (eq? (car x) 'do)
