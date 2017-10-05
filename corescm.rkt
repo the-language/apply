@@ -18,22 +18,29 @@
 ;; feature:
 
 ;; vector
-;; %vector->list
-;; list->vector
-;; vector
-;; %vector?
-;; %vector-length
-;; %vector-ref
+;; + %vector->list
+;; + list->vector
+;; + vector
+;; + %vector?
+;; + %vector-length
+;; + %vector-ref
 
 ;; number
-;; +
-;; -
-;; *
-;; /
-;; <
-;; >
-;; <=
-;; >=
+;; + +
+;; + -
+;; + *
+;; + /
+;; + <
+;; + >
+;; + <=
+;; + >=
+;; - %+
+;; - %-
+;; - %*
+;; - %/
+;; - %<
+;; - %>
+;; - %=
 
 (define (init feature)
   (set-null-prog!
