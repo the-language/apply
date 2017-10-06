@@ -67,6 +67,14 @@
 ;; ffi
 ;; + ffi
 
+;; hash
+;; + hash
+;; + hash-set
+;; + hash-ref
+;; + hash->list
+;; + hash-remove
+;; + make-immutable-hash
+
 (define (init feature)
   (set-null-prog!
    '((define-syntax define-syntax-rule
@@ -294,6 +302,42 @@
          (with-handlers ([(λ (x) (and (%call/cc-v? x) (eq? (%call/cc-id x) id))) %call/cc-v-v])
            (p (λ (x) (raise (%call/cc-v id x)))))))
      (define call-with-current-continuation call/cc)
+
+    (define (%reverse xs rs)
+      (if (null? xs)
+          rs
+          (%reverse (cdr xs) (cons (car xs) rs))))
+    (define (reverse xs) (%reverse xs '()))
+    (define (member x xs)
+      (if (null? xs)
+          #f
+          (or (equal? (car xs) x) (member x (cdr xs)))))
+    (define (ormap f xs)
+      (if (null? xs)
+          (or)
+          (or (f (car xs)) (ormap f (cdr xs)))))
+    (define (andmap f xs)
+      (cond
+        [(null? xs) (and)]
+        [(null? (cdr xs)) (and (f (car xs)))]
+        [else (and (f (car xs)) (andmap f (cdr xs)))]))
+     
+     ,@(if (set-member? feature 'hash)
+           '()
+           '((define-record-type hash
+               (%make-immutable-hash xs)
+               hash?
+               (xs %hash->list))
+             (define (make-immutable-hash xs)
+               (let loop ([rs '()] [xs (reverse xs)])
+                 (if (null? xs)
+                     (%make-immutable-hash rs)
+                     (let* ([x (car xs)] [xa (car xs)])
+                       (if (ormap (λ (y) (equal? (car y) xa)) rs)
+                           (loop rs (cdr xs))
+                           (loop (cons x rs) (cdr xs)))))))
+                   
+             ))
      )))
 (define (c? x)
   (not
