@@ -146,10 +146,21 @@ local function display(x)
 		end
 	end
 end
+local function toluastr(x)
+	local t=linebuff
+	linebuff=""
+	display(x)
+	local r=linebuff
+	linebuff=t
+	return r
+end
 local function displayln(x)display(x)newline()end
 local errorv=nil
-local serr="SchemeError"
-local function raise(x)errorv=x error(serr)end
+local serr=" SchemeRaise"
+local function raise(x)
+	errorv=x
+	error(" "..toluastr(x)..serr)
+end
 local function withexceptionhandler(f,x)
 	local s,r=pcall(x)
 	if s then
@@ -214,8 +225,6 @@ local function scmto(x)
 		return sym2str(x)
 	elseif is_atom(x) then
 		return scmto(atom_get(x))
-	elseif is_promise(x) then
-		return scmto(force(x))
 	elseif is_procedure(x) then
 		return function(...)
 				local xs={...}
@@ -278,5 +287,12 @@ end
 local function veclen(x)
 	assert(is_vector(x))
 	return #x[2]
+end
+local function zerror(...)
+	local s="SchemeError:"
+	for i,v in ipairs{...} do
+		s=s.." "..toluastr(v)
+	end
+	error(s)
 end
 

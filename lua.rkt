@@ -38,7 +38,11 @@
 (define pre (includes "lua.lua"))
 
 (define ns (newns
+            list
+            list?
+            map
             [with-exception-handler withexceptionhandler]
+            [error zerror]
             [raise raise]
             [%+ add]
             [%- sub]
@@ -77,6 +81,7 @@
 (define (newid x)
   (hash-ref!
    ns
+   x
    (λ ()
      (symbol->string
       (gensym
@@ -85,24 +90,26 @@
          (λ (x) (if (or (char-alphabetic? x) (char-numeric? x)) x #\_))
          (string->list (symbol->string x)))))))))
 
-(define ++ string-append)
+(define ++
+  (case-lambda
+    [() ""]
+    [(x . xs) (if (list? x)
+                  (apply ++ (cons (apply ++ x) xs))
+                  (string-append x (apply ++ xs)))]))
 (define-syntax-rule (exp x ...)
   (++ "(" x ... ")"))
 (define (function xs . vs)
   (exp "function(" (apply %function xs) ")"
-       (apply ++ vs) "\nend"))
+       (apply ++ vs) "end"))
 (define (function... xs rest . vs)
   (exp "function(" (apply %function (append xs (list "..."))) ")"
        "local " rest "=list(...)\n"
-       (apply ++ vs) "\nend"))
+       (apply ++ vs) "end"))
 (define %function
   (case-lambda
     [() ""]
-    [(a . xs) (++ a (apply %%function xs))]))
-(define %%function
-  (case-lambda
     [(a) a]
-    [(a . xs) (++ a "," (apply %%function xs))]))
+    [(a . xs) (++ a "," (apply %function xs))]))
 (define-syntax-rule (var x)
   (++ "local " x "\n"))
 (define-syntax-rule (var-set x v)
@@ -112,12 +119,12 @@
 (define-syntax-rule (cmd-if b x y)
   (++ "if " b " then\n"
       x
-      "\nelse\n"
+      "else\n"
       y
-      "\nend\n"))
-(define-syntax-rule (cmd-apply f x ...)
-  (++ f "(" (%%function x ...) ")"))
-(define-syntax-rule (cmd-eval x)
+      "end\n"))
+(define (cmd-apply f . xs)
+  (++ f "(" (apply %function xs) ")"))
+(define (cmd-eval x)
   (++ "ig(" x ")"))
 (define (block . xs)
   (cmd-apply (apply function (cons '() xs))))
@@ -141,18 +148,51 @@
     [(eq? f 'define) (error "APPLY: define" f xs)]
     [(eq? f 'void) "void"]
     [(eq? f 'quote) (QUOTE (first xs))]
-    [else (cmd-apply (EVAL f) (map EVAL xs))]))
+    [else (apply cmd-apply (cons (EVAL f) (map EVAL xs)))]))
 (define (LAMBDA xs x)
   (if (list? xs)
-      (function (map newid xs) (EVAL x))
+      (function (map newid xs) (return (EVAL x)))
       (let-values ([(h t) (ends xs)])
-        (function... (map newid h) (newid t) (EVAL x)))))
+        (function... (map newid h) (newid t) (return (EVAL x))))))
 (define (ends xs)
   (if (symbol? xs)
       (values '() xs)
       (let-values ([(h t) (ends (cdr xs))])
         (values (cons (car xs) h) t))))
-    
+(define (BEGIN xs)
+  (block
+   (map (λ (x) (var (newid (second x))))
+        (filter (λ (x) (and (pair? x) (eq? (first x) 'define))) xs))
+   (let-values  ([(h tl) (split-at-right xs 1)])
+     (++ (map
+          (λ (x)
+            (if (and (pair? x) (eq? (first x) 'define))
+                (var-set (id (second x)) (EVAL (third x)))
+                (cmd-eval (EVAL x))))
+          h)
+         (let ([t (car tl)])
+           (if (and (pair? t) (eq? (first t) 'define))
+               (list
+                (var-set (id (second t)) (EVAL (third t)))
+                (return "void"))
+               (return (EVAL t))))))))
+(define (QUOTE x)
+  (cond
+    [(symbol? x) (++ "symbol(\"" (symbol->string x) "\")")]
+    [(pair? x) (++ "cons(" (QUOTE (car x)) "," (QUOTE (cdr x)) ")")]
+    [(null? x) "null"]
+    [(eq? x #t) "true"]
+    [(eq? x #f) "false"]
+    [(number? x) (number->string x)]
+    [(string? x) (format "~s" x)]
+    [(char? x) (++ "char(" (format "~s" (string x)) ")")]
+    [else (error)]))
 
-(compiler c [ffi atom vector list display]
-          
+(define (feval x)
+  (++
+   pre
+   (return (cmd-apply "scmto" (EVAL x)))))
+
+(compiler c [ffi atom vector list display] feval)
+
+(displayln (c (read)))
