@@ -224,20 +224,31 @@
          [(zero? k) (car xs)]
          [else (list-ref (cdr xs) k)]))
      )
-   `((define-syntax %define-record-type
+   `((define-syntax-rule (define-record-type
+                           name
+                           (constructor cf ...)
+                           pred
+                           f ...)
+       (begin
+         (define (constructor cf ...) (vector (cons '_struct:_ 'name) (%%define-record-type%c%% f) ...))
+         (define (pred x) (and (%vector? x) (equal? (%vector-ref x 0) (cons '_struct:_ 'name))))
+         (%define-record-type name pred 1 f ...)))
+     (define-syntax %%define-record-type%c%%
        (syntax-rules ()
-         [(_ pred x) (void)]
-         [(_ pred c (f a) fs ...)
-          (begin
-            (define (a x) (if (pred x) (%vector-ref x c) (error "type error" (quote f) x)))
-            (%define-record-type pred (+ 1 c) fs ...))]))
-     (define-syntax define-record-type
+         [(_ (f a)) f]
+         [(_ (f a setv)) (atom f)]))
+     (define-syntax %define-record-type
        (syntax-rules ()
-         [(_ name (constructor cf ...) pred (f a) ...)
+         [(_ name pred x) (void)]
+         [(_ name pred c (f a) fs ...)
           (begin
-            (define (constructor cf ...) (vector (cons '_struct:_ 'name) f ...))
-            (define (pred x) (and (%vector? x) (equal? (%vector-ref x 0) (cons '_struct:_ 'name))))
-            (%define-record-type pred 1 (f a) ...))]))
+            (define (a x) (if (pred x) (%vector-ref x c) (error (symbol->string (quote a)) (quote pred) x)))
+            (%define-record-type name pred (+ 1 c) fs ...))]
+         [(_ name pred c (f a setv) fs ...)
+          (begin
+            (define (a x) (if (pred x) (atom-get (%vector-ref x c)) (error (symbol->string (quote a)) (quote pred) x)))
+            (define (setv x v) (if (pred x) (atom-set! (%vector-ref x c) v) (error (symbol->string (quote setv)) (quote pred) x)))
+            (%define-record-type name pred (+ 1 c) fs ...))]))
      (define (struct? x)
        (and (%vector? x)
             (not (%vector-length-0? x))
