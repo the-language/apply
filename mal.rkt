@@ -40,9 +40,7 @@
             >=
             =
             number?
-            char?
             string?
-            string->list
             quote
             symbol?
             [eq? =]
@@ -74,6 +72,7 @@
             [hash-has-key? contains?]
             make-immutable-hash
             hash->list
+            [str->strlist str->strlist]
             ))
 (define (id x) (newid x))
 (define (newid x)
@@ -117,7 +116,7 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number equal vector list display atom ffi hash] feval)
+(compiler c [number equal vector list display atom ffi hash nochar] feval)
 
 (define (unbegin x)
   (if (eq? (car x) 'do)
@@ -211,6 +210,14 @@
             (λ (k)
               (cons k (get hash k)))
             (keys hash))))
+    (def! %str->strlist
+      (fn* (s)
+           (if (string? s)
+               (let* (r (seq s))
+                 (if (nil? r)
+                     ()
+                     r))
+               (error "string->list: isn't string?" s))))
     ))
 
 (c '((define-record-type <pare>

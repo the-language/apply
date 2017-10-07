@@ -76,6 +76,11 @@
 ;; + hash-has-key?
 ;; + make-immutable-hash
 
+;; nochar
+;; - char?
+;; - string->list
+;; + %str->strlist
+
 (define (init features)
   (define (has-feature? x) (set-member? features x))
   (set-null-prog!
@@ -417,7 +422,17 @@
              (define (hash-has-key? hash key)
                (if (hash-ref hash key #f)
                    #t
-                   #f)))))))
+                   #f))))
+
+     ,@(if (has-feature? 'nochar)
+           '((define-record-type char
+               (%char v)
+               char?
+               (v %g%char))
+             (define (string->list s) (map %char (%str->strlist s)))
+             )
+           '())
+     )))
 (define (c? x)
   (cond
     [(symbol? x) #f]
@@ -442,26 +457,28 @@
    ))
 (require racket/sandbox)
 (define evalp (make-evaluator	'racket))
-(define (EVAL x)
+(define (EVAL fe x)
   (cond
-    [(pair? x) (APPLY (car x) (cdr x))]
+    [(pair? x) (APPLY (λ (x) (EVAL fe x)) (car x) (cdr x))]
+    [(and (set-member? fe 'nochar) (char? x)) (list '%char (string x))]
     [else x]))
-(define (APPLY f xs)
+(define (APPLY evall f xs)
   (cond
-    [(eq? f 'lambda) `(lambda ,(car xs) ,(BEGIN (cdr xs)))]
-    [(eq? f 'begin) (BEGIN xs)]
+    [(eq? f 'lambda) `(lambda ,(car xs) ,(BEGIN evall (cdr xs)))]
+    [(eq? f 'begin) (BEGIN evall xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
     [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
-    [(eq? f 'letrec) (LETREC xs)]
+    [(eq? f 'letrec) (LETREC evall xs)]
     [else
-     (let ([nxs (map EVAL xs)])
+     (let ([nxs (map evall xs)])
        (if (and (hash-has-key? fs f) (andmap c? nxs))
            (apply (hash-ref fs f) nxs)
-           (cons (EVAL f) (map EVAL xs))))]))
-(define (LETREC xs)
+           (cons (evall f) (map evall xs))))]))
+(define (LETREC evall xs)
   (match xs
     [`(,xvs ,@body)
      (BEGIN
+      evall
       (append
        (map (match-lambda
               [`[,x ,v] `(define ,x ,v)])
@@ -473,9 +490,9 @@
     [(symbol? x) (list 'quote x)]
     [(null? x) '(quote ())]
     [else x]))
-(define (BEGIN xs)
+(define (BEGIN evall xs)
   (if (null? (cdr xs))
-      (EVAL (car xs))
+      (evall (car xs))
       (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)]
             [b (let ([x (take-right xs 2)])
                  (and (equal? (second x) '(void))
@@ -487,16 +504,16 @@
            (λ (x)
              (if (and (pair? x) (eq? (car x) 'define))
                  (if (null? (cdddr x))
-                     `(define ,(cadr x) ,(EVAL (caddr x)))
+                     `(define ,(cadr x) ,(evall (caddr x)))
                      (error "BEGIN: define" xs))
-                 (EVAL x)))
+                 (evall x)))
            xs))
          (if b
              '((void))
              '())))))
 (define (run fe x)
   (init fe)
-  (EVAL (cons 'begin (expand-program (runmacro (append pre x))))))
+  (EVAL fe (cons 'begin (expand-program (runmacro (append pre x))))))
 (define-syntax-rule (compiler name [fe ...] evalf)
   (define (name p) (evalf (run (set (quote fe) ...) p))))
 
@@ -551,7 +568,7 @@
                              (error "gensym"))))])
           (gensym s))))
     (defmacro struct
-      (λ (name fs)
+      (λ (name fs . conf)
         `(define-record-type ,name
            (,name ,@fs)
            ,(string->symbol (string-append (symbol->string name) "?"))
@@ -559,4 +576,6 @@
               (λ (f)
                 (list f (string->symbol (string-append (symbol->string name) "-" (symbol->string f)))))
               fs))))
+    (define make-immutable-hasheq make-immutable-hash)
+    (define hasheq hash)
     ))
