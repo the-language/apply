@@ -107,8 +107,4 @@
       (cdr x)
       (error "unbegin")))
 
-(c '((define-record-type <pare>
-       (kons x y)
-       pare?
-       (x kar)
-       (y kdr))))
+(displayln (c (read)))
