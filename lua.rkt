@@ -83,12 +83,15 @@
    ns
    x
    (λ ()
-     (symbol->string
-      (gensym
-       (list->string
-        (map
-         (λ (x) (if (or (char-alphabetic? x) (char-numeric? x)) x #\_))
-         (string->list (symbol->string x)))))))))
+     (apply ++
+            (cons "zs_" (map
+             (λ (x) (if (or (char-alphabetic? x) (char-numeric? x))
+                        (string x)
+                        (list
+                         "_"
+                         (number->string (char->integer x))
+                         "_")))
+             (string->list (symbol->string x))))))))
 
 (define ++
   (case-lambda
