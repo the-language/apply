@@ -19,13 +19,14 @@
 f=$(mktemp)
 exports="$1"
 shift
-cat "$@" > $f
+echo '(' > $f
+cat "$@" >> $f
 cd $(dirname "$0")
 echo >> $f
 echo -n "(hash" >> $f
 for e in $exports ;do
 	echo -n " (quote $e) $e" >> $f
 done
-echo ")" >> $f
+echo '))' >> $f
 cat $f | racket lua.rkt
 rm $f
