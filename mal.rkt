@@ -43,7 +43,6 @@
             char?
             string?
             string->list
-            if
             quote
             symbol?
             [eq? =]
@@ -69,7 +68,6 @@
             raise
             with-exception-handler
             ))
-;(define (id x) (hash-ref ns x))
 (define (id x) (newid x))
 (define (newid x)
   (hash-ref! ns x (λ () (gensym x))))
@@ -93,6 +91,8 @@
     [(eq? f 'void) 'nil]
     [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
     [(eq? f 'ffi) (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
+    [(eq? f 'if) `(let* (v ,(EVAL (first xs)) b (if (nil? v) false v))
+                    (if b ,(EVAL (second xs)) ,(EVAL (third xs))))]
     [else (cons (EVAL f) (map EVAL xs))]))
 (define (QUOTE x) (list 'quote x))
 (define (BEGIN xs)
@@ -113,7 +113,7 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number equal if vector list display atom ffi] feval)
+(compiler c [number equal vector list display atom ffi] feval)
 
 (define (unbegin x)
   (if (eq? (car x) 'do)

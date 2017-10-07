@@ -42,8 +42,8 @@
 ;; - %>
 ;; - %=
 
-;; if
-;; - %if
+;; if2
+;; - if
 ;; + if
 
 ;; equal
@@ -89,12 +89,16 @@
            ((_ var init) (def var init))
            ((_ (var . args) . body) (define var (λ args . body))))))
      )
-   `(,@(if (set-member? feature 'if)
-           '()
-           '((define-syntax if
-               (syntax-rules ()
-                 [(_ c x) (if c x (void))]
-                 [(_ c x y) (%if c x y)]))))
+   `(,@(if (set-member? feature 'if2)
+           '((define-syntax-rule (when b x) (if b x))
+             )
+           '((define-syntax-rule (when b x) (if b x (void)))
+             (let-syntax ([if3 if])
+               (define-syntax if
+                 (syntax-rules ()
+                   [(_ c x) (when c x)]
+                   [(_ c x y) (if3 c x y)])))
+             ))
      ,@(if (set-member? feature 'vector)
            '((define pair? %pair?)
              (define car %car)
@@ -303,24 +307,24 @@
            (p (λ (x) (raise (%call/cc-v id x)))))))
      (define call-with-current-continuation call/cc)
 
-    (define (%reverse xs rs)
-      (if (null? xs)
-          rs
-          (%reverse (cdr xs) (cons (car xs) rs))))
-    (define (reverse xs) (%reverse xs '()))
-    (define (member x xs)
-      (if (null? xs)
-          #f
-          (or (equal? (car xs) x) (member x (cdr xs)))))
-    (define (ormap f xs)
-      (if (null? xs)
-          (or)
-          (or (f (car xs)) (ormap f (cdr xs)))))
-    (define (andmap f xs)
-      (cond
-        [(null? xs) (and)]
-        [(null? (cdr xs)) (and (f (car xs)))]
-        [else (and (f (car xs)) (andmap f (cdr xs)))]))
+     (define (%reverse xs rs)
+       (if (null? xs)
+           rs
+           (%reverse (cdr xs) (cons (car xs) rs))))
+     (define (reverse xs) (%reverse xs '()))
+     (define (member x xs)
+       (if (null? xs)
+           #f
+           (or (equal? (car xs) x) (member x (cdr xs)))))
+     (define (ormap f xs)
+       (if (null? xs)
+           (or)
+           (or (f (car xs)) (ormap f (cdr xs)))))
+     (define (andmap f xs)
+       (cond
+         [(null? xs) (and)]
+         [(null? (cdr xs)) (and (f (car xs)))]
+         [else (and (f (car xs)) (andmap f (cdr xs)))]))
      
      ,@(if (set-member? feature 'hash)
            '()
@@ -328,14 +332,14 @@
                (%make-immutable-hash xs)
                hash?
                (xs %hash->list))
-             (define (make-immutable-hash xs)
-               (let loop ([rs '()] [xs (reverse xs)])
-                 (if (null? xs)
-                     (%make-immutable-hash rs)
-                     (let* ([x (car xs)] [xa (car xs)])
-                       (if (ormap (λ (y) (equal? (car y) xa)) rs)
-                           (loop rs (cdr xs))
-                           (loop (cons x rs) (cdr xs)))))))
+             ;             (define (make-immutable-hash xs)
+             ;               (let loop ([rs '()] [xs (reverse xs)])
+             ;                 (if (null? xs)
+             ;                     (%make-immutable-hash rs)
+             ;                     (let* ([x (car xs)] [xa (car xs)])
+             ;                       (if (ormap (λ (y) (equal? (car y) xa)) rs)
+             ;                           (loop rs (cdr xs))
+             ;                           (loop (cons x rs) (cdr xs)))))))
                    
              ))
      )))

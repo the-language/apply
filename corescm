@@ -16,7 +16,7 @@ number?（可能是float）
 char?
 string?
 string->list
-%if : Bool -> Any -> Any -> Any
+if : Bool -> Any -> Any -> Any
 #t
 #f
 quote

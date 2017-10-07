@@ -43,7 +43,7 @@
             char?
             string?
             string->list
-            [%if if]
+            if
             quote
             symbol?
             eq?
@@ -101,7 +101,7 @@
     [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
     [else (error "%LAMBDA" x)]))
 
-(compiler c [number display ffi] feval)
+(compiler c [number display ffi if2] feval)
 
 (define (feval x)
   (cons '(define displayln (lambda (x) (begin (display x) (newline))))
