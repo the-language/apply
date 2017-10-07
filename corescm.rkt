@@ -308,11 +308,13 @@
            (p (λ (x) (raise (%call/cc-v id x)))))))
      (define call-with-current-continuation call/cc)
 
-     (define (%reverse xs rs)
-       (if (null? xs)
-           rs
-           (%reverse (cdr xs) (cons (car xs) rs))))
-     (define (reverse xs) (%reverse xs '()))
+     (define reverse
+       ((λ ()
+          (define (%reverse xs rs)
+            (if (null? xs)
+                rs
+                (%reverse (cdr xs) (cons (car xs) rs))))
+          (λ (xs) (%reverse xs '())))))
      (define (member x xs)
        (if (null? xs)
            #f
@@ -332,18 +334,39 @@
            '((define-record-type hash
                (%make-immutable-hash xs)
                hash?
-               (xs %hash->list))
-             (define (make-immutable-hash xs)
-               (let loop ([rs '()] [xs (reverse xs)])
-                 (if (null? xs)
-                     (%make-immutable-hash rs)
-                     (let* ([x (car xs)] [xa (car xs)])
-                       (if (ormap (λ (y) (equal? (car y) xa)) rs)
-                           (loop rs (cdr xs))
-                           (loop (cons x rs) (cdr xs)))))))
-                   
-             ))
-     )))
+               (xs hash->list))
+             (define make-immutable-hash
+               ((λ ()
+                  (define (%make-immutable-hash-loop rs xs)
+                    (if (null? xs)
+                        (%make-immutable-hash rs)
+                        (let* ([x (car xs)] [xa (car xs)])
+                          (if (ormap (λ (y) (equal? (car y) xa)) rs)
+                              (%make-immutable-hash-loop rs (cdr xs))
+                              (%make-immutable-hash-loop (cons x rs) (cdr xs))))))
+                  (λ (xs) (%make-immutable-hash-loop '() (reverse xs))))))
+             (define (hash-update hash key updater . f)
+               (%hash-update (hash->list hash) key updater
+                             %make-immutable-hash
+                             (λ ()
+                               (if (null? f)
+                                   (error "hash-update" hash key)
+                                   (let ([x (car f)])
+                                     (if (procedure? x)
+                                         (x)
+                                         x))))))
+             (define (%hash-update hash key updater s u)
+               (if (null? hash)
+                   (u)
+                   (let ([x (car hash)])
+                     (if (equal? (car x) key)
+                         (f (cons (cons (car x) (updater (cdr x))) (cdr hash)))
+                         (%hash-update (cdr hash) key updater (λ (r) (cons x r)) u)))))
+             (define (hash-set hash key v)
+               (let ([h (hash-update hash key (λ (x) v) #f)])
+                 (if h
+                     h
+                     (%make-immutable-hash (cons (cons key v) (hash->list hash)))))))))))
 (define (c? x)
   (cond
     [(symbol? x) #f]
@@ -378,11 +401,21 @@
     [(eq? f 'begin) (BEGIN xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
     [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
+    [(eq? f 'letrec) (LETREC xs)]
     [else
      (let ([nxs (map EVAL xs)])
        (if (and (hash-has-key? fs f) (andmap c? nxs))
            (apply (hash-ref fs f) nxs)
            (cons (EVAL f) (map EVAL xs))))]))
+(define (LETREC xs)
+  (match xs
+    [`(,xvs ,@body)
+     (BEGIN
+      (append
+       (map (match-lambda
+              [`[,x ,v] `(define ,x ,v)])
+            xvs)
+       body))]))
 (define (QUOTE x)
   (cond
     [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
