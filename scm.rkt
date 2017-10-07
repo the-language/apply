@@ -107,4 +107,4 @@
       (cdr x)
       (error "unbegin")))
 
-(displayln (cons 'begin (c (read))))
+(writeln (cons 'begin (c (read))))

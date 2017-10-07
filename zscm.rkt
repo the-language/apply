@@ -241,7 +241,7 @@
      (define-syntax %%define-record-type%c%%
        (syntax-rules ()
          [(_ (f a)) f]
-         [(_ (f a setv)) (atom f)]))
+         [(_ (f a setv)) (atom! f)]))
      (define-syntax %define-record-type
        (syntax-rules ()
          [(_ name pred x) (void)]
@@ -272,12 +272,26 @@
            (%vector-ref v k)
            (error "vector-ref: isn't vector?" x)))
 
-     (define-record-type delay-v
-       (%delay-v lazy)
-       promise?
-       (lazy %lazydelay-vv))
-     (define-syntax-rule (delay x) (%delay-v (lambda () x)))
-     (define (force x) ((%lazydelay-vv x))) ;Fix: memorize
+     ,@(if (has-feature? 'atom)
+           '((define-record-type delay-v
+               (%delay-v lazy)
+               promise?
+               (lazy %lazydelay-vv %set%delay!))
+             (define-syntax-rule (delay x) (%delay-v (lambda () x)))
+             (define (force x)
+               (let ([v (%lazydelay-vv x)])
+                 (if (procedure? v)
+                     (let ([f (v)])
+                       (begin
+                         (%set%delay! x (list f))
+                         f))
+                     (car v)))))
+           '((define-record-type delay-v
+               (%delay-v lazy)
+               promise?
+               (lazy %lazydelay-vv))
+             (define-syntax-rule (delay x) (%delay-v (lambda () x)))
+             (define (force x) ((%lazydelay-vv x)))))
      (define-syntax-rule (delay-force x) (delay (force x)))
      (define (make-promise x) (if (promise? x) x (delay x)))
 
@@ -326,9 +340,9 @@
      (define call-with-current-continuation call/cc)
 
      (define (%reverse xs rs)
-            (if (null? xs)
-                rs
-                (%reverse (cdr xs) (cons (car xs) rs))))
+       (if (null? xs)
+           rs
+           (%reverse (cdr xs) (cons (car xs) rs))))
      (define (reverse xs)
        (%reverse xs '()))
      (define (member x xs)
@@ -383,12 +397,12 @@
                hash?
                (xs hash->list))
              (define (%make-immutable-hash-loop rs xs)
-                    (if (null? xs)
-                        (%make-immutable-hash rs)
-                        (let* ([x (car xs)] [xa (car xs)])
-                          (if (ormap (λ (y) (equal? (car y) xa)) rs)
-                              (%make-immutable-hash-loop rs (cdr xs))
-                              (%make-immutable-hash-loop (cons x rs) (cdr xs))))))
+               (if (null? xs)
+                   (%make-immutable-hash rs)
+                   (let* ([x (car xs)] [xa (car xs)])
+                     (if (ormap (λ (y) (equal? (car y) xa)) rs)
+                         (%make-immutable-hash-loop rs (cdr xs))
+                         (%make-immutable-hash-loop (cons x rs) (cdr xs))))))
              (define (make-immutable-hash xs)
                (%make-immutable-hash-loop '() (reverse xs)))
              (define (hash-set hash key v)

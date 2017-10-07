@@ -239,4 +239,4 @@
            (swap! s (unfunc f))))
     ))
 
-(displayln (cons 'do (c (read))))
+(writeln (cons 'do (c (read))))
