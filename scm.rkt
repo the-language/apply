@@ -107,10 +107,4 @@
       (cdr x)
       (error "unbegin")))
 
-(define (main)
-  (let* ([exp (read)] [out (c exp)])
-    (for ([x out])
-      (display x))
-    (newline)))
-
-(main)
+(displayln (cons 'begin (c (read))))
