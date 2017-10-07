@@ -68,13 +68,13 @@
 ;; + ffi
 
 ;; hash
+;; + hash?
 ;; + hash
 ;; + hash-set
 ;; + hash-ref
 ;; + hash->list
 ;; + hash-has-key?
 ;; + make-immutable-hash
-;; + hash-update
 
 (define (init features)
   (define (has-feature? x) (set-member? features x))
@@ -353,7 +353,14 @@
                (car xs)
                (assf f (cdr xs)))))
      (define (assoc x xs) (assf (λ (y) (equal? x y)) xs))
-     
+
+     (define (hash-update hash key updater . f)
+       (hash-set
+        hash
+        key
+        (updater (if (null? f)
+                     (hash-ref hash key)
+                     (hash-ref hash key (car f))))))
      ,@(if (has-feature? 'hash)
            '()
            '((define-record-type hash
@@ -370,23 +377,22 @@
                               (%make-immutable-hash-loop rs (cdr xs))
                               (%make-immutable-hash-loop (cons x rs) (cdr xs))))))
                   (λ (xs) (%make-immutable-hash-loop '() (reverse xs))))))
-             (define (hash-update hash key updater . f)
-               (%hash-update (hash->list hash) key updater
+             (define (hash-set hash key v)
+               (let ([h (%hash-set hash key (λ (x) v))])
+                 (if h
+                     h
+                     (%make-immutable-hash (cons (cons key v) (hash->list hash))))))
+             (define (%hash-set hash key v)
+               (%%hash-set (hash->list hash) key v
                              %make-immutable-hash
-                             (λ ()
-                               (if (null? f)
-                                   (error "hash-update" hash key)
-                                   (let ([x (car f)])
-                                     (if (procedure? x)
-                                         (x)
-                                         x))))))
-             (define (%hash-update hash key updater s u)
+                             (λ () #f)))
+             (define (%%hash-set hash key v s u)
                (if (null? hash)
                    (u)
                    (let ([x (car hash)])
                      (if (equal? (car x) key)
-                         (f (cons (cons (car x) (updater (cdr x))) (cdr hash)))
-                         (%hash-update (cdr hash) key updater (λ (r) (cons x r)) u)))))
+                         (f (cons (cons (car x) v) (cdr hash)))
+                         (%%hash-set (cdr hash) key v (λ (r) (cons x r)) u)))))
              (define (hash-ref hash key . f)
                (let ([r (assoc key (hash->list hash))])
                  (if r
@@ -400,12 +406,7 @@
              (define (hash-has-key? hash key)
                (if (hash-ref hash key #f)
                    #t
-                   #f))
-             (define (hash-set hash key v)
-               (let ([h (hash-update hash key (λ (x) v) #f)])
-                 (if h
-                     h
-                     (%make-immutable-hash (cons (cons key v) (hash->list hash)))))))))))
+                   #f)))))))
 (define (c? x)
   (cond
     [(symbol? x) #f]

@@ -67,6 +67,13 @@
             [atom-map! swap!]
             raise
             with-exception-handler
+            [hash? hash-map?]
+            [hash hash-map]
+            [hash-set assoc]
+            [hash-ref hash-ref]
+            [hash-has-key? contains?]
+            make-immutable-hash
+            hash->list
             ))
 (define (id x) (newid x))
 (define (newid x)
@@ -110,7 +117,7 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number equal vector list display atom ffi] feval)
+(compiler c [number equal vector list display atom ffi hash] feval)
 
 (define (unbegin x)
   (if (eq? (car x) 'do)
@@ -182,6 +189,28 @@
            (if (list? xs)
                (apply f xs)
                (error "apply: isn't list?" f xs))))
+    (def! procedure?
+      (fn* (x)
+           (not (or (nil? x) (true? x) (false? x) (string? x) (symbol? x) (keyword? x) (list? x) (vector? x) (map? x) (atom? x)))))
+    (def! hash-ref
+      (fn* (h k & f)
+           (if (contains? h k)
+               (get h k)
+               (if (null? f)
+                   (error "hash-ref" h k)
+                   (let* (x (car f))
+                     (if (procedure? x)
+                         (x)
+                         x))))))
+    (def! make-immutable-hash
+      (fn* (xs)
+           (papply hash-map xs)))
+    (def! hash->list
+      (fn* (hash)
+           (map
+            (λ (k)
+              (cons k (get hash k)))
+            (keys hash))))
     ))
 
 (c '((define-record-type <pare>
