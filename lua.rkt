@@ -136,19 +136,17 @@
     [(symbol? x) (id x)]
     [else (QUOTE x)]))
 (define (APPLY f xs)
-  (cond
-    [(eq? f 'void) "void"]
-    [(eq? f '%if)
+  (match f
+    ['if
      (block
       (cmd-if (EVAL (first xs))
               (return (EVAL (second xs)))
               (return (EVAL (third xs)))))]
-    [(eq? f 'lambda) (LAMBDA (first xs) (second xs))]
-    [(eq? f 'begin) (BEGIN xs)]
-    [(eq? f 'define) (error "APPLY: define" f xs)]
-    [(eq? f 'void) "void"]
-    [(eq? f 'quote) (QUOTE (first xs))]
-    [else (apply cmd-apply (cons (EVAL f) (map EVAL xs)))]))
+    ['lambda (LAMBDA (first xs) (second xs))]
+    ['begin (BEGIN xs)]
+    ['void "void"]
+    ['quote (QUOTE (first xs))]
+    [_ (apply cmd-apply (cons (EVAL f) (map EVAL xs)))]))
 (define (LAMBDA xs x)
   (if (list? xs)
       (function (map newid xs) (return (EVAL x)))

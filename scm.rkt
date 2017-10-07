@@ -67,16 +67,13 @@
     [(symbol? x) (id x)]
     [else x]))
 (define (APPLY f xs)
-  (cond
-    [(eq? f 'lambda) (if (null? (cddr xs))
-                         (LAMBDA (car xs) (cadr xs))
-                         (error "APPLY: lambda" f xs))]
-    [(eq? f 'begin) (BEGIN xs)]
-    [(eq? f 'define) (error "APPLY: define" f xs)]
-    [(eq? f 'void) '(if #f #f)]
-    [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
-    [(eq? f 'ffi) (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
-    [else (cons (EVAL f) (map EVAL xs))]))
+  (match f
+    ['lambda (LAMBDA (first xs) (second xs))]
+    ['begin (BEGIN xs)]
+    ['void '(if #f #f)]
+    ['quote (QUOTE (car xs))]
+    ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
+    [_ (cons (EVAL f) (map EVAL xs))]))
 (define (QUOTE x) (list 'quote x))
 (define (BEGIN xs)
   (cond
