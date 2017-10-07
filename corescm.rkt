@@ -83,7 +83,7 @@
                              (syntax-rules ()
                                ((_ . args) x))))))
      (define-syntax-rule (λ . xs) (lambda . xs))
-     (let-syntax ((def define))
+     (let-syntax ([def define])
        (define-syntax define
          (syntax-rules ()
            ((_ var init) (def var init))
@@ -344,14 +344,27 @@
              ))
      )))
 (define (c? x)
-  (not
-   (or
-    (pair? x)
-    (symbol? x))))
-(define-syntax-rule (mkfs x ...) (make-hash (list (cons (quote x) x) ...)))
+  (cond
+    [(symbol? x) #f]
+    [(pair? x)
+     (if (eq? 'quote (car x))
+         #t
+         #f)]
+    [else #t]))
+(define-syntax %mkfs
+  (syntax-rules ()
+    [(_) '()]
+    [(_ [x0 v] x ...) (cons (cons (quote x0) v) (%mkfs x ...))]
+    [(_ x0 x ...) (cons (cons (quote x0) x0) (%mkfs x ...))]))
+(define-syntax-rule (mkfs x ...) (make-hash (%mkfs x ...)))
 (define fs
   (mkfs
-   + - * / < > <= >= =))
+   + - * / < > <= >= = string string-append
+   [symbol->string
+    (match-lambda
+      [`(quote ,v) (symbol->string v)])]
+   [string->symbol (λ (x) `(quote ,(string->symbol x)))]
+   ))
 (require racket/sandbox)
 (define evalp (make-evaluator	'racket))
 (define (EVAL x)
@@ -363,12 +376,18 @@
     [(eq? f 'lambda) `(lambda ,(car xs) ,(BEGIN (cdr xs)))]
     [(eq? f 'begin) (BEGIN xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
-    [(eq? f 'quote) (if (null? (cdr xs)) (list 'quote (car xs)) (error "APPLY: quote" f xs))]
+    [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
     [else
      (let ([nxs (map EVAL xs)])
        (if (and (hash-has-key? fs f) (andmap c? nxs))
            (apply (hash-ref fs f) nxs)
            (cons (EVAL f) (map EVAL xs))))]))
+(define (QUOTE x)
+  (cond
+    [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
+    [(symbol? x) (list 'quote x)]
+    [(null? x) '(quote ())]
+    [else x]))
 (define (BEGIN xs)
   (if (null? (cdr xs))
       (EVAL (car xs))

@@ -1,10 +1,10 @@
-lambda # (list 'lambda x y)
+lambda # (lambda <x> <y>)
 cons
 %car
 %cdr
 %pair?
 null?
-define # (define <SYMBOL> x)
+define # (define <SYMBOL> <x>)
 %+ : Num -> Num -> Num
 %- : Num -> Num -> Num
 %* : Num -> Num -> Num
@@ -19,7 +19,7 @@ string->list
 if : Bool -> Any -> Any -> Any
 #t
 #f
-quote
+quote # (quote <SYMBOL>) (quote ())
 symbol?
 eq?
 error
