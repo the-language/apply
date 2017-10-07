@@ -400,8 +400,8 @@
                      (%make-immutable-hash (cons (cons key v) (hash->list hash))))))
              (define (%hash-set hash key v)
                (%%hash-set (hash->list hash) key v
-                             %make-immutable-hash
-                             (λ () #f)))
+                           %make-immutable-hash
+                           (λ () #f)))
              (define (%%hash-set hash key v s u)
                (if (null? hash)
                    (u)
@@ -490,27 +490,47 @@
     [(symbol? x) (list 'quote x)]
     [(null? x) '(quote ())]
     [else x]))
+(define (define? x) (and (pair? x) (eq? (car x) 'define)))
+(define (lambda? x) (and (pair? x) (eq? (car x) 'lambda)))
 (define (BEGIN evall xs)
   (if (null? (cdr xs))
       (evall (car xs))
-      (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)]
-            [b (let ([x (take-right xs 2)])
-                 (and (equal? (second x) '(void))
-                      (not (and (pair? (first x)) (eq? (car (first x)) 'define)))))])
-        (append
-         (cons
-          'begin
-          (map
-           (λ (x)
-             (if (and (pair? x) (eq? (car x) 'define))
-                 (if (null? (cdddr x))
-                     `(define ,(cadr x) ,(evall (caddr x)))
-                     (error "BEGIN: define" xs))
-                 (evall x)))
-           xs))
-         (if b
-             '((void))
-             '())))))
+      (cons
+       'begin
+       (BEGINgc
+        (map
+         (λ (x)
+           (if (define? x)
+               `(define ,(second x) ,(evall (third x)))
+               (evall x)))
+         xs)))))
+; Symbol -> Exp -> Bool
+(define (GCfind? s x)
+  (match x
+    [`(lambda ,_ ,v) (GCfind? s v)]
+    [(? symbol? x) (equal? s x)]
+    [`(define ,_ ,v) (GCfind? s v)]
+    [`(quote ,_) #f]
+    [(cons 'begin xs) (ormap (λ (x) (GCfind? s x)) xs)]
+    [(? list? x) (ormap (λ (x) (GCfind? s x)) x)]
+    [_ #f]))
+(define (BEGINgc xs)
+  (let ([lastv (last xs)])
+    (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)])
+      (let ([defs (map (λ (x) (cons (second x) (third x))) (filter define? xs))])
+        (let-values ([(marked rest) (partition (λ (x) (or (not (lambda? (cdr x))) (GCfind? (car x) lastv))) defs)])
+          (let loop ([marked marked] [rest rest])
+            (if (null? rest)
+                xs
+                (let-values ([(new newrest) (partition (λ (x) (GCfind? (car x) marked)) rest)])
+                  (if (null? new)
+                      (let ([marked (map car marked)])
+                        (filter
+                         (λ (x)
+                           (if (define? x)
+                               (set-member? marked (second x))
+                               #t)) xs))
+                      (loop (append new marked) newrest))))))))))
 (define (run fe x)
   (init fe)
   (EVAL fe (cons 'begin (expand-program (runmacro (append pre x))))))
