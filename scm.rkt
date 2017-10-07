@@ -55,10 +55,9 @@
             with-exception-handler
             displayln
             ))
-;(define (id x) (hash-ref ns x))
 (define (id x) (newid x))
 (define (newid x)
-  (hash-ref! ns x (λ () (gensym x))))
+  (hash-ref! ns x (λ () (string->symbol (string-append "zs-" (symbol->string x))))))
 
 (define (EVAL x)
   (cond
