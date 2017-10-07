@@ -72,8 +72,9 @@
 ;; + hash-set
 ;; + hash-ref
 ;; + hash->list
-;; + hash-remove
+;; + hash-has-key?
 ;; + make-immutable-hash
+;; + hash-update
 
 (define (init features)
   (define (has-feature? x) (set-member? features x))
@@ -328,6 +329,30 @@
          [(null? xs) (and)]
          [(null? (cdr xs)) (and (f (car xs)))]
          [else (and (f (car xs)) (andmap f (cdr xs)))]))
+
+     (define (caar x) (car (car x)))
+     (define (cadr x) (car (cdr x)))
+     (define (cdar x) (cdr (car x)))
+     (define (cddr x) (cdr (cdr x)))
+     (define (caaar x) (car (car (car x))))
+     (define (caadr x) (car (car (cdr x))))
+     (define (cadar x) (car (cdr (car x))))
+     (define (caddr x) (car (cdr (cdr x))))
+     (define (cdaar x) (cdr (car (car x))))
+     (define (cdadr x) (cdr (car (cdr x))))
+     (define (cddar x) (cdr (cdr (car x))))
+     (define (cdddr x) (cdr (cdr (cdr x))))
+     (define first car)
+     (define second cadr)
+     (define third caddr)
+
+     (define (assf f xs)
+       (if (null? xs)
+           #f
+           (if (f (caar xs))
+               (car xs)
+               (assf f (cdr xs)))))
+     (define (assoc x xs) (assf (λ (y) (equal? x y)) xs))
      
      ,@(if (has-feature? 'hash)
            '()
@@ -362,6 +387,20 @@
                      (if (equal? (car x) key)
                          (f (cons (cons (car x) (updater (cdr x))) (cdr hash)))
                          (%hash-update (cdr hash) key updater (λ (r) (cons x r)) u)))))
+             (define (hash-ref hash key . f)
+               (let ([r (assoc key (hash->list hash))])
+                 (if r
+                     (cdr r)
+                     (if (null? f)
+                         (error "hash-ref" hash key)
+                         (let ([x (car f)])
+                           (if (procedure? x)
+                               (x)
+                               x))))))
+             (define (hash-has-key? hash key)
+               (if (hash-ref hash key #f)
+                   #t
+                   #f))
              (define (hash-set hash key v)
                (let ([h (hash-update hash key (λ (x) v) #f)])
                  (if h
