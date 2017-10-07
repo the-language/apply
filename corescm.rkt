@@ -75,7 +75,8 @@
 ;; + hash-remove
 ;; + make-immutable-hash
 
-(define (init feature)
+(define (init features)
+  (define (has-feature? x) (set-member? features x))
   (set-null-prog!
    '((define-syntax define-syntax-rule
        (syntax-rules ()
@@ -89,7 +90,7 @@
            ((_ var init) (def var init))
            ((_ (var . args) . body) (define var (λ args . body))))))
      )
-   `(,@(if (set-member? feature 'if2)
+   `(,@(if (has-feature? 'if2)
            '((define-syntax-rule (when b x) (if b x))
              )
            '((define-syntax-rule (when b x) (if b x (void)))
@@ -99,7 +100,7 @@
                    [(_ c x) (when c x)]
                    [(_ c x y) (if3 c x y)])))
              ))
-     ,@(if (set-member? feature 'vector)
+     ,@(if (has-feature? 'vector)
            '((define pair? %pair?)
              (define car %car)
              (define cdr %cdr)
@@ -143,7 +144,7 @@
                    (%cdr p)
                    (error "cdr: isn't pair?" p)))
              ))
-     ,@(if (set-member? feature 'number)
+     ,@(if (has-feature? 'number)
            '()
            '((define (+ . xs) (foldl %+ 0 xs))
              (define (* . xs) (foldl %* 1 xs))
@@ -182,7 +183,7 @@
        (if (null? xs)
            ys
            (cons (car xs) (append (cdr xs) ys))))
-     ,@(if (set-member? feature 'list)
+     ,@(if (has-feature? 'list)
            '()
            '((define (list . xs)
                xs)
@@ -206,7 +207,7 @@
        (if (null? xs)
            0
            (+ 1 (length (cdr xs)))))
-     ,@(if (set-member? feature 'equal)
+     ,@(if (has-feature? 'equal)
            '()
            '((define (equal? x y)
                (if (pair? x)
@@ -263,12 +264,12 @@
      (define-syntax-rule (delay-force x) (delay (force x)))
      (define (make-promise x) (if (promise? x) x (delay x)))
 
-     ,@(if (set-member? feature 'display)
+     ,@(if (has-feature? 'display)
            '()
            '((define (displayln x) (error "displayln: can't displayln" x))))
      (define (newline) (displayln ""))
 
-     ,@(if (set-member? feature 'atom)
+     ,@(if (has-feature? 'atom)
            '()
            '((define (atom? x) #f)
              (define (atom! x) (error "atom!: doesn't support atom" x))
@@ -276,7 +277,7 @@
              (define (atom-set! a x) (error "atom-set!: doesn't support atom" a x))
              (define (atom-get a) (error "atom-get: doesn't support atom" a x))))
 
-     ,@(if (set-member? feature 'ffi)
+     ,@(if (has-feature? 'ffi)
            '()
            '((define-syntax-rule (ffi x) (error "ffi: doesn't support" (quote x)))))
 
@@ -326,20 +327,20 @@
          [(null? (cdr xs)) (and (f (car xs)))]
          [else (and (f (car xs)) (andmap f (cdr xs)))]))
      
-     ,@(if (set-member? feature 'hash)
+     ,@(if (has-feature? 'hash)
            '()
            '((define-record-type hash
                (%make-immutable-hash xs)
                hash?
                (xs %hash->list))
-             ;             (define (make-immutable-hash xs)
-             ;               (let loop ([rs '()] [xs (reverse xs)])
-             ;                 (if (null? xs)
-             ;                     (%make-immutable-hash rs)
-             ;                     (let* ([x (car xs)] [xa (car xs)])
-             ;                       (if (ormap (λ (y) (equal? (car y) xa)) rs)
-             ;                           (loop rs (cdr xs))
-             ;                           (loop (cons x rs) (cdr xs)))))))
+             (define (make-immutable-hash xs)
+               (let loop ([rs '()] [xs (reverse xs)])
+                 (if (null? xs)
+                     (%make-immutable-hash rs)
+                     (let* ([x (car xs)] [xa (car xs)])
+                       (if (ormap (λ (y) (equal? (car y) xa)) rs)
+                           (loop rs (cdr xs))
+                           (loop (cons x rs) (cdr xs)))))))
                    
              ))
      )))
