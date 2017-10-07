@@ -325,13 +325,12 @@
            (p (λ (x) (raise (%call/cc-v id x)))))))
      (define call-with-current-continuation call/cc)
 
-     (define reverse
-       ((λ ()
-          (define (%reverse xs rs)
+     (define (%reverse xs rs)
             (if (null? xs)
                 rs
                 (%reverse (cdr xs) (cons (car xs) rs))))
-          (λ (xs) (%reverse xs '())))))
+     (define (reverse xs)
+       (%reverse xs '()))
      (define (member x xs)
        (if (null? xs)
            #f
@@ -383,16 +382,15 @@
                (%make-immutable-hash xs)
                hash?
                (xs hash->list))
-             (define make-immutable-hash
-               ((λ ()
-                  (define (%make-immutable-hash-loop rs xs)
+             (define (%make-immutable-hash-loop rs xs)
                     (if (null? xs)
                         (%make-immutable-hash rs)
                         (let* ([x (car xs)] [xa (car xs)])
                           (if (ormap (λ (y) (equal? (car y) xa)) rs)
                               (%make-immutable-hash-loop rs (cdr xs))
                               (%make-immutable-hash-loop (cons x rs) (cdr xs))))))
-                  (λ (xs) (%make-immutable-hash-loop '() (reverse xs))))))
+             (define (make-immutable-hash xs)
+               (%make-immutable-hash-loop '() (reverse xs)))
              (define (hash-set hash key v)
                (let ([h (%hash-set hash key (λ (x) v))])
                  (if h
@@ -514,11 +512,16 @@
     [(cons 'begin xs) (ormap (λ (x) (GCfind? s x)) xs)]
     [(? list? x) (ormap (λ (x) (GCfind? s x)) x)]
     [_ #f]))
+(define (notpurefunctional? x)
+  (cond
+    [(lambda? x) #f]
+    [(symbol? x) #f]
+    [else #t]))
 (define (BEGINgc xs)
   (let ([lastv (last xs)])
     (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)])
       (let ([defs (map (λ (x) (cons (second x) (third x))) (filter define? xs))])
-        (let-values ([(marked rest) (partition (λ (x) (or (not (lambda? (cdr x))) (GCfind? (car x) lastv))) defs)])
+        (let-values ([(marked rest) (partition (λ (x) (or (notpurefunctional? (cdr x)) (GCfind? (car x) lastv))) defs)])
           (let loop ([marked marked] [rest rest])
             (if (null? rest)
                 xs
