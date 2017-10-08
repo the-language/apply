@@ -122,8 +122,8 @@
                (if (pred (first lst))
                    (all? pred (rest lst))
                    false))))
-    (def! *digits-set* {"0" true "1" true "2" true "3" true "4" true
-                            "5" true "6" true "7" true "8" true "9" true "." true "/" true "e" true "+" true})
+    (def! *digits-set* (hash-map "0" true "1" true "2" true "3" true "4" true
+                            "5" true "6" true "7" true "8" true "9" true "." true "/" true "e" true "+" true))
     (def! all-digits?
       (fn* [chars]
            (all? (fn* [c] (contains? *digits-set* c)) chars)))
