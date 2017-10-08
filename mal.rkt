@@ -18,8 +18,8 @@
 (define-syntax %newns
   (syntax-rules ()
     [(_) '()]
-    [(_ [r s] x ...) (cons (cons (quote r) (list 'sfunc (quote s))) (%newns x ...))]
-    [(_ r x ...) (cons (cons (quote r) (list 'sfunc (quote r))) (%newns x ...))]))
+    [(_ [r s] x ...) (cons (cons (quote r) (quote s)) (%newns x ...))]
+    [(_ r x ...) (cons (cons (quote r) (quote r)) (%newns x ...))]))
 (define-syntax-rule (newns x ...)
   (make-hasheq
    (%newns x ...)))
@@ -47,7 +47,7 @@
             [equal? =]
             error
             boolean?
-            procedure?
+            [procedure? fn?]
             [apply papply]
             [%vector->list vector->list]
             [list->vector list->vector]
@@ -59,7 +59,7 @@
             [atom! atom]
             [atom-get deref]
             [atom-set! reset!]
-            [atom-map! atom-map!]
+            [atom-map! swap!]
             raise
             with-exception-handler
             [hash? hash-map?]
@@ -92,29 +92,19 @@
     ['quote (QUOTE (car xs))]
     ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
     ['if `(let* (v ,(EVAL (first xs)) b (if (nil? v) false v))
-                    (if b ,(EVAL (second xs)) ,(EVAL (third xs))))]
-    [_ (cons (UNFUNC (EVAL f)) (map EVAL xs))]))
-(define (UNFUNC x)
-  (match x
-    [`(sfunc ,v) v]
-    [_ `(unfunc ,x)]))
+            (if b ,(EVAL (second xs)) ,(EVAL (third xs))))]
+    [_ (cons (EVAL f) (map EVAL xs))]))
 (define (QUOTE x) (list 'quote x))
 (define (BEGIN xs)
-  (cond
-    [(null? xs) (EVAL '(void))]
-    [(null? (cdr xs)) (EVAL (car xs))]
-    [else
-     (cons 'do
-           (map (λ (x)
-                  (if (and (pair? x) (eq? (car x) 'define))
-                      (if (null? (cdddr x))
-                          `(def! ,(newid (cadr x)) ,(EVAL (caddr x)))
-                          (error "BEGIN: define" xs))
-                      (EVAL x))) xs))]))
+  (cons 'do
+        (map (λ (x)
+               (if (and (pair? x) (eq? (car x) 'define))
+                   `(def! ,(newid (cadr x)) ,(EVAL (caddr x)))
+                   (EVAL x))) xs)))
 (define (LAMBDA args x)
   (let loop ([a '()] [args args])
     (cond
-      [(null? args) `(sfunc (fn* ,a ,(EVAL x)))]
+      [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
 (compiler c [number equal vector display atom ffi hash nochar] feval)
@@ -128,7 +118,38 @@
   (append pre (unbegin (EVAL xs))))
 
 (define pre
-  '((def! error
+  '((def! all?
+      (fn* [pred lst]
+           (if (empty? lst)
+               true
+               (if (pred (first lst))
+                   (all? pred (rest lst))
+                   false))))
+    (def! *digits-set* {"0" true "1" true "2" true "3" true "4" true
+                            "5" true "6" true "7" true "8" true "9" true "." true "/" true "e" true "+" true})
+    (def! all-digits?
+      (fn* [chars]
+           (all? (fn* [c] (contains? *digits-set* c)) chars)))
+    (def! slow-number?
+      (fn* [x]
+           (let* [chars (seq (str o))]
+             (if (= "-" (first chars))
+                 (all-digits? (rest chars))
+                 (all-digits? chars)))))
+    (def! number/fn?
+      (fn* [x]
+           (not (or (nil? x) (true? x) (false? x) (string? x) (symbol? x) (keyword? x) (list? x) (vector? x) (map? x) (atom? x)))))
+    (def! number?
+      (fn* [x]
+           (if (number/fn? x)
+               (slow-number? x)
+               false)))
+    (def! fn?
+      (fn* [x]
+           (if (number/fn? x)
+               (not (slow-number? x))
+               false)))
+    (def! error
       (fn* (& xs)
            (throw (cons 'error xs))))
     (def! raise
@@ -136,13 +157,13 @@
            (throw (list 'raise x))))
     (def! with-exception-handler
       (fn* (handler thunk)
-           (try* ((unfunc thunk))
+           (try* (thunk)
                  (catch* e (if (if (list? e)
-                               (if (not (empty? e))
-                                   (= (first e) 'raise)
+                                   (if (not (empty? e))
+                                       (= (first e) 'raise)
+                                       false)
                                    false)
-                               false)
-                               ((unfunc handler) (first (rest e)))
+                               (handler (first (rest e)))
                                (throw e))))))
     (def! list->vector
       (fn* (xs)
@@ -159,9 +180,6 @@
            (if (list? xs)
                (cons x xs)
                (vector '_pair_ x xs))))
-    (def! sfunc
-      (fn* (x)
-           (vector '_lambda_ x)))
     (def! jpair?
       (fn* (x)
            (if (vector? x)
@@ -169,22 +187,10 @@
                    (= (nth x 0) '_pair_)
                    false)
                false)))
-    (def! procedure?
-      (fn* (x)
-           (if (vector? x)
-               (if (> (count x) 0)
-                   (= (nth x 0) '_lambda_)
-                   false)
-               false)))
-    (def! unfunc
-      (fn* (x)
-           (if (procedure? x)
-               (nth x 1)
-               (error "apply: isn't procedure?"))))
     (def! vvector?
       (fn* (x)
            (if (vector? x)
-               (not (or (jpair? x) (procedure? x)))
+               (not (jpair? x))
                false)))
     (def! pair?
       (fn* (x)
@@ -202,11 +208,8 @@
     (def! papply
       (fn* (f xs)
            (if (list? xs)
-               (apply (unfunc f) xs)
+               (apply f xs)
                (error "apply: isn't list?" f xs))))
-    (def! number?
-      (fn* (x)
-           (not (or (nil? x) (true? x) (false? x) (string? x) (symbol? x) (keyword? x) (list? x) (vector? x) (map? x) (atom? x)))))
     (def! hash-ref
       (fn* (h k & f)
            (if (contains? h k)
@@ -214,8 +217,8 @@
                (if (null? f)
                    (error "hash-ref" h k)
                    (let* (x (car f))
-                     (if (procedure? x)
-                         ((unfunc x))
+                     (if (fn? x)
+                         (x)
                          x))))))
     (def! make-immutable-hash
       (fn* (xs)
@@ -234,9 +237,6 @@
                      ()
                      r))
                (error "string->list: isn't string?" s))))
-    (def! atom-map!
-      (fn* (a f)
-           (swap! s (unfunc f))))
     ))
 
 (writeln (cons 'do (c (read))))

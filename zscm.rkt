@@ -505,7 +505,7 @@
 (define (define? x) (and (pair? x) (eq? (car x) 'define)))
 (define (lambda? x) (and (pair? x) (eq? (car x) 'lambda)))
 (define (BEGIN evall xs)
-  (if (null? (cdr xs))
+  (if (and (null? (cdr xs)) (not (define? (car xs))))
       (evall (car xs))
       (cons
        'begin
@@ -528,9 +528,10 @@
     [_ #f]))
 (define (notpurefunctional? x)
   (cond
+    [(and (pair? x) (eq? (car x) 'atom!)) (notpurefunctional? (second x))]
     [(lambda? x) #f]
-    [(symbol? x) #f]
-    [else #t]))
+    [(pair? x) #t]
+    [else #f]))
 (define (BEGINgc xs)
   (let ([lastv (last xs)])
     (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)])
@@ -541,12 +542,16 @@
                 xs
                 (let-values ([(new newrest) (partition (λ (x) (GCfind? (car x) marked)) rest)])
                   (if (null? new)
-                      (let ([marked (map car marked)])
-                        (filter
-                         (λ (x)
-                           (if (define? x)
-                               (set-member? marked (second x))
-                               #t)) xs))
+                      (let ([marked (map car marked)]
+                            [end (λ (xs)
+                                   (if (or (equal? lastv '(void)) (define? lastv))
+                                       (append xs (list '(void)))
+                                       xs))])
+                        (end (filter
+                              (λ (x)
+                                (if (define? x)
+                                    (set-member? marked (second x))
+                                    #t)) xs)))
                       (loop (append new marked) newrest))))))))))
 (define (run fe x)
   (init fe)
