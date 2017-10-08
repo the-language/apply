@@ -1,0 +1,9 @@
+#!/bin/sh
+c="$1"
+shift
+f() {
+	echo '('
+	cat "$@"
+	echo ')'
+}
+f "$@" | racket "$c"
