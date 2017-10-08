@@ -1535,10 +1535,6 @@
                 ((_ () . body) (let () . body))
                 ((let* ((var init) . bindings) . body)
                  (let ((var init)) (let* bindings . body)))))
-            (define-syntax letrec
-              (syntax-rules ()
-                ((_ ((var init) ...) . body)
-                 (let () (define var init) ... (let () . body)))))
             (define-syntax and
               (syntax-rules ()
                 ((_) #t)
