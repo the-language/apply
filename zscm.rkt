@@ -622,4 +622,8 @@
               fs))))
     (define make-immutable-hasheq make-immutable-hash)
     (define hasheq hash)
+    (defmacro let
+      (λ (fs . body)
+        `((λ ,(map car fs)
+           ,@body) ,(map cdr fs))))
     ))
