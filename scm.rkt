@@ -63,14 +63,12 @@
   (cond
     [(eq? x 'host-language) "scheme"]
     [(pair? x) (APPLY (car x) (cdr x))]
-    [(eq? x 'void) '(lambda () (if #f #f))]
     [(symbol? x) (id x)]
     [else x]))
 (define (APPLY f xs)
   (match f
     ['lambda (LAMBDA (first xs) (second xs))]
     ['begin (BEGIN xs)]
-    ['void '(if #f #f)]
     ['quote (QUOTE (car xs))]
     ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
     [_ (cons (EVAL f) (map EVAL xs))]))
@@ -97,7 +95,7 @@
     [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
     [else (error "%LAMBDA" x)]))
 
-(compiler c [number display ffi if2] feval)
+(compiler c [number display ffi] feval)
 
 (define (feval x)
   (cons '(define displayln (lambda (x) (begin (display x) (newline))))

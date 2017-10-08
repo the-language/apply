@@ -24,7 +24,6 @@ symbol?
 eq?
 error
 begin
-void : -> ...
 boolean?
 procedure?
 apply

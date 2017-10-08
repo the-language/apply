@@ -79,7 +79,6 @@
   (cond
     [(eq? x 'host-language) "mal"]
     [(pair? x) (APPLY (car x) (cdr x))]
-    [(eq? x 'void) '(fn* () nil)]
     [(symbol? x) (id x)]
     [(eq? x #t) 'true]
     [(eq? x #f) 'false]
@@ -88,11 +87,9 @@
   (match f
     ['lambda (LAMBDA (first xs) (second xs))]
     ['begin (BEGIN xs)]
-    ['void 'nil]
     ['quote (QUOTE (car xs))]
     ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
-    ['if `(let* (v ,(EVAL (first xs)) b (if (nil? v) false v))
-            (if b ,(EVAL (second xs)) ,(EVAL (third xs))))]
+    ['if `(if ,(EVAL (first xs)) ,(EVAL (second xs)) ,(EVAL (third xs)))]
     [_ (cons (EVAL f) (map EVAL xs))]))
 (define (QUOTE x) (list 'quote x))
 (define (BEGIN xs)

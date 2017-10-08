@@ -42,10 +42,6 @@
 ;; - %>
 ;; - %=
 
-;; if2
-;; - if
-;; + if
-
 ;; equal
 ;; + equal?
 
@@ -81,6 +77,10 @@
 ;; - string->list
 ;; + %str->strlist
 
+;; void
+;; + (void)
+;; + void?
+
 (define (init features)
   (define (has-feature? x) (set-member? features x))
   (set-null-prog!
@@ -96,16 +96,12 @@
            ((_ var init) (def var init))
            ((_ (var . args) . body) (define var (λ args . body))))))
      )
-   `(,@(if (has-feature? 'if2)
-           '((define-syntax-rule (when b x) (if b x))
-             )
-           '((define-syntax-rule (when b x) (if b x (void)))
-             (let-syntax ([if3 if])
-               (define-syntax if
-                 (syntax-rules ()
-                   [(_ c x) (when c x)]
-                   [(_ c x y) (if3 c x y)])))
-             ))
+   `((let-syntax ([if3 if])
+       (define-syntax if
+         (syntax-rules ()
+           [(_ c x) (when c x)]
+           [(_ c x y) (if3 c x y)])))
+     (define-syntax-rule (when c x) (if c x (void)))
      ,@(if (has-feature? 'vector)
            '((define pair? %pair?)
              (define car %car)
@@ -444,6 +440,12 @@
              (define (string->list s) (map %char (%str->strlist s)))
              )
            '())
+
+     ,@(if (has-feature? 'void)
+           '()
+           '((define-record-type void
+              (void)
+              void?)))
      )))
 (define (c? x)
   (cond
@@ -536,7 +538,7 @@
   (let ([lastv (last xs)])
     (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)])
       (let ([defs (map (λ (x) (cons (second x) (third x))) (filter define? xs))])
-        (let-values ([(marked rest) (partition (λ (x) (or (notpurefunctional? (cdr x)) (GCfind? (car x) lastv))) defs)])
+        (let-values ([(marked rest) (partition (λ (x) (or (eq? (car x) 'void) (notpurefunctional? (cdr x)) (GCfind? (car x) lastv))) defs)])
           (let loop ([marked marked] [rest rest])
             (if (null? rest)
                 xs
