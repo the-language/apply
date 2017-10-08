@@ -354,6 +354,10 @@
          [(null? xs) (and)]
          [(null? (cdr xs)) (and (f (car xs)))]
          [else (and (f (car xs)) (andmap f (cdr xs)))]))
+     (define (foldl f x xs)
+       (if (null? xs)
+           x
+           (foldl f (f (car xs) x) (cdr xs))))
 
      (define (caar x) (car (car x)))
      (define (cadr x) (car (cdr x)))
@@ -444,8 +448,8 @@
      ,@(if (has-feature? 'void)
            '()
            '((define-record-type void
-              (void)
-              void?)))
+               (void)
+               void?)))
      )))
 (define (c? x)
   (cond
@@ -625,5 +629,5 @@
     (defmacro let
       (λ (fs . body)
         `((λ ,(map car fs)
-           ,@body) ,(map cdr fs))))
+            ,@body) ,(map cdr fs))))
     ))
