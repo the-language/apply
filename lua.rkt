@@ -75,7 +75,8 @@
             [atom-set! atom_set]
             [atom-get atom_get]
             [void voidf]
-            displayln))
+            displayln
+            apply))
 
 (define (id x) (newid x))
 (define (newid x)
@@ -194,6 +195,6 @@
    pre
    (return (cmd-apply "scmto" (EVAL x)))))
 
-(compiler c [ffi atom vector list display] feval)
+(compiler c [ffi atom vector list display equal void] feval)
 
 (displayln (c (read)))
