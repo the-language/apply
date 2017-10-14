@@ -116,6 +116,8 @@
     [(a . xs) (++ a "," (apply %function xs))]))
 (define-syntax-rule (var x)
   (++ "local " x "\n"))
+(define-syntax-rule (newvar+set x v)
+  (++ "local " x "=" v "\n"))
 (define-syntax-rule (var-set x v)
   (++ x "=" v "\n"))
 (define-syntax-rule (return x)
@@ -181,13 +183,7 @@
 (define (QUOTE x)
   (cond
     [(symbol? x) (++ "symbol(\"" (symbol->string x) "\")")]
-    [(pair? x) (++ "cons(" (QUOTE (car x)) "," (QUOTE (cdr x)) ")")]
     [(null? x) "null"]
-    [(eq? x #t) "true"]
-    [(eq? x #f) "false"]
-    [(number? x) (number->string x)]
-    [(string? x) (format "~s" x)]
-    [(char? x) (++ "char(" (format "~s" (string x)) ")")]
     [else (error)]))
 
 (define (feval x)
