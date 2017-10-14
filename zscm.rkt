@@ -458,6 +458,7 @@
                (void)
                void?)))
      (define (memorize1 f) f)
+     (define (promise-forced? x) #f)
      )))
 (define (c? x)
   (cond

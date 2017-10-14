@@ -129,7 +129,7 @@
            (all? (fn* [c] (contains? *digits-set* c)) chars)))
     (def! slow-number?
       (fn* [x]
-           (let* [chars (seq (str o))]
+           (let* [chars (seq (str x))]
              (if (= "-" (first chars))
                  (all-digits? (rest chars))
                  (all-digits? chars)))))
