@@ -532,6 +532,7 @@
     [(cons 'begin xs) (ormap (λ (x) (GCfind? s x)) xs)]
     [(? list? x) (ormap (λ (x) (GCfind? s x)) x)]
     [_ #f]))
+(set! GCfind? (λ (s x) #t)) ;有BUG
 (define (notpurefunctional? x)
   (cond
     [(and (pair? x) (eq? (car x) 'atom!)) (notpurefunctional? (second x))]
