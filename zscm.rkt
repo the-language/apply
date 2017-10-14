@@ -512,7 +512,7 @@
 (define (QUOTE b x)
   (cond
     [b (list 'quote x)]
-    [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
+    [(pair? x) (list 'cons (QUOTE #f (car x)) (QUOTE #f (cdr x)))]
     [(symbol? x) (list 'quote x)]
     [(null? x) '(quote ())]
     [else x]))
