@@ -191,17 +191,23 @@
     [(string? x) (format "~s" x)]
     [(char? x) (++ "char(" (format "~s" (string x)) ")")]
     [else (error 'quote x)]))
-(define max-len 55)
-(define (%QUOTE x var c)
+(define max-c 10)
+(define (%QUOTE x c f)
   (if (pair? x)
       (if (> c max-c)
-        (let ([as (gensym)] [ds (gensym)])
-      (let ([a (%QUOTE (car x) as 0)] [d (QUOTE (cdr x) ds 0)])
-              (++
-               a
-              d
-              (newvar+set var (++ "cons(" a "," d ")")))))
-       (
+        (let ([var (symbol->string (gensym))])
+          (%QUOTE (car x) 0 (λ (a c)
+                              (%QUOTE (cdr x) c (λ (d c)
+                                                  (++
+                                                  (newvar+set var (++ "cons(" a "," d ")"))
+                                                  (f var (+ c 1))))))))
+        (%QUOTE (car x) c (λ (a c)
+                              (%QUOTE (cdr x) c (λ (d c)
+                                                  (f (++ "cons(" a "," d ")") (+ c 1)))))))
+      (f (QUOTE1 x) (+ c 1))))
+(define (QUOTE x)
+  (block
+   (%QUOTE x 0 (λ (x c) (return x)))))
 
 (define (feval x)
   (++

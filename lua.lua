@@ -198,29 +198,7 @@ local function scmto(x)
 	elseif x==null or is_pair(x) then
 		error("NULL/PAIR!")
 	elseif is_vector(x) then
-		local t=sym2str(vector_ref(x,0))
-		if t=="_v" then
-			local v=x[2]
-			local r={}
-			for i=2,#v do
-				r[i-1]=scmto(v[i])
-			end
-			return r
-		elseif t=="hashv" then
-			local v=vector_ref(x,1)
-			local r={}
-			while not is_null(v) do
-				local x=car(v)
-				local k=tostr(car(x))
-				if r[k]==nil then
-					r[k]=scmto(cdr(x))
-				end
-				local v=cdr(v)
-			end
-			return r
-		else
-			error("STRUCT!")
-		end
+		error("VECTOR!")
 	elseif is_symbol(x) then
 		return sym2str(x)
 	elseif is_atom(x) then
@@ -256,7 +234,7 @@ toscm=function(x)
 			for k,v in pairs(x) do
 				r=cons(cons(symbol(tostring(x)),toscm(v)),r)
 			end
-			return vector(symbol("hashv"),r)
+			error("HASH!")
 		end
 	elseif is_procedure(x) then
 		return function(...)
