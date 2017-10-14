@@ -495,7 +495,7 @@
     [(eq? f 'begin) (BEGIN evall xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
     [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (set-member? fe 'quote) (car xs)) (error "APPLY: quote" f xs))]
-    [(eq? f 'letrec) (LETREC evall xs)]
+    [(or (eq? f '_letrec_) (eq? f 'letrec)) (LETREC evall xs)] ;有BUG
     [else
      (let ([nxs (map evall xs)])
        (if (and (hash-has-key? fs f) (andmap c? nxs))
