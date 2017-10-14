@@ -429,7 +429,11 @@
                                x))))))
              (define (hash-union h1 h2)
                (foldl (λ (x h) (hash-set h (car x) (cdr x))) h1 (hash->list h2)))
-             (define (hash . xs) (make-immutable-hash xs))
+             (define (hash . xs) (make-immutable-hash (%hash%mkpair xs)))
+             (define (%hash%mkpair xs)
+               (if (null? xs)
+                   '()
+                   (cons (cons (car xs) (cadr xs)) (cddr xs))))
              (define (hash-has-key? hash key)
                (if (hash-ref hash key #f)
                    #t
