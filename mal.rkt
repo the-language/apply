@@ -223,8 +223,8 @@
     (def! hash->list
       (fn* (hash)
            (map
-            (λ (k)
-              (cons k (get hash k)))
+            (fn* (k)
+              (pcons k (get hash k)))
             (keys hash))))
     (def! %str->strlist
       (fn* (s)
