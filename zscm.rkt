@@ -433,7 +433,7 @@
              (define (%hash%mkpair xs)
                (if (null? xs)
                    '()
-                   (cons (cons (car xs) (cadr xs)) (cddr xs))))
+                   (cons (cons (car xs) (cadr xs)) (%hash%mkpair (cddr xs)))))
              (define (hash-has-key? hash key)
                (if (hash-ref hash key #f)
                    #t
