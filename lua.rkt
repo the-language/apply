@@ -86,13 +86,13 @@
    (λ ()
      (apply ++
             (cons "zs_" (map
-             (λ (x) (if (or (char-alphabetic? x) (char-numeric? x))
-                        (string x)
-                        (list
-                         "_"
-                         (number->string (char->integer x))
-                         "_")))
-             (string->list (symbol->string x))))))))
+                         (λ (x) (if (or (char-alphabetic? x) (char-numeric? x))
+                                    (string x)
+                                    (list
+                                     "_"
+                                     (number->string (char->integer x))
+                                     "_")))
+                         (string->list (symbol->string x))))))))
 
 (define ++
   (case-lambda
@@ -180,17 +180,34 @@
                 (var-set (id (second t)) (EVAL (third t)))
                 (return "void"))
                (return (EVAL t))))))))
-(define (QUOTE x)
+(define (QUOTE1 x)
   (cond
     [(symbol? x) (++ "symbol(\"" (symbol->string x) "\")")]
+    [(pair? x) (++ "cons(" (QUOTE (car x)) "," (QUOTE (cdr x)) ")")]
     [(null? x) "null"]
-    [else (error)]))
+    [(eq? x #t) "true"]
+    [(eq? x #f) "false"]
+    [(number? x) (number->string x)]
+    [(string? x) (format "~s" x)]
+    [(char? x) (++ "char(" (format "~s" (string x)) ")")]
+    [else (error 'quote x)]))
+(define max-len 55)
+(define (%QUOTE x var c)
+  (if (pair? x)
+      (if (> c max-c)
+        (let ([as (gensym)] [ds (gensym)])
+      (let ([a (%QUOTE (car x) as 0)] [d (QUOTE (cdr x) ds 0)])
+              (++
+               a
+              d
+              (newvar+set var (++ "cons(" a "," d ")")))))
+       (
 
 (define (feval x)
   (++
    pre
    (return (cmd-apply "scmto" (EVAL x)))))
 
-(compiler c [ffi atom vector list display equal void] feval)
+(compiler c [ffi atom vector list display equal void quote] feval)
 
 (displayln (c (read)))

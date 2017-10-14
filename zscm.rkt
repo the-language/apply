@@ -81,6 +81,10 @@
 ;; + (void)
 ;; + void?
 
+;; quote
+;; - quote
+;; + quote
+
 (define (init features)
   (define (has-feature? x) (set-member? features x))
   (set-null-prog!
@@ -480,15 +484,15 @@
 (define evalp (make-evaluator	'racket))
 (define (EVAL fe x)
   (cond
-    [(pair? x) (APPLY (λ (x) (EVAL fe x)) (car x) (cdr x))]
+    [(pair? x) (APPLY fe (λ (x) (EVAL fe x)) (car x) (cdr x))]
     [(and (set-member? fe 'nochar) (char? x)) (list '%char (string x))]
     [else x]))
-(define (APPLY evall f xs)
+(define (APPLY fe evall f xs)
   (cond
     [(eq? f 'lambda) `(lambda ,(car xs) ,(BEGIN evall (cdr xs)))]
     [(eq? f 'begin) (BEGIN evall xs)]
     [(eq? f 'define) (error "APPLY: define" f xs)]
-    [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (car xs)) (error "APPLY: quote" f xs))]
+    [(eq? f 'quote) (if (null? (cdr xs)) (QUOTE (set-member? fe 'quote) (car xs)) (error "APPLY: quote" f xs))]
     [(eq? f 'letrec) (LETREC evall xs)]
     [else
      (let ([nxs (map evall xs)])
@@ -505,8 +509,9 @@
               [`[,x ,v] `(define ,x ,v)])
             xvs)
        body))]))
-(define (QUOTE x)
+(define (QUOTE b x)
   (cond
+    [b (list 'quote x)]
     [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
     [(symbol? x) (list 'quote x)]
     [(null? x) '(quote ())]
