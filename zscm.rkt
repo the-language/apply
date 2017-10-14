@@ -457,6 +457,7 @@
            '((define-record-type void
                (void)
                void?)))
+     (define (memorize1 f) f)
      )))
 (define (c? x)
   (cond
