@@ -39,7 +39,7 @@
 
 (define ns (newns
             list
-            list?
+            [list? is_list]
             map
             [with-exception-handler withexceptionhandler]
             [error zerror]
