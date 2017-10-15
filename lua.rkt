@@ -75,7 +75,8 @@
             [atom-set! atom_set]
             [atom-get atom_get]
             [void voidf]
-            displayln
+            display
+            newline
             apply))
 
 (define (id x) (newid x))

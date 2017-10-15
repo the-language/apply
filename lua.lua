@@ -154,7 +154,6 @@ local function toluastr(x)
 	linebuff=t
 	return r
 end
-local function displayln(x)display(x)newline()end
 local errorv=nil
 local serr=" SchemeRaise"
 local function raise(x)

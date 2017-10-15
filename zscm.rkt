@@ -51,7 +51,8 @@
 ;; + map
 
 ;; display
-;; + displayln : String -> Void
+;; + display : String -> Void
+;; + newline
 
 ;; atom
 ;; + atom?
@@ -299,8 +300,9 @@
 
      ,@(if (has-feature? 'display)
            '()
-           '((define (displayln x) (error "displayln: can't displayln" x))))
-     (define (newline) (displayln ""))
+           '((define (display x) (error "display: can't display" x))
+             (define (newline) (error "newline: can't newline" x))))
+     (define (displayln x) (display x) (newline))
 
      ,@(if (has-feature? 'atom)
            '()

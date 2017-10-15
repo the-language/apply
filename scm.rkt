@@ -53,7 +53,8 @@
             apply
             raise
             with-exception-handler
-            displayln
+            display
+            newline
             ))
 (define (id x) (newid x))
 (define (newid x)
@@ -98,8 +99,7 @@
 (compiler c [number display ffi] feval)
 
 (define (feval x)
-  (cons '(define displayln (lambda (x) (begin (display x) (newline))))
-        (unbegin (EVAL x))))
+  (unbegin (EVAL x)))
 (define (unbegin x)
   (if (eq? (car x) 'begin)
       (cdr x)

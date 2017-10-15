@@ -55,7 +55,8 @@
             [%vector? vvector?]
             [%vector-length count]
             [%vector-ref nth]
-            [displayln println]
+            display
+            newline
             [atom! atom]
             [atom-get deref]
             [atom-set! reset!]
@@ -234,6 +235,11 @@
                      ()
                      r))
                (error "string->list: isn't string?" s))))
+    (def! %dis% (atom ""))
+    (def! newline (fn* () (do (println (deref %dis%)) (reset! %dis% ""))))
+    (def! display
+      (fn* (x)
+           (swap! %dis% (fn* (s) (str s x)))))
     ))
 
 (writeln (cons 'do (c (read))))
