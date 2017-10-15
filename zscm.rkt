@@ -278,6 +278,7 @@
                promise?
                (lazy %lazydelay-vv %set%delay!))
              (define-syntax-rule (delay x) (%delay-v (lambda () x)))
+             (define (promise-forced? x) (list? (%lazydelay-vv x)))
              (define (force x)
                (let ([v (%lazydelay-vv x)])
                  (if (procedure? v)
@@ -291,6 +292,7 @@
                promise?
                (lazy %lazydelay-vv))
              (define-syntax-rule (delay x) (%delay-v (lambda () x)))
+             (define (promise-forced? x) #f)
              (define (force x) ((%lazydelay-vv x)))))
      (define-syntax-rule (delay-force x) (delay (force x)))
      (define (make-promise x) (if (promise? x) x (delay x)))
@@ -458,7 +460,6 @@
                (void)
                void?)))
      (define (memorize1 f) f)
-     (define (promise-forced? x) #f)
      )))
 (define (c? x)
   (cond
