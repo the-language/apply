@@ -215,7 +215,7 @@
       (fn* (h k & f)
            (if (contains? h k)
                (get h k)
-               (if (null? f)
+               (if (empty? f)
                    (error "hash-ref" h k)
                    (let* (x (car f))
                      (if (fn? x)
