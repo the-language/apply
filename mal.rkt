@@ -71,6 +71,9 @@
             make-immutable-hash
             hash->list
             [str->strlist str->strlist]
+            list
+            list?
+            map
             ))
 (define (id x) (newid x))
 (define (newid x)
@@ -105,7 +108,7 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number equal vector display atom ffi hash nochar] feval)
+(compiler c [number equal vector display atom ffi hash nochar list] feval)
 
 (define (unbegin x)
   (if (eq? (car x) 'do)
