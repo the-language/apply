@@ -129,7 +129,7 @@ local function display(x)
 			putstr(")")
 		elseif t==atomt then
 			putstr("#<atom!")
-			putstr(atom_get(x))
+			display(atom_get(x))
 			putstr(">")
 		elseif t==chart then
 			putstr(x[2])
