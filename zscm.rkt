@@ -634,9 +634,9 @@
 (define ms (make-hash))
 (define (EVALmacro x)
   (let ([x (macroexpand x)])
-    (cond
-      [(pair? x) (APPLYmacro (car x) (cdr x))]
-      [else x])))
+    (if (pair? x)
+        (cons (EVALmacro (car x)) (EVALmacro (cdr x)))
+        x)))
 (define (macroexpand x)
   (cond
     [(and (pair? x) (eq? (car x) 'defmacro))
@@ -644,26 +644,6 @@
      '(void)]
     [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand (apply mf (cdr x))))]
     [else x]))
-(define (APPLYmacro f xs)
-  (cond
-    [(eq? f 'lambda) `(lambda ,(car xs) ,(BEGINmacro (cdr xs)))]
-    [(eq? f 'begin) (BEGINmacro xs)]
-    [(eq? f 'define) (error "APPLYmacro: define" f xs)]
-    [(eq? f 'quote) (if (null? (cdr xs)) (list 'quote (car xs)) (error "APPLYmacro: quote" f xs))]
-    [else (cons (EVALmacro f) (map EVALmacro xs))]))
-(define (BEGINmacro xs)
-  (if (null? (cdr xs))
-      (EVALmacro (car xs))
-      (cons
-       'begin
-       (map
-        (λ (x)
-          (if (and (pair? x) (eq? (car x) 'define))
-              (if (null? (cdddr x))
-                  `(define ,(cadr x) ,(EVALmacro (caddr x)))
-                  (error "BEGINmacro: define" xs))
-              (EVALmacro x)))
-        xs))))
 (define pre
   '((defmacro gensymmacro
       (λ xs
