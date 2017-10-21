@@ -1,0 +1,32 @@
+#!/bin/sh
+dis() {
+	echo "(displayln "
+	echo "$1"
+	echo ")"
+}
+lua() {
+	dis "$1" | ./run lua.rkt | luajit
+}
+mal() {
+	local f=$(mktemp)
+	dis "$1" | ./run mal.rkt > $f
+	~/mal $f
+	rm $f
+}
+musteq() {
+	if [ "$2" != "$3" ] ;then
+		echo "[FAILURE] $1 \"$2\" != \"$3\"" 1>&2
+	fi
+}
+runa() {
+	local f=$(mktemp)
+	$1 "$2" > $f
+	musteq $1 "$(cat $f)" "$3"
+}
+run() {
+	runa mal "$1" "$2" &
+	runa lua "$1" "$2" &
+}
+run "(+ 1 1)" 2
+
+wait
