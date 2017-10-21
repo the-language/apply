@@ -28,5 +28,6 @@ run() {
 	runa lua "$1" "$2" &
 }
 run "(+ 1 1)" 2
+run "(let* ([x (delay 0)] [n (force x)]) (if (promise-forced? x) 0 1))" 0
 
 wait
