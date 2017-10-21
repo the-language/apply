@@ -53,8 +53,9 @@
             apply
             raise
             with-exception-handler
-            display
+            [putstr display]
             newline
+            symbol->string
             ))
 (define (id x) (newid x))
 (define (newid x)

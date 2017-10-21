@@ -51,7 +51,7 @@
 ;; + map
 
 ;; display
-;; + display : String -> Void
+;; + putstr : String -> Void
 ;; + newline
 
 ;; atom
@@ -265,6 +265,14 @@
             (let ([x (%vector-ref x 0)])
               (and (pair? x)
                    (eq? (car x) '_struct:_)))))
+     (define (struct->list s)
+       (if (struct? s)
+           (cdr (%vector->list s))
+           (error "struct->list: isn't struct?" s)))
+     (define (%struct%type-of s)
+       (if (struct? s)
+           (cdr (%vector-ref x 0))
+           (error "isn't struct?" s)))
      (define (vector? x)
        (and (%vector? x)
             (not (struct? x))))
@@ -303,7 +311,41 @@
      (define (make-promise x) (if (promise? x) x (delay x)))
 
      ,@(if (has-feature? 'display)
-           '()
+           '((define (display x)
+               (cond
+                 [(string? x) (putstr x)]
+                 [(symbol? x) (putstr (symbol->string x))]
+                 [(number? x) (putstr (number->string x))]
+                 [(boolean? x) (if x (putstr "#t") (putstr "#f"))]
+                 [(char? x) (putstr (string x))]
+                 [(struct? x) (begin
+                                (putstr "(")
+                                (putstr (symbol->string (%struct%type-of x)))
+                                (%dis%* (struct->list x))
+                                (pustr ")"))]
+                 [(list? x) (begin
+                              (putstr "(")
+                              (display (car x))
+                              (%dis%* (cdr x))
+                              (pustr ")"))]
+                 [(vector? x) (begin
+                                (pustr "#")
+                                (display (vector->list x)))]
+                 [(pair? x) (begin
+                              (putstr "(")
+                              (display (car x))
+                              (putstr " . ")
+                              (display (cdr x))
+                              (pustr ")"))]
+                 [else (error "display" x)]))
+             (define (%dis%* xs)
+               (if (null? xs)
+                   0
+                   (begin
+                     (pustr " ")
+                     (display (car xs))
+                     (%dis%* (cdr xs)))))
+             )
            '((define (display x) (error "display: can't display" x))
              (define (newline) (error "newline: can't newline" x))))
      (define (displayln x) (display x) (newline))

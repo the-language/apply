@@ -15,12 +15,15 @@ define # (define <SYMBOL> <x>)
 number?（可能是float）
 char?
 string?
+;;string
 string->list
 if : Bool -> Any -> Any -> Any
 #t
 #f
 quote # (quote <SYMBOL>) (quote ())
 symbol?
+symbol->string
+number->string
 eq?
 error
 begin

@@ -55,7 +55,7 @@
             [%vector? vvector?]
             [%vector-length count]
             [%vector-ref nth]
-            display
+            putstr
             newline
             [atom! atom]
             [atom-get deref]
@@ -74,6 +74,8 @@
             list
             list?
             map
+            [symbol->string str]
+            [number->string str]
             ))
 (define (id x) (newid x))
 (define (newid x)
@@ -137,6 +139,9 @@
              (if (= "-" (first chars))
                  (all-digits? (rest chars))
                  (all-digits? chars)))))
+    (def! boolean?
+      (fn* [x]
+           (or (true? x) (false? x))))
     (def! number/fn?
       (fn* [x]
            (not (or (nil? x) (true? x) (false? x) (string? x) (symbol? x) (keyword? x) (list? x) (vector? x) (map? x) (atom? x)))))
@@ -240,7 +245,7 @@
                (error "string->list: isn't string?" s))))
     (def! %dis% (atom ""))
     (def! newline (fn* () (do (println (deref %dis%)) (reset! %dis% ""))))
-    (def! display
+    (def! putstr
       (fn* (x)
            (swap! %dis% (fn* (s) (str s x)))))
     ))

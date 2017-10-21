@@ -59,7 +59,10 @@
             [number? is_number]
             [char? is_char]
             [string? is_string]
+            [boolean? is_boolean]
             [string->list string2list]
+            [symbol->string sym2str]
+            [number->string tostring]
             [symbol? is_symbol]
             [eq? equal]
             [equal? equal]
@@ -76,7 +79,7 @@
             [atom-get atom_get]
             [void voidf]
             [procedure? is_procedure]
-            display
+            putstr
             newline
             apply))
 

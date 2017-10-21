@@ -26,8 +26,9 @@ runa() {
 run() {
 	runa mal "$1" "$2" &
 	runa lua "$1" "$2" &
+	wait
 }
 run "(+ 1 1)" 2
-run "(let* ([x (delay 0)] [n (force x)]) (if (promise-forced? x) 0 1))" 0
+run "(let* ([x (delay 0)] [n (force x)]) (promise-forced? x))" "#t"
+run "(hash-ref (hash 0 1 2 3) 0)" 1
 
-wait
