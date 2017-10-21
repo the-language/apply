@@ -322,12 +322,12 @@
                                 (putstr "(")
                                 (putstr (symbol->string (%struct%type-of x)))
                                 (%dis%* (struct->list x))
-                                (pustr ")"))]
+                                (putstr ")"))]
                  [(list? x) (begin
                               (putstr "(")
                               (display (car x))
                               (%dis%* (cdr x))
-                              (pustr ")"))]
+                              (putstr ")"))]
                  [(vector? x) (begin
                                 (pustr "#")
                                 (display (vector->list x)))]
@@ -336,13 +336,13 @@
                               (display (car x))
                               (putstr " . ")
                               (display (cdr x))
-                              (pustr ")"))]
+                              (putstr ")"))]
                  [else (error "display" x)]))
              (define (%dis%* xs)
                (if (null? xs)
                    0
                    (begin
-                     (pustr " ")
+                     (putstr " ")
                      (display (car xs))
                      (%dis%* (cdr xs)))))
              )
