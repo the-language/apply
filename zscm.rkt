@@ -635,7 +635,9 @@
 (define (EVALmacro x)
   (let ([x (macroexpand x)])
     (if (pair? x)
-        (cons (EVALmacro (car x)) (EVALmacro (cdr x)))
+        (if (eq? (car x) 'quote)
+            x
+            (cons (EVALmacro (car x)) (EVALmacro (cdr x))))
         x)))
 (define (macroexpand x)
   (cond
@@ -645,17 +647,7 @@
     [(and (pair? x) (hash-ref ms (car x) #f)) => (λ (mf) (macroexpand (apply mf (cdr x))))]
     [else x]))
 (define pre
-  '((defmacro gensymmacro
-      (λ xs
-        (let ([s (if (null? xs)
-                     "g"
-                     (if (and (pair? s) (null? (cddr s)) (eq? (car s) 'quote))
-                         (symbol->string (cadr s))
-                         (if (string? s)
-                             s
-                             (error "gensym"))))])
-          (gensym s))))
-    (defmacro struct
+  '((defmacro struct
       (λ (name fs . conf)
         `(define-record-type ,name
            (,name ,@fs)
