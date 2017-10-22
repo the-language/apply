@@ -57,7 +57,7 @@
    (defmacro let
      (λ (p . xs)
        `((λ ,(map car p)
-          ,@xs) ,@(map second p))))
+           ,@xs) ,@(map second p))))
    (defmacro letrec
      (λ (p . xs)
        `(begin
@@ -66,6 +66,13 @@
                `(define ,(car x) ,(second x)))
              p)
           ,@xs)))
+   (defmacro let*
+     (λ (p . xs)
+       (if (null? p)
+           `(begin ,@xs)
+           (let ([x (car p)])
+             `(let ([,(car x) ,(second x)])
+                (let* ,(cdr p) ,@xs))))))
    ))
 
 (prelude
@@ -269,6 +276,7 @@
       (DEFINE conf macros (car f) `((λ ,(cdr f) ,@xs)))))
 (define (define? x) (and (pair? x) (eq? (car x) 'define)))
 (define (lambda? x) (and (pair? x) (eq? (car x) 'lambda)))
+(define (begin? x) (and (pair? x) (eq? (car x) 'begin)))
 ; Symbol -> Exp -> Bool
 (define (GCfind? s x)
   (match x
@@ -300,13 +308,19 @@
                                 xs)))
                         (loop (append new marked) newrest)))))))))))
 (define (BEGIN conf macros xs)
-  (BEGINgc
-   (map
-    (λ (x)
-      (if (define? x)
-          (DEFINE conf macros (cadr x) (cddr x))
-          (EVAL conf macros x)))
-    xs)))
+  (let loop ([cs (BEGINgc
+                  (map
+                   (λ (x)
+                     (if (define? x)
+                         (DEFINE conf macros (cadr x) (cddr x))
+                         (EVAL conf macros x)))
+                   xs))])
+    (if (null? cs)
+        '()
+        (let ([c (car cs)])
+          (if (begin? c)
+              (append (cdr c) (loop (cdr cs)))
+              (cons c (loop (cdr cs))))))))
 (define (QUOTE x)
   (cond
     [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
