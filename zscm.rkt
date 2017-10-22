@@ -190,6 +190,7 @@
    (define symbol->string __symbol->string)
    (define string->symbol __string->symbol)
    (define call-with-exception-handler __call-with-exception-handler)
+   (define apply __apply)
 
    (define (not x) (if x #f #t))
    (define (string . xs) (list->string xs))
