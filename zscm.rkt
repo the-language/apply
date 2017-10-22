@@ -32,6 +32,36 @@
 
 (prelude
  get
+ '((defmacro and
+     (λ xs
+       (if (null? xs)
+           #t
+           (if (null? (cdr xs))
+               (car xs)
+               (let ([s (gensym)])
+                 `(let ([,s ,(car xs)])
+                    (if ,s
+                        (and ,@(cdr xs))
+                        #f)))))))
+   (defmacro or
+     (λ xs
+       (if (null? xs)
+           #f
+           (if (null? (cdr xs))
+               (car xs)
+               (let ([s (gensym)])
+                 `(let ([,s ,(car xs)])
+                    (if ,s
+                        ,s
+                        (or ,@(cdr xs)))))))))
+   (defmacro let
+     (λ (p . xs)
+       `((λ ,(map car p)
+          ,@xs) ,@(map second p))))
+   ))
+
+(prelude
+ get
  '((define null? __null?)
    (define error __error)
 
@@ -75,18 +105,6 @@
      (if (zero? i)
          (car xs)
          (list-ref (cdr xs) (- i 1))))
-
-   (defmacro and
-     (λ xs
-       (if (null? xs)
-           #t
-           (if (null? (cdr xs))
-               (car xs)
-               (let ([s (gensym)])
-                 `(let ([,s ,(car xs)])
-                    (if ,s
-                        (and ,@(cdr xs))
-                        #f)))))))
    ))
 
 (prelude
