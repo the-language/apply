@@ -58,6 +58,14 @@
      (λ (p . xs)
        `((λ ,(map car p)
           ,@xs) ,@(map second p))))
+   (defmacro letrec
+     (λ (p . xs)
+       `(begin
+          ,@(map
+             (λ (x)
+               `(define ,(car x) ,(second x)))
+             p)
+          ,@xs)))
    ))
 
 (prelude
