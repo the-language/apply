@@ -13,49 +13,49 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide c)
-(require "zscm.rkt")
-(define-syntax %newns
-  (syntax-rules ()
-    [(_) '()]
-    [(_ [r s] x ...) (cons (cons (quote r) (quote s)) (%newns x ...))]
-    [(_ r x ...) (cons (cons (quote r) (quote r)) (%newns x ...))]))
-(define-syntax-rule (newns x ...)
-  (make-hasheq
-   (%newns x ...)))
+(provide scm)
+(require "codegen.rkt")
+(new-lisp-getid
+ id
 
-(define ns (newns
-            cons
-            [%car car]
-            [%cdr cdr]
-            [%pair? pair?]
-            null?
-            +
-            -
-            *
-            /
-            <
-            >
-            <=
-            >=
-            =
-            number?
-            char?
-            string?
-            string->list
-            if
-            quote
-            symbol?
-            eq?
-            error
-            boolean?
-            procedure?
-            apply
-            raise
-            with-exception-handler
-            [putstr display]
-            newline
-            symbol->string
+  null?
+pair?
+cons
+car
+cdr
+
+error
+raise
+with-exception-handler
+
+<lambda>
+<begin>
+procedure?
+apply
+
+string-append
+string?
+
+symbol?
+symbol->string
+string->symbol
+
+boolean?
+<if>
+
+number?
+number->string
+string->number
+eq?
++/2
+-/2
+*2
+/2
+<2
+>2
+<=2
+>=2
+
             ))
 (define (id x) (newid x))
 (define (newid x)

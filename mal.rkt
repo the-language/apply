@@ -66,6 +66,16 @@
 
  putstr
  newline
+
+ +
+ -
+ *
+ /
+ <
+ >
+ <=
+ >=
+ [= eqs]
  )
 (define (EVAL x)
   (cond
@@ -233,4 +243,11 @@
     (def! putstr
       (fn* (x)
            (swap! %dis% (fn* (s) (str s x)))))
+    (def! eqs
+      (fn* (x y & xs)
+           (if (= x y)
+               (if (empty? xs)
+                   true
+                   (apply eqs (cons y xs)))
+               false)))
     ))
