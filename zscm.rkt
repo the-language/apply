@@ -176,4 +176,104 @@
                c)
               (cdr ops)))))))
 
-(runprelude (newconf))
+(require racket/sandbox)
+(define evalp (make-evaluator 'racket))
+(define (macroexpand macros x)
+  (cond
+    [(and (pair? x) (eq? (car x) 'defmacro))
+     (hash-set! macros (second x) (evalp (third x)))
+     '(void)]
+    [(and (pair? x) (hash-ref macros (car x) #f)) => (λ (mf) (macroexpand (apply mf (cdr x))))]
+    [else x]))
+(define (c? x)
+  (cond
+    [(symbol? x) #f]
+    [(pair? x) (and (eq? 'quote (car x)) (symbol? (second x)))]
+    [else #t]))
+(define-syntax %mkfs
+  (syntax-rules ()
+    [(_) '()]
+    [(_ [x0 v] x ...) (cons (cons (quote x0) v) (%mkfs x ...))]
+    [(_ x0 x ...) (cons (cons (quote x0) x0) (%mkfs x ...))]))
+(define-syntax-rule (mkfs x ...) (make-hash (%mkfs x ...)))
+(define fs
+  (mkfs
+   + - * / < > <= >= = string string-append
+   [symbol->string
+    (match-lambda
+      [`(quote ,v) (symbol->string v)])]
+   [string->symbol (λ (x) `(quote ,(string->symbol x)))]
+   ))
+(define (EVAL conf macros x)
+  (cond
+    [(pair? x) (APPLY conf macros (car x) (cdr x))]
+    [else x]))
+(define (APPLY conf macros f xs)
+  (match f
+    [(or 'λ 'lambda) `(lambda ,(car xs) . ,(BEGIN conf macros (cdr xs)))]
+    ['begin (if (null? (cdr xs))
+                (EVAL conf macros (car xs))
+                `(begin ,@(BEGIN conf macros xs)))]
+    ['define (error 'APPLY f xs)]
+    ['quote (if (conf-get conf 'quote) `(quote ,(car xs)) (QUOTE (car xs)))]
+    [_ (let ([nxs (map (λ (x) (EVAL conf macros x)) xs)])
+         (if (and (hash-has-key? fs f) (andmap c? nxs))
+             (apply (hash-ref fs f) nxs)
+             (cons (EVAL conf macros f) nxs)))]))
+(define (DEFINE conf macros f xs)
+  (if (symbol? f)
+      (if (null? (cdr xs))
+          `(define ,f ,(EVAL conf macros (car xs)))
+          (raise `(define ,f ,@xs)))
+      (DEFINE conf macros (car f) `((λ ,(cdr f) ,@xs)))))
+(define (define? x) (and (pair? x) (eq? (car x) 'define)))
+(define (lambda? x) (and (pair? x) (eq? (car x) 'lambda)))
+; Symbol -> Exp -> Bool
+(define (GCfind? s x)
+  (match x
+    [`(lambda ,_ ,@v) (GCfind? s v)]
+    [(? symbol? x) (eq? s x)]
+    [`(define ,_ ,v) (GCfind? s v)]
+    [`(quote ,_) #f]
+    [(? pair? x) (or (GCfind? s (car x)) (GCfind? s (cdr x)))]
+    [_ #f]))
+(define (BEGINgc xs)
+  (let ([lastv (last xs)])
+    (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)])
+      (let-values ([(rdefs rnotdefs) (partition define? xs)])
+        (let ([defs (map (λ (x) (cons (second x) (third x))) rdefs)])
+          (let-values ([(marked rest) (partition (λ (x) (or (eq? (car x) 'void) (GCfind? (car x) rnotdefs))) defs)])
+            (let loop ([marked marked] [rest rest])
+              (if (null? rest)
+                  xs
+                  (let-values ([(new newrest) (partition (λ (x) (GCfind? (car x) marked)) rest)])
+                    (if (null? new)
+                        (let ([marked (map car marked)])
+                          (let ([xs (filter
+                                     (λ (x)
+                                       (if (define? x)
+                                           (set-member? marked (second x))
+                                           #t)) xs)])
+                            (if (or (equal? lastv '(void)) (define? lastv))
+                                (append xs (list '(void)))
+                                xs)))
+                        (loop (append new marked) newrest)))))))))))
+(define (BEGIN conf macros xs)
+  (BEGINgc
+   (map
+    (λ (x)
+      (if (define? x)
+          (DEFINE conf macros (cadr x) (cddr x))
+          (EVAL conf macros x)))
+    xs)))
+(define (QUOTE x)
+  (cond
+    [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
+    [(symbol? x) `(quote ,x)]
+    [(null? x) '(quote ())]
+    [else x]))
+
+(define (run conf xs)
+  (EVAL conf (make-hash) (cons 'begin (append (runprelude conf) xs))))
+
+(run (newconf) '((list? '())))
