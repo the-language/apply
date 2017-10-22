@@ -32,6 +32,42 @@
 
 (prelude
  get
+ '((define (not x) (if x #f #t))
+   
+   (define (zero? x) (eq? x 0))
+   (define (positive? x) (> x 0))
+   (define (negative? x) (< x 0))
+   (define (%max x y) (if (> x y) x y))
+   (define (max x . xs) (foldl %max x xs))
+   (define (%min x y) (if (< x y) x y))
+   (define (min x . xs) (foldl %min x xs))
+   
+   (define (append xs ys)
+     (if (null? xs)
+         ys
+         (cons (car xs) (append (cdr xs) ys))))
+   (define (filter f xs)
+     (if (null? xs)
+         '()
+         (if (f (car xs))
+             (cons (car xs) (filter f (cdr xs)))
+             (filter f (cdr xs)))))
+   (define (foldl f x xs)
+     (if (null? xs)
+         x
+         (foldl f (f (car xs) x) (cdr xs))))
+   (define (length xs)
+     (if (null? xs)
+         0
+         (+ 1 (length (cdr xs)))))
+   (define (list-ref xs i)
+     (if (zero? i)
+         (car xs)
+         (list-ref (cdr xs) (- i 1))))
+   ))
+
+(prelude
+ get
  (if (get 'vector)
      '((define pair? __pair?)
        (define car __car)
