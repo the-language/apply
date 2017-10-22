@@ -594,7 +594,7 @@
                 (EVAL conf macros (car xs))
                 `(begin ,@(BEGIN conf macros xs)))]
     ['define (error 'APPLY f xs)]
-    ['quote (if (conf-get conf 'quote) `(quote ,(car xs)) (QUOTE (car xs)))]
+    ['quote (if (conf-get conf 'quote) `(quote ,(car xs)) (QUOTE conf (car xs)))]
     [_ (let ([nxs (map (λ (x) (EVAL conf macros x)) xs)])
          (if (and (hash-has-key? fs f) (andmap c? nxs))
              (apply (hash-ref fs f) nxs)
@@ -656,9 +656,9 @@
            (EVAL conf macros x)))
      (BEGINappend
       (map (λ (x) (macroexpand macros x)) xs)))))) ;在GC前合并begin
-(define (QUOTE x)
+(define (QUOTE conf x)
   (cond
-    [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
+    [(pair? x) (list 'cons (QUOTE conf (car x)) (QUOTE conf (cdr x)))]
     [(symbol? x) `(quote ,x)]
     [(null? x) '(quote ())]
     [(and (char? x)
