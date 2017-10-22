@@ -7,6 +7,7 @@ local linebuff=""
 local function newline()print(linebuff)linebuff=""end
 local function putstr(s)linebuff=linebuff..s end
 local function is_table(x)return type(x)=="table"end
+local function ig(x)end
 
 local function is_null(x)return x==null end
 local function is_pair(x)return(is_table(x)and x[1]==pairt)end
