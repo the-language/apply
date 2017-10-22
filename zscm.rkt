@@ -186,18 +186,32 @@
    (define string? __string?)
    (define string->list __string->list)
    (define list->string __list->string)
-   (define string __string)
    (define symbol? __symbol?)
    (define symbol->string __symbol->string)
    (define string->symbol __string->symbol)
+   (define call-with-exception-handler __call-with-exception-handler)
 
    (define (not x) (if x #f #t))
+   (define (string . xs) (list->string xs))
    (define (displayln x) (display x) (newline))
    (define eqv? equal?)
    (defmacro delay-force
      (λ (x)
        `(delay (force ,x))))
    (define (make-promise x) (if (promise? x) x (delay x)))
+   (define (hash-update hash key updater . f)
+     (hash-set
+      hash
+      key
+      (updater
+       (if (null? f)
+           (hash-ref hash key)
+           (hash-ref hash key (car f))))))
+   (define (%hash xs)
+     (if (null? xs)
+         '()
+         (cons (cons (car xs) (cadr xs)) (%hash (cddr xs)))))
+   (define (hash . xs) (make-immutable-hash (%hash xs)))
 
    (define (zero? x) (eq? x 0))
    (define (positive? x) (> x 0))
@@ -235,6 +249,47 @@
      (if (zero? i)
          (car xs)
          (list-ref (cdr xs) (- i 1))))
+   (define (%reverse xs rs)
+     (if (null? xs)
+         rs
+         (%reverse (cdr xs) (cons (car xs) rs))))
+   (define (reverse xs)
+     (%reverse xs '()))
+   (define (member x xs)
+     (if (null? xs)
+         #f
+         (or (equal? (car xs) x) (member x (cdr xs)))))
+   (define (ormap f xs)
+     (if (null? xs)
+         (or)
+         (or (f (car xs)) (ormap f (cdr xs)))))
+   (define (andmap f xs)
+     (cond
+       [(null? xs) (and)]
+       [(null? (cdr xs)) (and (f (car xs)))]
+       [else (and (f (car xs)) (andmap f (cdr xs)))]))
+   (define (caar x) (car (car x)))
+   (define (cadr x) (car (cdr x)))
+   (define (cdar x) (cdr (car x)))
+   (define (cddr x) (cdr (cdr x)))
+   (define (caaar x) (car (car (car x))))
+   (define (caadr x) (car (car (cdr x))))
+   (define (cadar x) (car (cdr (car x))))
+   (define (caddr x) (car (cdr (cdr x))))
+   (define (cdaar x) (cdr (car (car x))))
+   (define (cdadr x) (cdr (car (cdr x))))
+   (define (cddar x) (cdr (cdr (car x))))
+   (define (cdddr x) (cdr (cdr (cdr x))))
+   (define first car)
+   (define second cadr)
+   (define third caddr)
+   (define (assf f xs)
+     (if (null? xs)
+         #f
+         (if (f (caar xs))
+             (car xs)
+             (assf f (cdr xs)))))
+   (define (assoc x xs) (assf (λ (y) (equal? x y)) xs))
    ))
 
 (prelude
@@ -430,6 +485,58 @@
            `(%delay-v (lambda () ,x))))
        (define (promise-forced? x) #f)
        (define (force x) ((%lazydelay-vv x))))))
+
+(prelude
+ get
+ (if (get 'hash)
+     '((define make-immutable-hash __make-immutable-hash)
+       (define hash->list __hash->list)
+       (define hash-set __hash-set)
+       (define hash-ref __hash-ref)
+       (define hash-hash-key? __hash-hash-key?))
+     '((define-record-type hash
+         (%make-immutable-hash xs)
+         hash?
+         (xs hash->list))
+       (define (make-immutable-hash . xs)
+         (if (null? xs)
+             (%make-immutable-hash '())
+             (%do-make-immutable-hash (car xs))))
+       (define (%do-make-immutable-hash xs)
+         (if (null? xs)
+             (%make-immutable-hash '())
+             (let ([x (car xs)])
+               (hash-set (%do-make-immutable-hash (cdr xs)) (car x) (cdr x)))))
+       (define (hash-set hash key v)
+         (let ([h (%hash-set hash key (λ (x) v))])
+           (if h
+               h
+               (%make-immutable-hash (cons (cons key v) (hash->list hash))))))
+       (define (%hash-set hash key v)
+         (%%hash-set (hash->list hash) key v
+                     %make-immutable-hash
+                     (λ () #f)))
+       (define (%%hash-set hash key v s u)
+         (if (null? hash)
+             (u)
+             (let ([x (car hash)])
+               (if (equal? (car x) key)
+                   (s (cons (cons (car x) v) (cdr hash)))
+                   (%%hash-set (cdr hash) key v (λ (r) (cons x r)) u)))))
+       (define (hash-ref hash key . f)
+         (let ([r (assoc key (hash->list hash))])
+           (if r
+               (cdr r)
+               (if (null? f)
+                   (error "hash-ref" hash key)
+                   (let ([x (car f)])
+                     (if (procedure? x)
+                         (x)
+                         x))))))
+       (define (hash-has-key? hash key)
+         (if (hash-ref hash key #f) ; 非boolean,所以要if
+             #t
+             #f)))))
 
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))
