@@ -13,6 +13,7 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(require "alexpander.rkt")
 (define-syntax newconf
   (syntax-rules ()
     [(_) (hasheq)]
@@ -274,6 +275,6 @@
     [else x]))
 
 (define (run conf xs)
-  (EVAL conf (make-hash) (cons 'begin (append (runprelude conf) xs))))
+  (EVAL conf (make-hash) (cons 'begin (expand-program (append (runprelude conf) xs)))))
 
-(run (newconf) '((list? '())))
+(run (newconf) '((list? 0)))
