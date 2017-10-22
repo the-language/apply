@@ -15,15 +15,6 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (provide mal)
 (require "codegen.rkt")
-(define-syntax %newns
-  (syntax-rules ()
-    [(_) '()]
-    [(_ [r s] x ...) (cons (cons (quote r) (quote s)) (%newns x ...))]
-    [(_ r x ...) (cons (cons (quote r) (quote r)) (%newns x ...))]))
-(define-syntax-rule (newns x ...)
-  (make-hasheq
-   (%newns x ...)))
-
 (new-lisp-getid
  id
 
@@ -75,13 +66,8 @@
  putstr
  newline
  )
-(define (id x) (newid x))
-(define (newid x)
-  (hash-ref! ns x (λ () (string->symbol (string-append "zs-" (symbol->string x))))))
-
 (define (EVAL x)
   (cond
-    [(eq? x 'host-language) "mal"]
     [(pair? x) (APPLY (car x) (cdr x))]
     [(symbol? x) (id x)]
     [(eq? x #t) 'true]

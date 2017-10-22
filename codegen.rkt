@@ -69,7 +69,7 @@
                   (%newns% x ...))]))
 (define-syntax-rule (lisp-newns x ...)
   (make-hasheq
-   (%newns x ...)))
+   (%newns% x ...)))
 (define (lisp-getid ns x)
   (hash-ref! ns x (λ () (string->symbol (string-append "zs-" (symbol->string x))))))
 (define-syntax-rule (new-lisp-getid geter x ...)
