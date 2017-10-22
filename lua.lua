@@ -63,7 +63,7 @@ local function is_boolean(x)return type(x)=="boolean"end
 
 local function is_number(x)return type(x)=="number"end
 local function num(x)return x+0 end
-local function eq(x,y)return x==y end
+local function eq(x,y)return x==y or (is_symbol(x) and is_symbol(y) and eq(sym2str(x),sym2str(y)))end
 local function add(x,y)return x+y end
 local function sub(x,y)return x-y end
 local function mul(x,y)return x*y end
