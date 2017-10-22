@@ -33,9 +33,9 @@
 (prelude
  get
  '((define (not x) (if x #f #t))
-   
+
    (define eqv? equal?)
-   
+
    (define (zero? x) (eq? x 0))
    (define (positive? x) (> x 0))
    (define (negative? x) (< x 0))
@@ -44,6 +44,7 @@
    (define (%min x y) (if (< x y) x y))
    (define (min x . xs) (foldl %min x xs))
 
+   (define null? __null?)
    (define (list . xs) xs)
    (define (list? xs) (or (null? xs) (and (pair? xs) (list? (cdr xs)))))
    (define (map f xs)
