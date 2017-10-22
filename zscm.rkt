@@ -211,6 +211,7 @@
          '()
          (cons (cons (car xs) (cadr xs)) (%hash (cddr xs)))))
    (define (hash . xs) (make-immutable-hash (%hash xs)))
+   (define (memorize1 f) f) ; zaoqil-core
 
    (define (zero? x) (eq? x 0))
    (define (positive? x) (> x 0))
