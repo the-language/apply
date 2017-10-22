@@ -33,6 +33,7 @@
 
  [string-append str]
  string?
+ [str->lst %str->strlist]
 
  symbol?
  [symbol->string str]
@@ -75,34 +76,39 @@
     [else x]))
 (define (APPLY f xs)
   (match f
-    ['lambda (LAMBDA (first xs) (second xs))]
+    ['lambda (LAMBDA (first xs) (cdr xs))]
     ['begin (BEGIN xs)]
     ['quote (QUOTE (car xs))]
     ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
     ['if `(if ,(EVAL (first xs)) ,(EVAL (second xs)) ,(EVAL (third xs)))]
     [_ (cons (EVAL f) (map EVAL xs))]))
-(define (QUOTE x) (list 'quote x))
+(define (QUOTE x)
+  (if (null? x)
+      '()
+      `(quote ,x)))
 (define (BEGIN xs)
-  (cons 'do
-        (map (λ (x)
-               (if (and (pair? x) (eq? (car x) 'define))
-                   `(def! ,(newid (cadr x)) ,(EVAL (caddr x)))
-                   (EVAL x))) xs)))
+  (if (null? (cdr xs))
+      (EVAL (car xs))
+      (cons 'do
+            (map (λ (x)
+                   (if (and (pair? x) (eq? (car x) 'define))
+                       `(def! ,(id (second x)) ,(EVAL (third x)))
+                       (EVAL x))) xs))))
 (define (LAMBDA args x)
   (let loop ([a '()] [args args])
     (cond
-      [(null? args) `(fn* ,a ,(EVAL x))]
-      [(symbol? args) (loop (append a (list '& (newid args))) '())]
-      [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [+-*/<>= equal vector display atom hash [charstr nochar]] feval)
+      [(null? args) `(fn* ,a ,(BEGIN x))]
+      [(symbol? args) (loop (append a (list '& (id args))) '())]
+      [else (loop (append a (list (id (car args)))) (cdr args))])))
+(compiler mal [+-*/<>= equal vector display atom hash [charstr 'nochar]] feval)
 
-(define (unbegin x)
-  (if (eq? (car x) 'do)
+(define (undo x)
+  (if (and (pair? x) (eq? (car x) 'do))
       (cdr x)
-      (error "unbegin")))
+      (list x)))
 
 (define (feval xs)
-  (append pre (unbegin (EVAL xs))))
+  (cons 'do (append pre (undo (EVAL xs)))))
 
 (define pre
   '((def! all?
@@ -228,5 +234,3 @@
       (fn* (x)
            (swap! %dis% (fn* (s) (str s x)))))
     ))
-
-(writeln (cons 'do (c (read))))

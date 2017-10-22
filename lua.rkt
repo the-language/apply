@@ -141,6 +141,7 @@
     ['lambda (LAMBDA (first xs) (%BEGIN (cdr xs)))]
     ['begin (BEGIN xs)]
     ['quote (QUOTE (first xs))]
+    ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
     [_ (apply cmd-apply (cons (EVAL f) (map EVAL xs)))]))
 (define (LAMBDA xs x)
   (if (list? xs)
