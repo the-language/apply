@@ -47,8 +47,7 @@
                                    (string x)
                                    (string-append
                                     "_"
-                                    (number->string (char->integer x))
-                                    "_")))
+                                    (number->string (char->integer x)))))
                         (string->list (symbol->string x))))))))
 (define-syntax-rule (new-c-getid geter x ...)
   (begin
