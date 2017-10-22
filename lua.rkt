@@ -197,4 +197,4 @@
    pre
    (%BEGIN (unbegin x))))
 
-(compiler lua [display quote atom] feval)
+(compiler lua [display quote atom [charstr 'nochar]] feval)
