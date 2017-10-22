@@ -628,19 +628,23 @@
     (let ([xs (filter-not (λ (x) (equal? x '(void))) xs)])
       (let-values ([(rdefs rnotdefs) (partition define? xs)])
         (let ([defs (map (λ (x) (cons (second x) (third x))) rdefs)])
-          (let-values ([(marked rest) (partition (λ (x) (or (eq? (car x) 'void) (GCfind? (car x) rnotdefs))) defs)])
+          (let-values ([(marked rest) (partition (λ (x) (GCfind? (car x) rnotdefs)) defs)])
             (let loop ([marked marked] [rest rest])
               (if (null? rest)
                   xs
                   (let-values ([(new newrest) (partition (λ (x) (GCfind? (car x) marked)) rest)])
                     (if (null? new)
-                        (let ([marked (map car marked)])
+                        (let* ([lastvoid (or (equal? lastv '(void)) (define? lastv))]
+                               [marked0 (map car marked)]
+                               [marked (if lastvoid
+                                           (cons 'void marked0)
+                                           marked0)])
                           (let ([xs (filter
                                      (λ (x)
                                        (if (define? x)
                                            (set-member? marked (second x))
                                            #t)) xs)])
-                            (if (or (equal? lastv '(void)) (define? lastv))
+                            (if lastvoid
                                 (append xs (list '(void)))
                                 xs)))
                         (loop (append new marked) newrest)))))))))))
