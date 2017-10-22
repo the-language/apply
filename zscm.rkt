@@ -182,10 +182,8 @@
    (define number? __number?)
    (define number->string __number->string)
    (define string->number __string->number)
-   (define char? __char?)
+   (define string-append __string-append)
    (define string? __string?)
-   (define string->list __string->list)
-   (define list->string __list->string)
    (define symbol? __symbol?)
    (define symbol->string __symbol->string)
    (define string->symbol __string->symbol)
@@ -538,6 +536,20 @@
          (if (hash-ref hash key #f) ; 非boolean,所以要if
              #t
              #f)))))
+(prelude
+ get
+ (case (get 'charstr)
+   [('nochar) ;不能和quote一起使用
+    '((define-record-type char
+        (%char v)
+        char?
+        (v %g%char))
+      (define (string->list s) (map %char (__str->lst s)))
+      (define (list->string s) (foldl string-append "" (map %g%char s))))]
+   [else
+    '((define char? __char?)
+      (define list->string __list->string)
+      (define string->list __string->list))]))
 
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))
@@ -571,6 +583,8 @@
   (let ([x (macroexpand macros x)])
     (cond
       [(pair? x) (APPLY conf macros (car x) (cdr x))]
+      [(and (char? x)
+            (eq? (conf-get conf 'charstr) 'nochar)) `(%char ,(string x))]
       [else x])))
 (define (APPLY conf macros f xs)
   (match f
@@ -646,6 +660,8 @@
     [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
     [(symbol? x) `(quote ,x)]
     [(null? x) '(quote ())]
+    [(and (char? x)
+          (eq? (conf-get conf 'charstr) 'nochar)) `(%char ,(string x))]
     [else x]))
 
 (define (run conf xs)
