@@ -18,49 +18,45 @@
 (new-lisp-getid
  id
 
-  null?
-pair?
-cons
-car
-cdr
+ null?
+ pair?
+ cons
+ car
+ cdr
 
-error
-raise
-with-exception-handler
+ error
+ raise
+ with-exception-handler
 
-<lambda>
-<begin>
-procedure?
-apply
+ procedure?
+ apply
 
-string-append
-string?
+ string-append
+ string?
 
-symbol?
-symbol->string
-string->symbol
+ symbol?
+ symbol->string
+ string->symbol
 
-boolean?
-<if>
+ boolean?
+ <if>
 
-number?
-number->string
-string->number
-eq?
-+/2
--/2
-*2
-/2
-<2
->2
-<=2
->=2
+ number?
+ number->string
+ string->number
+ eq?
+ +
+ -
+ *
+ /
+ <
+ >
+ <=
+ >=
 
-            ))
-(define (id x) (newid x))
-(define (newid x)
-  (hash-ref! ns x (λ () (string->symbol (string-append "zs-" (symbol->string x))))))
-
+ [putstr display]
+ newline
+ )
 (define (EVAL x)
   (cond
     [(eq? x 'host-language) "scheme"]
@@ -71,39 +67,33 @@ eq?
   (match f
     ['lambda (LAMBDA (first xs) (second xs))]
     ['begin (BEGIN xs)]
-    ['quote (QUOTE (car xs))]
+    ['quote `(quote ,(car xs))]
     ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
+    ['if `(if ,(EVAL (first xs)) ,(EVAL (second xs)) ,(EVAL (third xs)))]
     [_ (cons (EVAL f) (map EVAL xs))]))
-(define (QUOTE x) (list 'quote x))
 (define (BEGIN xs)
-  (cond
-    [(null? xs) (EVAL '(void))]
-    [(null? (cdr xs)) (EVAL (car xs))]
-    [else
-     (cons 'begin
+  (if (null? (cdr xs))
+      (EVAL (car xs))
+      (cons 'begin
            (map (λ (x)
-                  (if (and (pair? x) (eq? (car x) 'define))
-                      (if (null? (cdddr x))
-                          `(define ,(newid (cadr x)) ,(EVAL (caddr x)))
-                          (error "BEGIN: define" xs))
-                      (EVAL x))) xs))]))
+                  (match x
+                    [`(define ,i ,v) `(define ,(id i) ,(EVAL v))]
+                    [`(set! ,i ,v) `(set! ,i ,v)]
+                    [_ (EVAL x)])) xs))))
 (define (LAMBDA args x)
   `(lambda ,(%LAMBDA args)
      ,(EVAL x)))
 (define (%LAMBDA x)
   (cond
     [(null? x) '()]
-    [(symbol? x) (newid x)]
+    [(symbol? x) (id x)]
     [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
     [else (error "%LAMBDA" x)]))
 
-(compiler c [number display ffi] feval)
+(compiler scm0 [number display ffi] EVAL)
 
-(define (feval x)
-  (unbegin (EVAL x)))
-(define (unbegin x)
-  (if (eq? (car x) 'begin)
-      (cdr x)
-      (error "unbegin")))
+(define
+  pre
+  '())
 
-(writeln (cons 'begin (c (read))))
+(define (scm c) (scm0 (append pre c)))

@@ -1,4 +1,5 @@
 #lang racket
-(provide lua mal)
+(provide lua mal scm)
 (require "lua.rkt")
 (require "mal.rkt")
+(require "scm.rkt")

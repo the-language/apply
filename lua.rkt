@@ -128,6 +128,7 @@
 
 (define (EVAL x)
   (cond
+    [(eq? x 'host-language) "lua"]
     [(pair? x) (APPLY (car x) (cdr x))]
     [(symbol? x) (id x)]
     [else (QUOTE x)]))
