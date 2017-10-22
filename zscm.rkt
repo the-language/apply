@@ -434,6 +434,10 @@
            [(vector? x) (begin
                           (__putstr "#")
                           (display (vector->list x)))]
+           [(atom? x) (begin
+                        (__putstr "#<atom:")
+                        (display (atom-get x))
+                        (__putstr ">"))]
            [else (error "display" x)]))
        (define (%dis%* x)
          (if (null? x)

@@ -68,7 +68,13 @@
  [>=2 gteq]
 
  putstr
- newline)
+ newline
+
+ [atom! atom]
+ [atom-get atomget]
+ [atom-set! atomset]
+ [atom-map! atommap]
+ [atom? isatom])
 
 (define ++
   (case-lambda
@@ -191,4 +197,4 @@
    pre
    (%BEGIN (unbegin x))))
 
-(compiler lua [display quote] feval)
+(compiler lua [display quote atom] feval)

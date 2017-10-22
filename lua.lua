@@ -73,3 +73,9 @@ local function lt(x,y)return x<y end
 local function gteq(x,y)return x>=y end
 local function lteq(x,y)return x<=y end
 
+local function isatom(x)return(is_table(x)and x[1]==atomt)end
+local function atom(x)return{atomt,x}end
+local function atomget(x)assert(isatom(x))return x[2]end
+local function atomset(x,v)assert(isatom(x))x[2]=v end
+local function atommap(f,x)assert(isatom(x)) local n=f(x[2]) x[2]=n return n end
+
