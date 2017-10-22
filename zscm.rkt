@@ -76,7 +76,7 @@
    (defmacro cond
      (λ xs
        (if (null? xs)
-           `(error 'cond)
+           `(error "cond")
            (let ([c (car xs)])
              (let ([g (car c)] [v (cdr c)])
                (if (eq? g 'else)
@@ -241,6 +241,67 @@
                c)
               (cdr ops)))))))
 
+(prelude
+ get
+ (if (get 'atom)
+     '((define atom! __atom!)
+       (define atom-get __atom-get)
+       (define atom-set! __atom-set!)
+       (define atom-map! __atom-map!)
+       (define atom? __atom?)
+       )
+     '((define atom! (error "atom"))
+       (define atom-get (error "atom"))
+       (define atom-set! (error "atom"))
+       (define atom-map! (error "atom"))
+       (define atom? #f)
+       )))
+
+(prelude
+ get
+ '((defmacro define-record-type
+     (begin
+       (define (mkc fs)
+         (if (null? fs)
+             '()
+             (cons
+              (match (car fs)
+                [`(,x ,a) x]
+                [`(,x ,a ,set) `(atom! ,x)])
+              (mkc (cdr fs)))))
+       (define (deffs name pred c fs)
+         (if (null? fs)
+             '()
+             (append
+              (match (car fs)
+                [`(,f ,a)
+                 `((define (,a x)
+                     (if (,pred x)
+                         (_vec_ref_ x ,c)
+                         (error ,(symbol->string name) ,(symbol->string a) x))))]
+                [`(,f ,a ,set)
+                 `((define (,a x)
+                     (if (,pred x)
+                         (atom-get (_vec_ref_ x ,c))
+                         (error ,(symbol->string name) ,(symbol->string a) x)))
+                   (define (,set x v)
+                     (if (,pred x)
+                         (atom-set! (_vec_ref_ x ,c) v)
+                         (error ,(symbol->string name) ,(symbol->string a) x))))])
+              (deffs name pred (+ 1 c) (cdr fs)))))
+       (λ (name constructor pred . fs)
+         `(begin
+            (define ,constructor
+              (vector
+               (cons '_%struct%_ (quote ,name))
+               ,@(mkc fs)))
+            (define (,pred x)
+              (and
+               (struct? x)
+               (eq? (cdr (_vec_ref_ x 0))
+                    (quote ,name))))
+            ,@(deffs name pred 1 fs)))))))
+
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))
 (define (macroexpand macros x)
@@ -325,20 +386,24 @@
                                 (append xs (list '(void)))
                                 xs)))
                         (loop (append new marked) newrest)))))))))))
+;(set! BEGINgc (λ (x) x))
+(define (BEGINappend cs)
+  (if (null? cs)
+      '()
+      (let ([c (car cs)])
+        (if (begin? c)
+            (append (cdr c) (BEGINappend (cdr cs)))
+            (cons c (BEGINappend (cdr cs)))))))
 (define (BEGIN conf macros xs)
-  (let loop ([cs (BEGINgc
-                  (map
-                   (λ (x)
-                     (if (define? x)
-                         (DEFINE conf macros (cadr x) (cddr x))
-                         (EVAL conf macros x)))
-                   xs))])
-    (if (null? cs)
-        '()
-        (let ([c (car cs)])
-          (if (begin? c)
-              (append (cdr c) (loop (cdr cs)))
-              (cons c (loop (cdr cs))))))))
+  (BEGINgc
+   (BEGINappend
+    (map
+     (λ (x)
+       (if (define? x)
+           (DEFINE conf macros (cadr x) (cddr x))
+           (EVAL conf macros x)))
+     (BEGINappend
+      (map (λ (x) (macroexpand macros x)) xs)))))) ;在GC前合并begin
 (define (QUOTE x)
   (cond
     [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
@@ -349,4 +414,9 @@
 (define (run conf xs)
   (EVAL conf (make-hash) (cons 'begin (append (runprelude conf) xs))))
 
-(run (newconf) '((equal? (list 0 1) (list 0 1))))
+(run (newconf) '((define-record-type <pare>
+                   (kons x y)
+                   pare?
+                   (x kar set-kar!)
+                   (y kdr))
+                 (kons 0 1)))
