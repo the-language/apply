@@ -173,14 +173,10 @@
                                (throw e))))))
     (def! list->vector
       (fn* (xs)
-           (if (list? xs)
-               (apply vector xs)
-               (error "list->vector: isn't list?" xs))))
+           (apply vector xs)))
     (def! vector->list
       (fn* (xs)
-           (if (vvector? xs)
-               (apply list xs)
-               (error "vector->list: isn't vector?" xs))))
+           (apply list xs)))
     (def! pcons
       (fn* (x xs)
            (if (list? xs)
