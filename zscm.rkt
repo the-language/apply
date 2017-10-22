@@ -41,7 +41,13 @@
    (define (max x . xs) (foldl %max x xs))
    (define (%min x y) (if (< x y) x y))
    (define (min x . xs) (foldl %min x xs))
-   
+
+   (define (list . xs) xs)
+   (define (list? xs) (or (null? xs) (and (pair? xs) (list? (cdr xs)))))
+   (define (map f xs)
+     (if (null? xs)
+         '()
+         (cons (f (car xs)) (map f (cdr xs)))))
    (define (append xs ys)
      (if (null? xs)
          ys
@@ -78,7 +84,8 @@
        (define _vec_ref_ __vector-ref)
        (define list->vector __list->vector)
        (define _vec->lst_ __vector->list)
-       (define (_vec_len_0?_ v) (zero? (_vec_len_ v))))
+       (define (_vec_len_0?_ v) (zero? (_vec_len_ v)))
+       )
      '((define (pair? x) (and (__pair? x) (not (_vec?_ x))))
        (define (car p)
          (if (pair? p)
@@ -103,6 +110,27 @@
          (if (_vec?_ x)
              (__cdr x)
              (error "vector->list: isn't vector" x)))
-       (define (_vec_len_0?_ x) (null? (_vec->lst_ x))))))
+       (define (_vec_len_0?_ x) (null? (_vec->lst_ x)))
+       )))
+
+(prelude
+ get
+ (if (get 'equal)
+     '((define eq? __equal?)
+       (define eqv? __equal?)
+       (define equal? __equal?)
+       )
+     '((define eq? __eq?)
+       (define eqv? __equal?)
+       (define (equal? x y)
+         (cond
+           [(eq? x y) #t]
+           [(pair? x) (and (pair? y)
+                           (equal? (car x) (car y))
+                           (equal? (cdr x) (cdr y)))]
+           [(_vec?_ x) (and (_vec?_ y)
+                            (equal? (_vec->lst_ x) (_vec->lst_ y)))]
+           [else #f]))
+       ))
 
 (runprelude (newconf))
