@@ -13,8 +13,8 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide c)
-(require "zscm.rkt")
+(provide mal)
+(require "codegen.rkt")
 (define-syntax %newns
   (syntax-rules ()
     [(_) '()]
@@ -24,59 +24,57 @@
   (make-hasheq
    (%newns x ...)))
 
-(define ns (newns
-            [cons pcons]
-            [%car car]
-            [%cdr cdr]
-            [%pair? pair?]
-            [null? empty?]
-            +
-            -
-            *
-            /
-            <
-            >
-            <=
-            >=
-            =
-            number?
-            string?
-            quote
-            symbol?
-            [eq? =]
-            [equal? =]
-            error
-            boolean?
-            [procedure? fn?]
-            [apply papply]
-            [%vector->list vector->list]
-            [list->vector list->vector]
-            vector
-            [%vector? vvector?]
-            [%vector-length count]
-            [%vector-ref nth]
-            putstr
-            newline
-            [atom! atom]
-            [atom-get deref]
-            [atom-set! reset!]
-            [atom-map! swap!]
-            raise
-            with-exception-handler
-            [hash? hash-map?]
-            [hash hash-map]
-            [hash-set assoc]
-            [hash-ref hash-ref]
-            [hash-has-key? contains?]
-            make-immutable-hash
-            hash->list
-            [str->strlist str->strlist]
-            list
-            list?
-            map
-            [symbol->string str]
-            [number->string str]
-            ))
+(new-lisp-getid
+ id
+
+ [null? empty?]
+ pair?
+ [cons pcons]
+ car
+ cdr
+
+ error
+ raise
+ with-exception-handler
+
+ procedure?
+ apply
+
+ [string-append str]
+ string?
+
+ symbol?
+ [symbol->string str]
+ [string->symbol symbol]
+
+ boolean?
+
+ number?
+ [number->string str]
+ string->number
+ [equal? =]
+
+ [atom! atom]
+ [atom-get deref]
+ [atom-set! reset!]
+ [atom-map! swap!]
+            
+ [hash? hash-map?]
+ [hash-set assoc]
+ [hash-ref hash-ref]
+ [hash-has-key? contains?]
+ make-immutable-hash
+
+ vector
+ [vector? vvector?]
+ [vector-length count]
+ [vector-ref nth]
+ list->vector
+ vector->list
+
+ putstr
+ newline
+ )
 (define (id x) (newid x))
 (define (newid x)
   (hash-ref! ns x (λ () (string->symbol (string-append "zs-" (symbol->string x))))))
@@ -110,7 +108,7 @@
       [(null? args) `(fn* ,a ,(EVAL x))]
       [(symbol? args) (loop (append a (list '& (newid args))) '())]
       [else (loop (append a (list (newid (car args)))) (cdr args))])))
-(compiler c [number equal vector display atom ffi hash nochar list] feval)
+(compiler c [+-*/<>= equal vector display atom hash [charstr nochar]] feval)
 
 (define (unbegin x)
   (if (eq? (car x) 'do)
@@ -129,7 +127,7 @@
                    (all? pred (rest lst))
                    false))))
     (def! *digits-set* (hash-map "0" true "1" true "2" true "3" true "4" true
-                            "5" true "6" true "7" true "8" true "9" true "." true "/" true "e" true "+" true))
+                                 "5" true "6" true "7" true "8" true "9" true "." true "/" true "e" true "+" true))
     (def! all-digits?
       (fn* [chars]
            (all? (fn* [c] (contains? *digits-set* c)) chars)))
@@ -211,11 +209,6 @@
            (if (jpair? x)
                (nth x 2)
                (rest x))))
-    (def! papply
-      (fn* (f xs)
-           (if (list? xs)
-               (apply f xs)
-               (error "apply: isn't list?" f xs))))
     (def! hash-ref
       (fn* (h k & f)
            (if (contains? h k)
@@ -228,12 +221,12 @@
                          x))))))
     (def! make-immutable-hash
       (fn* (xs)
-           (papply hash-map xs)))
+           (apply hash-map xs)))
     (def! hash->list
       (fn* (hash)
            (map
             (fn* (k)
-              (pcons k (get hash k)))
+                 (pcons k (get hash k)))
             (keys hash))))
     (def! %str->strlist
       (fn* (s)

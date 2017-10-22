@@ -54,6 +54,13 @@ local function apply(f,xs)return f(unpack(list2lua(xs)))end
 
 local function strappend(x,y)return x..y end
 local function is_string(x)return type(x)=="string"end
+local function str2lst(s)
+	local r={}
+	for i=1,#s do
+		r[i]=char(str:sub(i,i))
+	end
+	return lst(r)
+end
 
 local function is_symbol(x)return(is_table(x)and x[1]==symbolt)end
 local function sym2str(x)assert(is_symbol(x))return x[2]end

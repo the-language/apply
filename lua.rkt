@@ -47,6 +47,7 @@
 
  [string-append strappend]
  [string? is_string]
+ [str->lst str2lst]
 
  [symbol? is_symbol]
  [symbol->string sym2str]
