@@ -13,7 +13,6 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require "alexpander.rkt")
 (define-syntax newconf
   (syntax-rules ()
     [(_) (hasheq)]
@@ -76,6 +75,18 @@
      (if (zero? i)
          (car xs)
          (list-ref (cdr xs) (- i 1))))
+
+   (defmacro and
+     (λ xs
+       (if (null? xs)
+           #t
+           (if (null? (cdr xs))
+               (car xs)
+               (let ([s (gensym)])
+                 `(let ([,s ,(car xs)])
+                    (if ,s
+                        (and ,@(cdr xs))
+                        #f)))))))
    ))
 
 (prelude
@@ -186,7 +197,7 @@
     [(and (pair? x) (eq? (car x) 'defmacro))
      (hash-set! macros (second x) (evalp (third x)))
      '(void)]
-    [(and (pair? x) (hash-ref macros (car x) #f)) => (λ (mf) (macroexpand (apply mf (cdr x))))]
+    [(and (pair? x) (hash-ref macros (car x) #f)) => (λ (mf) (macroexpand macros (apply mf (cdr x))))]
     [else x]))
 (define (c? x)
   (cond
@@ -208,9 +219,10 @@
    [string->symbol (λ (x) `(quote ,(string->symbol x)))]
    ))
 (define (EVAL conf macros x)
-  (cond
-    [(pair? x) (APPLY conf macros (car x) (cdr x))]
-    [else x]))
+  (let ([x (macroexpand macros x)])
+    (cond
+      [(pair? x) (APPLY conf macros (car x) (cdr x))]
+      [else x])))
 (define (APPLY conf macros f xs)
   (match f
     [(or 'λ 'lambda) `(lambda ,(car xs) . ,(BEGIN conf macros (cdr xs)))]
