@@ -13,6 +13,7 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(provide run compiler)
 (define-syntax newconf
   (syntax-rules ()
     [(_) (hasheq)]
@@ -166,9 +167,9 @@
                           (string-append (symbol->string name) "-" (symbol->string f))))
                    (let ([f (car f)]) ;mutable
                      (let ([g (string-append (symbol->string name) "-" (symbol->string f))])
-                     `(,f ,(string->symbol g)
-                          ,(string->symbol
-                            (string-append "set-" g "!")))))))
+                       `(,f ,(string->symbol g)
+                            ,(string->symbol
+                              (string-append "set-" g "!")))))))
              fs))))
    ))
 
@@ -193,6 +194,10 @@
    (define (not x) (if x #f #t))
    (define (displayln x) (display x) (newline))
    (define eqv? equal?)
+   (defmacro delay-force
+     (λ (x)
+       `(delay (force ,x))))
+   (define (make-promise x) (if (promise? x) x (delay x)))
 
    (define (zero? x) (eq? x 0))
    (define (positive? x) (> x 0))
@@ -388,6 +393,44 @@
      '((define (display x) (error "display: can't display" x))
        (define (newline) (error "newline: can't newline" x)))))
 
+(prelude
+ get
+ (if (get 'void)
+     '((define void __void)
+       (define void? __void?))
+     '((define-record-type void
+         (void)
+         void?))))
+
+(prelude
+ get
+ (if (get 'atom)
+     '((define-record-type delay-v
+         (%delay-v lazy)
+         promise?
+         (lazy %lazydelay-vv %set%delay!))
+       (defmacro delay
+         (λ (x)
+           `(%delay-v (lambda () ,x))))
+       (define (promise-forced? x) (pair? (%lazydelay-vv x)))
+       (define (force x)
+         (let ([v (%lazydelay-vv x)])
+           (if (pair? v)
+               (car v)
+               (let ([f (v)])
+                 (begin
+                   (%set%delay! x (list f))
+                   f))))))
+     '((define-record-type delay-v
+         (%delay-v lazy)
+         promise?
+         (lazy %lazydelay-vv))
+       (defmacro delay
+         (λ (x)
+           `(%delay-v (lambda () ,x))))
+       (define (promise-forced? x) #f)
+       (define (force x) ((%lazydelay-vv x))))))
+
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))
 (define (macroexpand macros x)
@@ -500,9 +543,5 @@
 (define (run conf xs)
   (EVAL conf (make-hash) (cons 'begin (append (runprelude conf) xs))))
 
-(run (newconf) '((define-record-type <pare>
-                   (kons x y)
-                   pare?
-                   (x kar set-kar!)
-                   (y kdr))
-                 (pare? (kons 0 1))))
+(define-syntax-rule (compiler name [c ...] evalf)
+  (define (name p) (evalf (run (newconf c ...) p))))
