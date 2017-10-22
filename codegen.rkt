@@ -15,17 +15,22 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (require "zscm.rkt")
 (provide (all-defined-out) (all-from-out "zscm.rkt"))
+
+(define-syntax builtinname
+  (syntax-rules ()
+    [(_ r) (string->symbol (string-append "__" (symbol->string (quote r))))]))
+
 (define-syntax c%newns
   (syntax-rules ()
     [(_) '()]
     [(_ [r s] x ...) (cons
                       (cons
-                       (string->symbol (string-append "__" (symbol->string (quote r))))
+                       (builtinname r)
                        (symbol->string (quote s)))
                       (c%newns x ...))]
     [(_ r x ...) (cons
                   (cons
-                   (string->symbol (string-append "__" (symbol->string (quote r))))
+                   (builtinname r)
                    (symbol->string (quote r)))
                   (c%newns x ...))]))
 (define-syntax-rule (%new-c-ns x ...)
@@ -55,12 +60,12 @@
     [(_) '()]
     [(_ [r s] x ...) (cons
                       (cons
-                       (string->symbol (string-append "__" (symbol->string (quote r))))
+                       (builtinname r)
                        (quote s))
                       (%newns% x ...))]
     [(_ r x ...) (cons
                   (cons
-                   (string->symbol (string-append "__" (symbol->string (quote r))))
+                   (builtinname r)
                    (quote r))
                   (%newns% x ...))]))
 (define-syntax-rule (lisp-newns x ...)
@@ -72,3 +77,8 @@
   (begin
     (define ns (lisp-newns x ...))
     (define (geter v) (lisp-getid ns v))))
+
+(define (unbegin x)
+  (if (and (pair? x) (eq? (car x) 'begin))
+      (cdr x)
+      (list x)))

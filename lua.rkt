@@ -13,16 +13,8 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-;(provide c)
-(require "zscm.rkt")
-(define-syntax %newns
-  (syntax-rules ()
-    [(_) '()]
-    [(_ [r s] x ...) (cons (cons (quote r) (symbol->string (quote s))) (%newns x ...))]
-    [(_ r x ...) (cons (cons (quote r) (symbol->string (quote r))) (%newns x ...))]))
-(define-syntax-rule (newns x ...)
-  (make-hasheq
-   (%newns x ...)))
+(provide lua)
+(require "codegen.rkt")
 (define-syntax-rule (includes f)
   (include/reader
    f
@@ -37,67 +29,46 @@
                    (loop (string-append s "\n" x))))))))))
 (define pre (includes "lua.lua"))
 
-(define ns (newns
-            list
-            [list? is_list]
-            map
-            [with-exception-handler withexceptionhandler]
-            [error zerror]
-            [raise raise]
-            [%+ add]
-            [%- sub]
-            [%* mul]
-            [%/ quo]
-            cons
-            [%car car]
-            [%cdr cdr]
-            [%pair? is_pair]
-            [null? is_null]
-            [%< lt]
-            [%> gt]
-            [%= eq]
-            [number? is_number]
-            [char? is_char]
-            [string? is_string]
-            [boolean? is_boolean]
-            [string->list string2list]
-            [symbol->string sym2str]
-            [number->string tostring]
-            [symbol? is_symbol]
-            [eq? equal]
-            [equal? equal]
-            [%vector->list vec2list]
-            [list->vector list2vec]
-            vector
-            [%vector? is_vector]
-            [%vector-length veclen]
-            [%vector-ref vector_ref]
-            [atom? is_atom]
-            [atom! atom]
-            [atom-map! atom_map]
-            [atom-set! atom_set]
-            [atom-get atom_get]
-            [void voidf]
-            [procedure? is_procedure]
-            putstr
-            newline
-            apply))
+(new-c-getid
+ id
 
-(define (id x) (newid x))
-(define (newid x)
-  (hash-ref!
-   ns
-   x
-   (λ ()
-     (apply ++
-            (cons "zs_" (map
-                         (λ (x) (if (or (char-alphabetic? x) (char-numeric? x))
-                                    (string x)
-                                    (list
-                                     "_"
-                                     (number->string (char->integer x))
-                                     "_")))
-                         (string->list (symbol->string x))))))))
+ [null? is_null]
+ [pair? is_pair]
+ cons
+ car
+ cdr
+
+ error
+ raise
+ [with-exception-handler withexceptionhandler]
+
+ [procedure? is_procedure]
+ apply
+
+ [string-append strappend]
+ [string? is_string]
+
+ [symbol? is_symbol]
+ [symbol->string sym2str]
+ [string->symbol symbol]
+
+ [boolean? is_boolean]
+
+ [number? is_number]
+ [number->string tostring]
+ [string->number num]
+ [eq? eq]
+ [+/2 add]
+ [-/2 sub]
+ [*2 mul]
+ [/2 quo]
+ [<2 lt]
+ [>2 gt]
+ [<=2 lteq]
+ [>=2 gteq]
+
+ putstr
+ newline)
 
 (define ++
   (case-lambda
@@ -142,7 +113,6 @@
 
 (define (EVAL x)
   (cond
-    [(eq? x 'host-language) "\"lua\""]
     [(pair? x) (APPLY (car x) (cdr x))]
     [(symbol? x) (id x)]
     [else (QUOTE x)]))
@@ -153,24 +123,24 @@
       (cmd-if (EVAL (first xs))
               (return (EVAL (second xs)))
               (return (EVAL (third xs)))))]
-    ['lambda (LAMBDA (first xs) (second xs))]
+    ['lambda (LAMBDA (first xs) (%BEGIN (cdr xs)))]
     ['begin (BEGIN xs)]
-    ['void "void"]
     ['quote (QUOTE (first xs))]
     [_ (apply cmd-apply (cons (EVAL f) (map EVAL xs)))]))
 (define (LAMBDA xs x)
   (if (list? xs)
-      (function (map newid xs) (return (EVAL x)))
+      (function (map id xs) x)
       (let-values ([(h t) (ends xs)])
-        (function... (map newid h) (newid t) (return (EVAL x))))))
+        (function... (map id h) (id t) x))))
 (define (ends xs)
   (if (symbol? xs)
       (values '() xs)
       (let-values ([(h t) (ends (cdr xs))])
         (values (cons (car xs) h) t))))
-(define (BEGIN xs)
-  (block
-   (map (λ (x) (var (newid (second x))))
+(define (BEGIN xs) (block (%BEGIN xs)))
+(define (%BEGIN xs)
+  (++
+   (map (λ (x) (var (id (second x))))
         (filter (λ (x) (and (pair? x) (eq? (first x) 'define))) xs))
    (let-values  ([(h tl) (split-at-right xs 1)])
      (++ (map
@@ -219,8 +189,6 @@
 (define (feval x)
   (++
    pre
-   (return (cmd-apply "scmto" (EVAL x)))))
+   (%BEGIN (unbegin x))))
 
-(compiler c [ffi atom vector list display equal void quote] feval)
-
-(displayln (c (read)))
+(compiler lua [display quote] feval)
