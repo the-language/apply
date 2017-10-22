@@ -79,3 +79,18 @@ local function atomget(x)assert(isatom(x))return x[2]end
 local function atomset(x,v)assert(isatom(x))x[2]=v end
 local function atommap(f,x)assert(isatom(x)) local n=f(x[2]) x[2]=n return n end
 
+local function lst(xs)
+	local r=null
+	for i=#xs,1,-1 do
+		r=cons(xs[i],r)
+	end
+	return r
+end
+
+local function vec(...)return{vectort,{...}}end
+local function isvec(x)return(is_table(x)and x[1]==vectort)end
+local function veclen(x)assert(isvec(x))return #x[2]end
+local function vecref(v,k)assert(isvec(x))return x[2][k+1]end
+local function lst2vec(l)return{vectort,list2lua(l)}end
+local function vec2lst(v)assert(isvec(x))return lst(x[2])end
+

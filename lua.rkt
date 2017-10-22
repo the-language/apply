@@ -74,7 +74,15 @@
  [atom-get atomget]
  [atom-set! atomset]
  [atom-map! atommap]
- [atom? isatom])
+ [atom? isatom]
+
+ [vector vec]
+ [vector? isvec]
+ [vector-length veclen]
+ [vector-ref vecref]
+ [list->vector lst2vec]
+ [vector->list vec2lst]
+ )
 
 (define ++
   (case-lambda
@@ -197,4 +205,4 @@
    pre
    (%BEGIN (unbegin x))))
 
-(compiler lua [display quote atom [charstr 'nochar]] feval)
+(compiler lua [display quote atom [charstr 'nochar] vector] feval)
