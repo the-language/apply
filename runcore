@@ -1,9 +1,0 @@
-#!/bin/sh
-c="$1"
-shift
-f=$(mktemp)
-echo "(core '"  > $f
-cat "$@" >> $f
-echo ")" >> $f
-./run "$c" ../zaoqil/zaoqil-core.scm $f
-rm $f
