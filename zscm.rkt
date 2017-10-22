@@ -398,12 +398,28 @@
 (prelude
  get
  (if (get 'atom)
-     '((define atom! __atom!)
-       (define atom-get __atom-get)
-       (define atom-set! __atom-set!)
-       (define atom-map! __atom-map!)
-       (define atom? __atom?)
-       )
+     (match (get 'atom)
+       [#t
+        '((define atom! __atom!)
+          (define atom-get __atom-get)
+          (define atom-set! __atom-set!)
+          (define atom-map! __atom-map!)
+          (define atom? __atom?))]
+       ['set!
+        '((define-record-type atom
+            (%atom! get set)
+            atom?
+            (get %atom-get)
+            (set %atom-set!))
+          (define (atom! x)
+            (define v x)
+            (%atom! (λ () v) (λ (nx) (set! v nx))))
+          (define (atom-get x) ((%atom-get x)))
+          (define (atom-set! x v) ((%atom-set! x) v))
+          (define (atom-map! f x)
+            (let ([r (f (atom-get x))])
+              (atom-set! x r)
+              r)))])
      '((define atom! (error "atom"))
        (define atom-get (error "atom"))
        (define atom-set! (error "atom"))

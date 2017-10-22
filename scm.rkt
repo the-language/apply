@@ -65,7 +65,7 @@
     [else x]))
 (define (APPLY f xs)
   (match f
-    ['lambda (LAMBDA (first xs) (second xs))]
+    ['lambda (LAMBDA (first xs) (cdr xs))]
     ['begin (BEGIN xs)]
     ['quote `(quote ,(car xs))]
     ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
@@ -82,7 +82,7 @@
                     [_ (EVAL x)])) xs))))
 (define (LAMBDA args x)
   `(lambda ,(%LAMBDA args)
-     ,(EVAL x)))
+     ,(BEGIN x)))
 (define (%LAMBDA x)
   (cond
     [(null? x) '()]
@@ -90,7 +90,7 @@
     [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
     [else (error "%LAMBDA" x)]))
 
-(compiler scm0 [number display ffi] EVAL)
+(compiler scm0 [number display ffi [atom 'set!]] EVAL)
 
 (define
   pre
