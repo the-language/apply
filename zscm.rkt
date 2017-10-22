@@ -84,12 +84,75 @@
                    `(if ,g
                         (begin ,@v)
                         (cond ,@(cdr xs)))))))))
+
+   (defmacro define-record-type
+     (begin
+       (define (mkc fs)
+         (if (null? fs)
+             '()
+             (cons
+              (match (car fs)
+                [`(,x ,a) x]
+                [`(,x ,a ,set) `(atom! ,x)])
+              (mkc (cdr fs)))))
+       (define (deffs name pred c fs)
+         (if (null? fs)
+             '()
+             (append
+              (match (car fs)
+                [`(,f ,a)
+                 `((define (,a x)
+                     (if (,pred x)
+                         (_vec_ref_ x ,c)
+                         (error ,(symbol->string name) ,(symbol->string a) x))))]
+                [`(,f ,a ,set)
+                 `((define (,a x)
+                     (if (,pred x)
+                         (atom-get (_vec_ref_ x ,c))
+                         (error ,(symbol->string name) ,(symbol->string a) x)))
+                   (define (,set x v)
+                     (if (,pred x)
+                         (atom-set! (_vec_ref_ x ,c) v)
+                         (error ,(symbol->string name) ,(symbol->string a) x))))])
+              (deffs name pred (+ 1 c) (cdr fs)))))
+       (λ (name constructor pred . fs)
+         `(begin
+            (define ,constructor
+              (vector
+               (cons '_%struct%_ (quote ,name))
+               ,@(mkc fs)))
+            (define (,pred x)
+              (and
+               (struct? x)
+               (eq? (cdr (_vec_ref_ x 0))
+                    (quote ,name))))
+            ,@(deffs name pred 1 fs)))))
+   (define (struct? x)
+     (and (_vec?_ x)
+          (not (_vec_len_0?_ x))
+          (let ([x (_vec_ref_ x 0)])
+            (and (pair? x)
+                 (eq? (car x) '_%struct%_)))))
+   (define (vector? x) (and (_vec?_ x) (not (struct? x))))
+   (define (vector-length v)
+     (if (vector? v)
+         (_vec_len_ v)
+         (error "vector-length: isn't vector" x)))
+   (define (vector-ref v i)
+     (if (vector? x)
+         (_vec_ref_ v i)
+         (error "vector-ref: isn't vector" x)))
+   (define (vector->list v)
+     (if (vector? v)
+         (_vec->lst_ v)
+         (error "vector->list: isn't vector" v)))
    ))
 
 (prelude
  get
  '((define null? __null?)
    (define error __error)
+   (define cons __cons)
    (define procedure? __procedure?)
    (define number? __number?)
    (define char? __char?)
@@ -257,51 +320,6 @@
        (define atom? #f)
        )))
 
-(prelude
- get
- '((defmacro define-record-type
-     (begin
-       (define (mkc fs)
-         (if (null? fs)
-             '()
-             (cons
-              (match (car fs)
-                [`(,x ,a) x]
-                [`(,x ,a ,set) `(atom! ,x)])
-              (mkc (cdr fs)))))
-       (define (deffs name pred c fs)
-         (if (null? fs)
-             '()
-             (append
-              (match (car fs)
-                [`(,f ,a)
-                 `((define (,a x)
-                     (if (,pred x)
-                         (_vec_ref_ x ,c)
-                         (error ,(symbol->string name) ,(symbol->string a) x))))]
-                [`(,f ,a ,set)
-                 `((define (,a x)
-                     (if (,pred x)
-                         (atom-get (_vec_ref_ x ,c))
-                         (error ,(symbol->string name) ,(symbol->string a) x)))
-                   (define (,set x v)
-                     (if (,pred x)
-                         (atom-set! (_vec_ref_ x ,c) v)
-                         (error ,(symbol->string name) ,(symbol->string a) x))))])
-              (deffs name pred (+ 1 c) (cdr fs)))))
-       (λ (name constructor pred . fs)
-         `(begin
-            (define ,constructor
-              (vector
-               (cons '_%struct%_ (quote ,name))
-               ,@(mkc fs)))
-            (define (,pred x)
-              (and
-               (struct? x)
-               (eq? (cdr (_vec_ref_ x 0))
-                    (quote ,name))))
-            ,@(deffs name pred 1 fs)))))))
-
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))
 (define (macroexpand macros x)
@@ -419,4 +437,4 @@
                    pare?
                    (x kar set-kar!)
                    (y kdr))
-                 (kons 0 1)))
+                 (pare? (kons 0 1))))
