@@ -73,12 +73,30 @@
            (let ([x (car p)])
              `(let ([,(car x) ,(second x)])
                 (let* ,(cdr p) ,@xs))))))
+   (defmacro cond
+     (λ xs
+       (if (null? xs)
+           `(error 'cond)
+           (let ([c (car xs)])
+             (let ([g (car c)] [v (cdr c)])
+               (if (eq? g 'else)
+                   `(begin ,@v)
+                   `(if ,g
+                        (begin ,@v)
+                        (cond ,@(cdr xs)))))))))
    ))
 
 (prelude
  get
  '((define null? __null?)
    (define error __error)
+   (define procedure? __procedure?)
+   (define number? __number?)
+   (define char? __char?)
+   (define string? __string?)
+   (define string->list __string->list)
+   (define list->string __list->string)
+   (define string __string)
 
    (define (not x) (if x #f #t))
 
@@ -331,4 +349,4 @@
 (define (run conf xs)
   (EVAL conf (make-hash) (cons 'begin (append (runprelude conf) xs))))
 
-(run (newconf) '((list? 0)))
+(run (newconf) '((equal? (list 0 1) (list 0 1))))
