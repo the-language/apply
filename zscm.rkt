@@ -133,6 +133,10 @@
           (let ([x (_vec_ref_ x 0)])
             (and (pair? x)
                  (eq? (car x) '_%struct%_)))))
+   (define (_struct_type_ x)
+     (if (struct? x)
+         (cdr (_vec_ref_ x 0))
+         (error "isn't struct" x)))
    (define (vector? x) (and (_vec?_ x) (not (struct? x))))
    (define (vector-length v)
      (if (vector? v)
@@ -155,14 +159,19 @@
    (define cons __cons)
    (define procedure? __procedure?)
    (define number? __number?)
+   (define number->string __number->string)
+   (define string->number __string->number)
    (define char? __char?)
    (define string? __string?)
    (define string->list __string->list)
    (define list->string __list->string)
    (define string __string)
+   (define symbol? __symbol?)
+   (define symbol->string __symbol->string)
+   (define string->symbol __string->symbol)
 
    (define (not x) (if x #f #t))
-
+   (define (displayln x) (display x) (newline))
    (define eqv? equal?)
 
    (define (zero? x) (eq? x 0))
@@ -319,6 +328,45 @@
        (define atom-map! (error "atom"))
        (define atom? #f)
        )))
+
+(prelude
+ get
+ (if (get 'display)
+     '((define (display x)
+         (cond
+           [(string? x) (__putstr x)]
+           [(symbol? x) (__putstr (symbol->string x))]
+           [(number? x) (__putstr (number->string x))]
+           [(boolean? x) (if x (__putstr "#t") (__putstr "#f"))]
+           [(char? x) (__putstr (string x))]
+           [(struct? x) (begin
+                          (__putstr "(")
+                          (__putstr (symbol->string (_struct_type_ x)))
+                          (%dis%* (struct->list x))
+                          (__putstr ")"))]
+           [(pair? x) (begin
+                        (__putstr "(")
+                        (display (car x))
+                        (%dis%* (cdr x))
+                        (__putstr ")"))]
+           [(vector? x) (begin
+                          (__putstr "#")
+                          (display (vector->list x)))]
+           [else (error "display" x)]))
+       (define (%dis%* x)
+         (if (null? x)
+             (void)
+             (if (pair? x)
+                 (begin
+                   (putstr " ")
+                   (display (car xs))
+                   (%dis%* (cdr xs)))
+                 (begin
+                   (putstr " . ")
+                   (display x)))))
+       (define newline __newline))
+     '((define (display x) (error "display: can't display" x))
+       (define (newline) (error "newline: can't newline" x)))))
 
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))
