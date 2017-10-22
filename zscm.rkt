@@ -34,6 +34,8 @@
  get
  '((define (not x) (if x #f #t))
    
+   (define eqv? equal?)
+   
    (define (zero? x) (eq? x 0))
    (define (positive? x) (> x 0))
    (define (negative? x) (< x 0))
@@ -117,11 +119,9 @@
  get
  (if (get 'equal)
      '((define eq? __equal?)
-       (define eqv? __equal?)
        (define equal? __equal?)
        )
      '((define eq? __eq?)
-       (define eqv? __equal?)
        (define (equal? x y)
          (cond
            [(eq? x y) #t]
@@ -131,6 +131,48 @@
            [(_vec?_ x) (and (_vec?_ y)
                             (equal? (_vec->lst_ x) (_vec->lst_ y)))]
            [else #f]))
-       ))
+       )))
+
+(prelude
+ get
+ (if (get '+-*/<>=)
+     '((define < __<)
+       (define > __>)
+       (define = __=)
+       (define <= __<=)
+       (define >= __>=)
+       (define + __+)
+       (define - __-)
+       (define * __*)
+       (define / __/)
+       )
+     (let loop ([c '((define (+ . xs) (foldl __+2 0 xs))
+                     (define (* . xs) (foldl __*2 1 xs))
+                     (define (- x . xs)
+                       (if (null? xs)
+                           (__-2 0 x)
+                           (foldl (λ (n x) (__-2 x n)) x xs)))
+                     (define (/ x . xs)
+                       (if (null? xs)
+                           (__/2 1 x)
+                           (foldl (λ (n x) (__/2 x n)) x xs))))]
+                [ops (list
+                      (cons '< '__<2)
+                      (cons '> '__>2)
+                      (cons '= 'eq?)
+                      (cons '<= '__<=2)
+                      (cons '>= '__>=2))])
+       (if (null? ops)
+           c
+           (let* ([op (car ops)] [f (cdr op)] [doop (gensym (car op))])
+             (loop
+              (append
+               `((define (,doop x y xs)
+                   (if (null? xs)
+                       (,f x y)
+                       (and (,f x y) (,doop y (car xs) (cdr xs)))))
+                 (define (,(car op) x y . xs) (,doop x y xs)))
+               c)
+              (cdr ops)))))))
 
 (runprelude (newconf))
