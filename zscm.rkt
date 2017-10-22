@@ -84,8 +84,11 @@
                    `(if ,g
                         (begin ,@v)
                         (cond ,@(cdr xs)))))))))
+   ))
 
-   (defmacro define-record-type
+(prelude
+ get
+ '((defmacro define-record-type
      (begin
        (define (mkc fs)
          (if (null? fs)
@@ -150,6 +153,23 @@
      (if (vector? v)
          (_vec->lst_ v)
          (error "vector->list: isn't vector" v)))
+
+   (defmacro struct
+     (λ (name fs . c)
+       `(define-record-type ,name
+          (,name ,@(map (λ (x) (if (symbol? x) x (car x))) fs))
+          ,(string->symbol (string-append (symbol->string name) "?"))
+          ,@(map
+             (λ (f)
+               (if (symbol? f)
+                   `(,f ,(string->symbol
+                          (string-append (symbol->string name) "-" (symbol->string f))))
+                   (let ([f (car f)]) ;mutable
+                     (let ([g (string-append (symbol->string name) "-" (symbol->string f))])
+                     `(,f ,(string->symbol g)
+                          ,(string->symbol
+                            (string-append "set-" g "!")))))))
+             fs))))
    ))
 
 (prelude
