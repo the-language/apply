@@ -28,6 +28,7 @@
                    (datum->syntax #f s)
                    (loop (string-append s "\n" x))))))))))
 (define pre (includes "lua.lua"))
+(define id c-getid)
 
 (define ++
   (case-lambda
@@ -76,7 +77,29 @@
     [(pair? x) (APPLY (car x) (cdr x))]
     [(symbol? x) (primcase
                   x
+                  [pair? "is_pair"]
+                  [cons "cons"]
+                  [car "car"]
+                  [cdr "cdr"]
+                  [symbol? "is_symbol"]
+                  [symbol->string "sym2str"]
+                  [raise "raise"]
+                  [apply "apply"]
+                  [with-exception-handler "weh"]
+                  [putstr "io.write"]
+                  [newline "print()"]
+                  [atom! "atom"]
+                  [atom-get "atomget"]
+                  [atom-set! "atomset"]
+                  [atom-map! "atommap"]
+                  [atom? "isatom"]
                   [vector "vec"]
+                  [vector? "isvec"]
+                  [vector-length "veclen"]
+                  [vector-ref "vecref"]
+                  [list->vector "lst2vec"]
+                  [vector->list "vec2lst"]
+                  [number->string "tostring"]
                   (id x))]
     [else (QUOTE x)]))
 (define (type s x)
@@ -96,16 +119,8 @@
      (primcase
       f
       [null? (exp (EVAL (first xs)) "==null")]
-      [pair? "is_pair"]
-      [cons "cons"]
-      [car "car"]
-      [cdr "cdr"]
-
-      [raise "raise"]
-      [with-exception-handler "weh"]
 
       [procedure? (exp "type(" (EVAL (first xs)) ")==\"function\"")]
-      [apply "apply"]
 
       [string-append (exp (EVAL (first xs)) ".." (EVAL (second xs)))]
       [string? (exp "type(" (EVAL (first xs)) ")==\"string\"")]
@@ -117,14 +132,11 @@ end
 return lst(r)
 end")]
 
-      [symbol? "is_symbol"]
-      [symbol->string "sym2str"]
       [string->symbol (exp "{symbolt," (EVAL (first xs)) "}")]
 
       [boolean? (exp "type(" (EVAL (first xs)) ")==\"boolean\"")]
 
       [number? (exp "type(" (EVAL (first xs)) ")==\"number\"")]
-      [number->string "tostring"]
       [string->number (exp (EVAL (first xs)) "+0")]
       [eq? (exp (EVAL (first xs)) "=" (EVAL (second xs)))]
       [+/2 (exp (EVAL (first xs)) "+" (EVAL (second xs)))]
@@ -136,20 +148,6 @@ end")]
       [<=2 (exp (EVAL (first xs)) "<=" (EVAL (second xs)))]
       [>=2 (exp (EVAL (first xs)) ">=" (EVAL (second xs)))]
 
-      [putstr (cmd-apply "io.write" (EVAL (first xs)))]
-      [newline "print()"]
-
-      [atom! "atom"]
-      [atom-get "atomget"]
-      [atom-set! "atomset"]
-      [atom-map! "atommap"]
-      [atom? "isatom"]
-
-      [vector? "isvec"]
-      [vector-length "veclen"]
-      [vector-ref "vecref"]
-      [list->vector "lst2vec"]
-      [vector->list "vec2lst"]
       (apply cmd-apply (cons (EVAL f) (map EVAL xs))))]))
 (define (LAMBDA xs x)
   (if (list? xs)

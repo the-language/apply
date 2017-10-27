@@ -24,7 +24,7 @@
     [(eq? f (builtinname p)) x] ...
     [else v]))
 
-(define (c-getid ns x)
+(define (c-getid x)
   (apply string-append
             (cons "zs" (map
                         (λ (x) (if (or (char-alphabetic? x) (char-numeric? x))
@@ -33,7 +33,7 @@
                                     "_"
                                     (number->string (char->integer x)))))
                         (string->list (symbol->string x))))))
-(define (lisp-getid ns x)
+(define (lisp-getid x)
   (string->symbol (string-append "zs-" (symbol->string x))))
 
 (define (unbegin x)

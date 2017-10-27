@@ -90,7 +90,7 @@
 (prelude
  get
  '((defmacro define-record-type
-     (begin
+     (λ (name constructor pred . fs)
        (define (mkc fs)
          (if (null? fs)
              '()
@@ -119,18 +119,17 @@
                          (atom-set! (_vec_ref_ x ,c) v)
                          (error ,(symbol->string name) ,(symbol->string a) x))))])
               (deffs name pred (+ 1 c) (cdr fs)))))
-       (λ (name constructor pred . fs)
-         `(begin
-            (define ,constructor
-              (vector
-               (cons '_%struct%_ (quote ,name))
-               ,@(mkc fs)))
-            (define (,pred x)
-              (and
-               (struct? x)
-               (eq? (cdr (_vec_ref_ x 0))
-                    (quote ,name))))
-            ,@(deffs name pred 1 fs)))))
+       `(begin
+          (define ,constructor
+            (vector
+             (cons '_%struct%_ (quote ,name))
+             ,@(mkc fs)))
+          (define (,pred x)
+            (and
+             (struct? x)
+             (eq? (cdr (_vec_ref_ x 0))
+                  (quote ,name))))
+          ,@(deffs name pred 1 fs))))
    (define (struct? x)
      (and (_vec?_ x)
           (not (_vec_len_0?_ x))
@@ -637,8 +636,8 @@
              #f)))))
 (prelude
  get
- (case (get 'charstr)
-   [('nochar) ;不能和quote一起使用
+ (match (get 'charstr)
+   ['nochar ;不能和quote一起使用
     '((define-record-type char
         (%char v)
         char?
@@ -649,10 +648,10 @@
             (map %char (_str->list_ s))
             (error "string->list: isn't string" s)))
       (define (list->string s) (foldl string-append "" (map %g%char s))))]
-   [else
-    '((define (char? x) (__char? x)
-        (define (list->string x) (__list->string x))
-        (define (string->list s) (__string->list s))))]))
+   [_
+    '((define (char? x) (__char? x))
+      (define (list->string x) (__list->string x))
+      (define (string->list s) (__string->list s)))]))
 
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))
