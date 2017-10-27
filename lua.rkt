@@ -177,7 +177,7 @@ end")]
                 (var-set (id (second t)) (EVAL (third t)))
                 (return "void"))
                (return (EVAL t))))))))
-(define (QUOTE1 x)
+(define (QUOTE x)
   (cond
     [(symbol? x) (++ "symbol(\"" (symbol->string x) "\")")]
     [(pair? x) (++ "cons(" (QUOTE (car x)) "," (QUOTE (cdr x)) ")")]
@@ -188,29 +188,10 @@ end")]
     [(string? x) (format "~s" x)]
     [(char? x) (++ "char(" (format "~s" (string x)) ")")]
     [else (error 'quote x)]))
-(define max-c 10)
-(define (%QUOTE x c f)
-  (if (pair? x)
-      (if (> c max-c)
-          (let ([var (symbol->string (gensym))])
-            (%QUOTE (car x) 0 (λ (a c)
-                                (%QUOTE (cdr x) c (λ (d c)
-                                                    (++
-                                                     (newvar+set var (++ "cons(" a "," d ")"))
-                                                     (f var (+ c 1))))))))
-          (%QUOTE (car x) c (λ (a c)
-                              (%QUOTE (cdr x) c (λ (d c)
-                                                  (f (++ "cons(" a "," d ")") (+ c 1)))))))
-      (f (QUOTE1 x) (+ c 1))))
-(define (QUOTE x)
-  (if (pair? x)
-      (block
-       (%QUOTE x 0 (λ (x c) (return x))))
-      (QUOTE1 x)))
 
 (define (feval x)
   (++
    pre
    (%BEGIN (unbegin x))))
 
-(compiler lua [display quote atom [charstr 'nochar] vector] feval)
+(compiler lua [display quote atom [charstr 'nochar] vector [split 10]] feval)
