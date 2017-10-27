@@ -15,73 +15,69 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (provide mal)
 (require "codegen.rkt")
-(new-lisp-getid
- id
-
- [null? empty?]
- pair?
- [cons pcons]
- car
- cdr
-
- error
- raise
- with-exception-handler
-
- procedure?
- apply
-
- [string-append str]
- string?
- [str->lst %str->strlist]
-
- symbol?
- [symbol->string str]
- [string->symbol symbol]
-
- boolean?
-
- number?
- [number->string str]
- string->number
- [equal? =]
-
- [atom! atom]
- [atom-get deref]
- [atom-set! reset!]
- [atom-map! swap!]
-            
- [hash? hash-map?]
- [hash-set assoc]
- [hash-ref hash-ref]
- [hash-has-key? contains?]
- make-immutable-hash
-
- vector
- [vector? vvector?]
- [vector-length count]
- [vector-ref nth]
- list->vector
- vector->list
-
- putstr
- newline
-
- +
- -
- *
- /
- <
- >
- <=
- >=
- [= eqs]
- )
+(define id lisp-getid)
 (define (EVAL x)
   (cond
     [(eq? x 'host-language) "mal"]
     [(pair? x) (APPLY (car x) (cdr x))]
-    [(symbol? x) (id x)]
+    [(symbol? x)
+     (primcase
+      x
+      [null? 'empty?]
+      [pair? 'jpair?]
+      [cons 'cons]
+      [car 'car]
+      [cdr 'cdr]
+      [raise 'raise]
+      [with-exception-handler 'weh]
+      [procedure? 'procedure?]
+      [apply 'apply]
+      [string-append 'str]
+      [string? 'string?]
+      [symbol? 'symbol?]
+      [symbol->string 'str]
+      [string->symbol 'symbol]
+      [string? 'string?]
+      [str->lst '(fn* (s)
+                      (let* (r (seq s))
+                        (if (nil? r)
+                            ()
+                            r)))]
+      [boolean? 'boolean?]
+      [number? 'number?]
+      [number->string 'str]
+      [string->number 'string->number] ; 没有实现
+      [equal? '=]
+      [atom! 'atom]
+      [atom-get 'deref]
+      [atom-set! 'reset!]
+      [atom-map! 'swap!]
+      [hash? 'hash-map?]
+      [hash-set 'assoc]
+      [hash-ref 'get]
+      [hash-has-key? 'contains?]
+      [make-immutable-hash '(fn* (xs)
+                                 (apply hash-map xs))]
+      [vector 'vector]
+      [vector? 'vvector?]
+      [vector-length 'count]
+      [vector-ref 'nth]
+      [list->vector '(fn* (xs)
+                          (apply vector xs))]
+      [vector->list '(fn* (xs)
+                          (apply list xs))]
+      [putstr 'putstr]
+      [newline 'newline]
+      [+ '+]
+      [- '-]
+      [* '*]
+      [/ '/]
+      [< '<]
+      [> '>]
+      [<= '<=]
+      [>= '>=]
+      [= 'eqs]
+      (id x))]
     [(eq? x #t) 'true]
     [(eq? x #f) 'false]
     [else x]))
@@ -156,13 +152,11 @@
            (if (number/fn? x)
                (not (slow-number? x))
                false)))
-    (def! error
-      (fn* (& xs)
-           (throw (cons 'error xs))))
+    
     (def! raise
       (fn* (x)
            (throw (list 'raise x))))
-    (def! with-exception-handler
+    (def! weh
       (fn* (handler thunk)
            (try* (thunk)
                  (catch* e (if (if (list? e)
@@ -172,13 +166,7 @@
                                    false)
                                (handler (first (rest e)))
                                (throw e))))))
-    (def! list->vector
-      (fn* (xs)
-           (apply vector xs)))
-    (def! vector->list
-      (fn* (xs)
-           (apply list xs)))
-    (def! pcons
+    (def! cons
       (fn* (x xs)
            (if (list? xs)
                (cons x xs)
@@ -208,33 +196,12 @@
            (if (jpair? x)
                (nth x 2)
                (rest x))))
-    (def! hash-ref
-      (fn* (h k & f)
-           (if (contains? h k)
-               (get h k)
-               (if (empty? f)
-                   (error "hash-ref" h k)
-                   (let* (x (car f))
-                     (if (fn? x)
-                         (x)
-                         x))))))
-    (def! make-immutable-hash
-      (fn* (xs)
-           (apply hash-map xs)))
     (def! hash->list
       (fn* (hash)
            (map
             (fn* (k)
-                 (pcons k (get hash k)))
+                 (cons k (get hash k)))
             (keys hash))))
-    (def! %str->strlist
-      (fn* (s)
-           (if (string? s)
-               (let* (r (seq s))
-                 (if (nil? r)
-                     ()
-                     r))
-               (error "string->list: isn't string?" s))))
     (def! %dis% (atom ""))
     (def! newline (fn* () (do (println (deref %dis%)) (reset! %dis% ""))))
     (def! putstr
