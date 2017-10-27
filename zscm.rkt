@@ -744,23 +744,25 @@
                                 xs)))
                         (loop (append new marked) newrest)))))))))))
 ;(set! BEGINgc (λ (x) x))
-(define (BEGINappend cs)
+(define (BEGINappend macros cs)
   (if (null? cs)
       '()
-      (let ([c (car cs)])
+      (let ([c (macroexpand macros (car cs))])
         (if (begin? c)
-            (append (cdr c) (BEGINappend (cdr cs)))
-            (cons c (BEGINappend (cdr cs)))))))
+            (append (BEGINappend macros (cdr c)) (BEGINappend macros (cdr cs)))
+            (cons c (BEGINappend macros (cdr cs)))))))
 (define (BEGIN conf macros xs)
   (BEGINgc
    (BEGINappend
+    macros
     (map
      (λ (x)
        (if (define? x)
            (DEFINE conf macros (cadr x) (cddr x))
            (EVAL conf macros x)))
      (BEGINappend
-      (map (λ (x) (macroexpand macros x)) xs)))))) ;在GC前合并begin
+      macros
+      xs))))) ;在GC前合并begin
 (define (QUOTE conf x)
   (cond
     [(pair? x) (list 'cons (QUOTE conf (car x)) (QUOTE conf (cdr x)))]
