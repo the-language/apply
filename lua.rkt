@@ -29,62 +29,6 @@
                    (loop (string-append s "\n" x))))))))))
 (define pre (includes "lua.lua"))
 
-(new-c-getid
- id
-
- [null? is_null]
- [pair? is_pair]
- cons
- car
- cdr
-
- error
- raise
- [with-exception-handler withexceptionhandler]
-
- [procedure? is_procedure]
- apply
-
- [string-append strappend]
- [string? is_string]
- [str->lst str2lst]
-
- [symbol? is_symbol]
- [symbol->string sym2str]
- [string->symbol symbol]
-
- [boolean? is_boolean]
-
- [number? is_number]
- [number->string tostring]
- [string->number num]
- [eq? eq]
- [+/2 add]
- [-/2 sub]
- [*2 mul]
- [/2 quo]
- [<2 lt]
- [>2 gt]
- [<=2 lteq]
- [>=2 gteq]
-
- putstr
- newline
-
- [atom! atom]
- [atom-get atomget]
- [atom-set! atomset]
- [atom-map! atommap]
- [atom? isatom]
-
- [vector vec]
- [vector? isvec]
- [vector-length veclen]
- [vector-ref vecref]
- [list->vector lst2vec]
- [vector->list vec2lst]
- )
-
 (define ++
   (case-lambda
     [() ""]
@@ -130,8 +74,13 @@
   (cond
     [(eq? x 'host-language) "lua"]
     [(pair? x) (APPLY (car x) (cdr x))]
-    [(symbol? x) (id x)]
+    [(symbol? x) (primcase
+                  x
+                  [vector "vec"]
+                  (id x))]
     [else (QUOTE x)]))
+(define (type s x)
+  (cmd-apply (exp "function(x)return type(x)==\"table\"and x[1]==" s) x))
 (define (APPLY f xs)
   (match f
     ['if
@@ -143,7 +92,65 @@
     ['begin (BEGIN xs)]
     ['quote (QUOTE (first xs))]
     ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
-    [_ (apply cmd-apply (cons (EVAL f) (map EVAL xs)))]))
+    [_
+     (primcase
+      f
+      [null? (exp (EVAL (first xs)) "==null")]
+      [pair? "is_pair"]
+      [cons "cons"]
+      [car "car"]
+      [cdr "cdr"]
+
+      [raise "raise"]
+      [with-exception-handler "weh"]
+
+      [procedure? (exp "type(" (EVAL (first xs)) ")==\"function\"")]
+      [apply "apply"]
+
+      [string-append (exp (EVAL (first xs)) ".." (EVAL (second xs)))]
+      [string? (exp "type(" (EVAL (first xs)) ")==\"string\"")]
+      [str->lst (exp "function(s)
+local r={}
+for i=1,#s do
+r[i]=str:sub(i,i)
+end
+return lst(r)
+end")]
+
+      [symbol? "is_symbol"]
+      [symbol->string "sym2str"]
+      [string->symbol (exp "{symbolt," (EVAL (first xs)) "}")]
+
+      [boolean? (exp "type(" (EVAL (first xs)) ")==\"boolean\"")]
+
+      [number? (exp "type(" (EVAL (first xs)) ")==\"number\"")]
+      [number->string "tostring"]
+      [string->number (exp (EVAL (first xs)) "+0")]
+      [eq? (exp (EVAL (first xs)) "=" (EVAL (second xs)))]
+      [+/2 (exp (EVAL (first xs)) "+" (EVAL (second xs)))]
+      [-/2 (exp (EVAL (first xs)) "-" (EVAL (second xs)))]
+      [*2 (exp (EVAL (first xs)) "*" (EVAL (second xs)))]
+      [/2 (exp (EVAL (first xs)) "/" (EVAL (second xs)))]
+      [<2 (exp (EVAL (first xs)) "<" (EVAL (second xs)))]
+      [>2 (exp (EVAL (first xs)) ">" (EVAL (second xs)))]
+      [<=2 (exp (EVAL (first xs)) "<=" (EVAL (second xs)))]
+      [>=2 (exp (EVAL (first xs)) ">=" (EVAL (second xs)))]
+
+      [putstr (cmd-apply "io.write" (EVAL (first xs)))]
+      [newline "print()"]
+
+      [atom! "atom"]
+      [atom-get "atomget"]
+      [atom-set! "atomset"]
+      [atom-map! "atommap"]
+      [atom? "isatom"]
+
+      [vector? "isvec"]
+      [vector-length "veclen"]
+      [vector-ref "vecref"]
+      [list->vector "lst2vec"]
+      [vector->list "vec2lst"]
+      (apply cmd-apply (cons (EVAL f) (map EVAL xs))))]))
 (define (LAMBDA xs x)
   (if (list? xs)
       (function (map id xs) x)

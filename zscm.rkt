@@ -175,23 +175,58 @@
 
 (prelude
  get
- '((define null? __null?)
-   (define error __error)
-   (define raise __raise)
-   (define with-exception-handler __with-exception-handler)
-   (define cons __cons)
-   (define procedure? __procedure?)
-   (define number? __number?)
-   (define number->string __number->string)
-   (define string->number __string->number)
-   (define string-append __string-append)
-   (define string? __string?)
-   (define symbol? __symbol?)
-   (define boolean? __boolean?)
-   (define symbol->string __symbol->string)
-   (define string->symbol __string->symbol)
-   (define apply __apply)
+ '((define (null? x) (__null? x))
+   (define (raise x) (__raise x))
+   (define (with-exception-handler handler thunk)
+     (if (procedure? handler)
+         (if (procedure? thunk)
+             (__with-exception-handler handler thunk)
+             (error "with-exception-handler: isn't procedure" thunk))
+         (error "with-exception-handler: isn't procedure" handler)))
+   (define (cons a d) (__cons a d))
+   (define (procedure? x) (__procedure? x))
+   (define (number? x) (__number? x))
+   (define (number->string x)
+     (if (number? x)
+         (__number->string x)
+         (error "number->string: isn't number" x)))
+   (define (string->number x)
+     (if (string? x)
+         (__string->number x)
+         (error "string->number: isn't string" x)))
+   (define (string-append x y)
+     (if (string? x)
+         (if (string? y)
+             (__string-append x y)
+             (error "string-append: isn't string" y))
+         (error "string-append: isn't string" x)))
+   (define (string? x) (__string? x))
+   (define (symbol? x) (__symbol? x))
+   (define (boolean? x) (__boolean? x))
+   (define (symbol->string x)
+     (if (symbol? x)
+         (__symbol->string x)
+         (erro "symbol->string: isn't symbol" x)))
+   (define (string->symbol x)
+     (if (string? x)
+         (__string->symbol x)
+         (error "string->symbol: isn't string" x)))
+   (define (apply f xs)
+     (if (procedure? f)
+         (if (list? xs)
+             (__apply f xs)
+             (error "apply: isn't list" xs))
+         (error "apply: isn't procedure" f)))
+   (define (car p)
+     (if (pair? p)
+         (__car p)
+         (error "car: isn't pair" p)))
+   (define (cdr p)
+     (if (pair? p)
+         (__cdr p)
+         (error "cdr: isn't pair" p)))
 
+   (define (error . xs) (raise (cons 'error xs)))
    (define (not x) (if x #f #t))
    (define (string . xs) (list->string xs))
    (define (displayln x) (display x) (newline))
@@ -297,51 +332,35 @@
 (prelude
  get
  (if (get 'vector)
-     '((define pair? __pair?)
-       (define car __car)
-       (define cdr __cdr)
+     '((define (pair? x) (__pair? x))
        (define vector __vector)
-       (define _vec?_ __vector?)
-       (define _vec_len_ __vector-length)
-       (define _vec_ref_ __vector-ref)
-       (define list->vector __list->vector)
-       (define _vec->lst_ __vector->list)
+       (define (_vec?_ x) (__vector? x))
+       (define (_vec_len_ x) (__vector-length x))
+       (define (_vec_ref_ vector k) (__vector-ref vector k))
+       (define (list->vector x)
+         (if (list? x)
+             (__list->vector x)
+             (error "list->vector: isn't list" x)))
+       (define (_vec->lst_ x) (__vector->list x))
        (define (_vec_len_0?_ v) (zero? (_vec_len_ v)))
        )
      '((define (pair? x) (and (__pair? x) (not (_vec?_ x))))
-       (define (car p)
-         (if (pair? p)
-             (__car p)
-             (error "car: isn't pair" p)))
-       (define (cdr p)
-         (if (pair? p)
-             (__cdr p)
-             (error "cdr: isn't pair" p)))
        (define (vector . xs) (cons '_%vec%_ xs))
        (define (_vec?_ x) (and (__pair? x) (eq? (__car x) '_%vec%_)))
-       (define (_vec_len_ x)
-         (if (_vec?_ x)
-             (length (__cdr x))
-             (error "vector-length: isn't vector" x)))
-       (define (_vec_ref_ x i)
-         (if (_vec?_ x)
-             (list-ref (__cdr x) i)
-             (error "vector-ref: isn't vector" x)))
+       (define (_vec_len_ x) (length (__cdr x)))
+       (define (_vec_ref_ x i) (list-ref (__cdr x) i))
        (define (list->vector xs) (cons '_%vec%_ xs))
-       (define (_vec->lst_ x)
-         (if (_vec?_ x)
-             (__cdr x)
-             (error "vector->list: isn't vector" x)))
+       (define (_vec->lst_ x) (__cdr x))
        (define (_vec_len_0?_ x) (null? (_vec->lst_ x)))
        )))
 
 (prelude
  get
  (if (get 'equal)
-     '((define eq? __equal?)
-       (define equal? __equal?)
+     '((define (eq? x y) (__equal? x y))
+       (define (equal? x y) (__equal? x y))
        )
-     '((define eq? __eq?)
+     '((define (eq? x y) (__eq? x y))
        (define (equal? x y)
          (cond
            [(eq? x y) #t]
@@ -366,16 +385,40 @@
        (define * __*)
        (define / __/)
        )
-     (let loop ([c '((define (+ . xs) (foldl __+/2 0 xs))
-                     (define (* . xs) (foldl __*2 1 xs))
+     (let loop ([c '((define (_+_ x y)
+                       (if (number? x)
+                           (if (number? y)
+                               (__+/2 x y)
+                               (error "+: isn't number" y))
+                           (error "+: isn't number" x)))
+                     (define (_-_ x y)
+                       (if (number? x)
+                           (if (number? y)
+                               (__-2 x y)
+                               (error "-: isn't number" y))
+                           (error "-: isn't number" x)))
+                     (define (_*_ x y)
+                       (if (number? x)
+                           (if (number? y)
+                               (__*2 x y)
+                               (error "*: isn't number" y))
+                           (error "*: isn't number" x)))
+                     (define (_/_ x y)
+                       (if (number? x)
+                           (if (number? y)
+                               (__/2 x y)
+                               (error "/: isn't number" y))
+                           (error "/: isn't number" x)))
+                     (define (+ . xs) (foldl _+_ 0 xs))
+                     (define (* . xs) (foldl _*_ 1 xs))
                      (define (- x . xs)
                        (if (null? xs)
-                           (__-2 0 x)
-                           (foldl (λ (n x) (__-/2 x n)) x xs)))
+                           (_-_ 0 x)
+                           (foldl (λ (n x) (_-_ x n)) x xs)))
                      (define (/ x . xs)
                        (if (null? xs)
-                           (__/2 1 x)
-                           (foldl (λ (n x) (__/2 x n)) x xs))))]
+                           (_/_ 1 x)
+                           (foldl (λ (n x) (_/_ x n)) x xs))))]
                 [ops (list
                       (cons '< '__<2)
                       (cons '> '__>2)
@@ -384,14 +427,24 @@
                       (cons '>= '__>=2))])
        (if (null? ops)
            c
-           (let* ([op (car ops)] [f (cdr op)] [doop (gensym (car op))])
+           (let* ([op (car ops)]
+                  [f (cdr op)]
+                  [fn (gensym f)]
+                  [d (car op)]
+                  [doop (gensym d)])
              (loop
               (append
-               `((define (,doop x y xs)
+               `((define (,fn x y)
+                   (if (number? x)
+                       (if (number? y)
+                           (,f x y)
+                           (error "isn't number" y))
+                       (error "isn't number" x)))
+                 (define (,doop x y xs)
                    (if (null? xs)
-                       (,f x y)
-                       (and (,f x y) (,doop y (car xs) (cdr xs)))))
-                 (define (,(car op) x y . xs) (,doop x y xs)))
+                       (,fn x y)
+                       (and (,fn x y) (,doop y (car xs) (cdr xs)))))
+                 (define (,d x y . xs) (,doop x y xs)))
                c)
               (cdr ops)))))))
 
@@ -400,11 +453,24 @@
  (if (get 'atom)
      (match (get 'atom)
        [#t
-        '((define atom! __atom!)
-          (define atom-get __atom-get)
-          (define atom-set! __atom-set!)
-          (define atom-map! __atom-map!)
-          (define atom? __atom?))]
+        '((define (atom! x) (__atom! x))
+          (define (atom-get x)
+            (if (atom? x)
+                (__atom-get x)
+                (error "atom-get: isn't atom" x)))
+          (define (atom-set! a x)
+            (if (atom? a)
+                (begin
+                  (__atom-set! a x)
+                  (void))
+                (error "atom-set!: isn't atom" a)))
+          (define (atom-map! f a)
+            (if (atom? a)
+                (if (procedure? f)
+                    (__atom-map! f a)
+                    (error "atom-map!: isn't procedure" f))
+                (error "atom-map!: isn't atom" a)))
+          (define (atom? x) (__atom? x)))]
        ['set!
         '((define-record-type atom
             (%atom! get set)
@@ -430,43 +496,44 @@
 (prelude
  get
  (if (get 'display)
-     '((define (display x)
+     '((define (_putstr_ x) (__putstr x))
+       (define (display x)
          (cond
-           [(string? x) (__putstr x)]
-           [(symbol? x) (__putstr (symbol->string x))]
-           [(number? x) (__putstr (number->string x))]
-           [(boolean? x) (if x (__putstr "#t") (__putstr "#f"))]
-           [(char? x) (__putstr (string x))]
+           [(string? x) (_putstr_ x)]
+           [(symbol? x) (_putstr_ (symbol->string x))]
+           [(number? x) (_putstr_ (number->string x))]
+           [(boolean? x) (if x (_putstr_ "#t") (_putstr_ "#f"))]
+           [(char? x) (_putstr_ (string x))]
            [(struct? x) (begin
-                          (__putstr "(")
-                          (__putstr (symbol->string (_struct_type_ x)))
+                          (_putstr_ "(")
+                          (_putstr_ (symbol->string (_struct_type_ x)))
                           (%dis%* (struct->list x))
-                          (__putstr ")"))]
+                          (_putstr_ ")"))]
            [(pair? x) (begin
-                        (__putstr "(")
+                        (_putstr_ "(")
                         (display (car x))
                         (%dis%* (cdr x))
-                        (__putstr ")"))]
+                        (_putstr_ ")"))]
            [(vector? x) (begin
-                          (__putstr "#")
+                          (_putstr_ "#")
                           (display (vector->list x)))]
            [(atom? x) (begin
-                        (__putstr "#<atom:")
+                        (_putstr_ "#<atom:")
                         (display (atom-get x))
-                        (__putstr ">"))]
+                        (_putstr_ ">"))]
            [else (error "display" x)]))
        (define (%dis%* x)
          (if (null? x)
              (void)
              (if (pair? x)
                  (begin
-                   (putstr " ")
+                   (_putstr_ " ")
                    (display (car xs))
                    (%dis%* (cdr xs)))
                  (begin
-                   (putstr " . ")
+                   (_putstr_ " . ")
                    (display x)))))
-       (define newline __newline))
+       (define (newline) (__newline)))
      '((define (display x) (error "display: can't display" x))
        (define (newline) (error "newline: can't newline" x)))))
 
@@ -511,11 +578,20 @@
 (prelude
  get
  (if (get 'hash)
-     '((define make-immutable-hash __make-immutable-hash)
-       (define hash->list __hash->list)
-       (define hash-set __hash-set)
+     '((define (make-immutable-hash x) (__make-immutable-hash x))
+       (define (hash->list h)
+         (if (hash? h)
+             (__hash->list h)
+             (error "hash->list: isn't hash" h)))
+       (define (hash-set h k v)
+         (if (hash? h)
+             (__hash-set h k v)
+             (error "hash-set: isn't hash" h)))
        (define hash-ref __hash-ref)
-       (define hash-hash-key? __hash-hash-key?))
+       (define (hash-hash-key? h k)
+         (if (hash? h)
+             (__hash-hash-key? h k)
+             (error "hash-hash-key?: isn't hash" h))))
      '((define-record-type hash
          (%make-immutable-hash xs)
          hash?
@@ -567,12 +643,16 @@
         (%char v)
         char?
         (v %g%char))
-      (define (string->list s) (map %char (__str->lst s)))
+      (define (_str->list_ x) (__str->lst x))
+      (define (string->list s)
+        (if (string? s)
+            (map %char (_str->list_ s))
+            (error "string->list: isn't string" s)))
       (define (list->string s) (foldl string-append "" (map %g%char s))))]
    [else
-    '((define char? __char?)
-      (define list->string __list->string)
-      (define string->list __string->list))]))
+    '((define (char? x) (__char? x)
+        (define (list->string x) (__list->string x))
+        (define (string->list s) (__string->list s))))]))
 
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))

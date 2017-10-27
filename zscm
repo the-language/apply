@@ -4,7 +4,6 @@ cons
 car
 cdr
 
-error
 raise
 with-exception-handler
 

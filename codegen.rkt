@@ -19,63 +19,22 @@
 (define-syntax builtinname
   (syntax-rules ()
     [(_ r) (string->symbol (string-append "__" (symbol->string (quote r))))]))
+(define-syntax-rule (primcase f [p x] ... v)
+  (cond
+    [(eq? f (builtinname p)) x] ...
+    [else v]))
 
-(define-syntax c%newns
-  (syntax-rules ()
-    [(_) '()]
-    [(_ [r s] x ...) (cons
-                      (cons
-                       (builtinname r)
-                       (symbol->string (quote s)))
-                      (c%newns x ...))]
-    [(_ r x ...) (cons
-                  (cons
-                   (builtinname r)
-                   (symbol->string (quote r)))
-                  (c%newns x ...))]))
-(define-syntax-rule (%new-c-ns x ...)
-  (make-hasheq
-   (c%newns x ...)))
 (define (c-getid ns x)
-  (hash-ref!
-   ns
-   x
-   (λ ()
-     (apply string-append
+  (apply string-append
             (cons "zs" (map
                         (λ (x) (if (or (char-alphabetic? x) (char-numeric? x))
                                    (string x)
                                    (string-append
                                     "_"
                                     (number->string (char->integer x)))))
-                        (string->list (symbol->string x))))))))
-(define-syntax-rule (new-c-getid geter x ...)
-  (begin
-    (define ns (%new-c-ns x ...))
-    (define (geter v) (c-getid ns v))))
-
-(define-syntax %newns%
-  (syntax-rules ()
-    [(_) '()]
-    [(_ [r s] x ...) (cons
-                      (cons
-                       (builtinname r)
-                       (quote s))
-                      (%newns% x ...))]
-    [(_ r x ...) (cons
-                  (cons
-                   (builtinname r)
-                   (quote r))
-                  (%newns% x ...))]))
-(define-syntax-rule (lisp-newns x ...)
-  (make-hasheq
-   (%newns% x ...)))
+                        (string->list (symbol->string x))))))
 (define (lisp-getid ns x)
-  (hash-ref! ns x (λ () (string->symbol (string-append "zs-" (symbol->string x))))))
-(define-syntax-rule (new-lisp-getid geter x ...)
-  (begin
-    (define ns (lisp-newns x ...))
-    (define (geter v) (lisp-getid ns v))))
+  (string->symbol (string-append "zs-" (symbol->string x))))
 
 (define (unbegin x)
   (if (and (pair? x) (eq? (car x) 'begin))
