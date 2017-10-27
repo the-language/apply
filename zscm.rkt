@@ -695,7 +695,7 @@
                 (EVAL conf macros (car xs))
                 `(begin ,@(BEGIN conf macros xs)))]
     ['define (error 'APPLY f xs)]
-    ['quote (if (conf-get conf 'quote) `(quote ,(car xs)) (QUOTE conf (car xs)))]
+    ['quote (if (conf-get conf 'quote) `(quote ,(car xs)) (QUOTE macros conf (car xs)))]
     [_ (let ([nxs (map (λ (x) (EVAL conf macros x)) xs)])
          (if (and (hash-has-key? fs f) (andmap c? nxs))
              (apply (hash-ref fs f) nxs)
@@ -753,22 +753,45 @@
             (cons c (BEGINappend macros (cdr cs)))))))
 (define (BEGIN conf macros xs)
   (BEGINgc
-   (map
-    (λ (x)
-      (if (define? x)
-          (DEFINE conf macros (cadr x) (cddr x))
-          (EVAL conf macros x)))
-    (BEGINappend
-     macros
-     xs)))) ;必须在GC前合并begin
-(define (QUOTE conf x)
+   (BEGINappend
+    macros
+    (map
+     (λ (x)
+       (if (define? x)
+           (DEFINE conf macros (cadr x) (cddr x))
+           (EVAL conf macros x)))
+     xs))))
+(define (QUOTE1 conf x)
   (cond
-    [(pair? x) (list 'cons (QUOTE conf (car x)) (QUOTE conf (cdr x)))]
+    [(pair? x) (list 'cons (QUOTE1 conf (car x)) (QUOTE1 conf (cdr x)))]
     [(symbol? x) `(quote ,x)]
     [(null? x) '(quote ())]
     [(and (char? x)
           (eq? (conf-get conf 'charstr) 'nochar)) `(%char ,(string x))]
     [else x]))
+(define (%QUOTE max-count conf x count f)
+  (if (pair? x)
+      (if (> count max-count)
+          (let ([v (gensym)])
+            (%QUOTE max-count conf (car x) 0
+                    (λ (a c2)
+                      (%QUOTE max-count conf (cdr x) c2
+                              (λ (d c3)
+                                `(begin
+                                   (define ,v (cons ,a ,d))
+                                   ,(f v (+ c3 1))))))))
+          (%QUOTE max-count conf (car x) count
+                  (λ (a c2)
+                    (%QUOTE max-count conf (cdr x) c2
+                            (λ (d c3)
+                              (f `(cons ,a ,d) (+ c3 1)))))))
+      (f (QUOTE1 conf x) (+ count 1))))
+(define (QUOTE macros conf x)
+  (if (conf-get conf 'split)
+      (if (pair? x)
+          (EVAL macros conf (%QUOTE (conf-get conf 'split) conf x 0 (λ (x c) x)))
+          (QUOTE1 conf x))
+      (QUOTE1 conf x)))
 
 (define (run conf xs)
   (EVAL conf (make-hash) (cons 'begin (append (runprelude conf) xs))))
