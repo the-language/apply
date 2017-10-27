@@ -753,16 +753,14 @@
             (cons c (BEGINappend macros (cdr cs)))))))
 (define (BEGIN conf macros xs)
   (BEGINgc
-   (BEGINappend
-    macros
-    (map
-     (λ (x)
-       (if (define? x)
-           (DEFINE conf macros (cadr x) (cddr x))
-           (EVAL conf macros x)))
-     (BEGINappend
-      macros
-      xs))))) ;在GC前合并begin
+   (map
+    (λ (x)
+      (if (define? x)
+          (DEFINE conf macros (cadr x) (cddr x))
+          (EVAL conf macros x)))
+    (BEGINappend
+     macros
+     xs)))) ;必须在GC前合并begin
 (define (QUOTE conf x)
   (cond
     [(pair? x) (list 'cons (QUOTE conf (car x)) (QUOTE conf (cdr x)))]
