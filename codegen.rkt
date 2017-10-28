@@ -46,7 +46,7 @@
       (list x)))
 
 (define (FFI lang evaler xs)
-  (if (null? (cdr xs))
+  (if (eq? (first (car xs)) 'else)
       (evaler (car xs))
       (if (eq? lang (first (car xs)))
           (second (car xs))
