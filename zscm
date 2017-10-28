@@ -36,4 +36,5 @@ eq?
 >=2
 
 host-language
+ffi
 

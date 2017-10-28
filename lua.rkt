@@ -73,7 +73,7 @@
 
 (define (EVAL x)
   (cond
-    [(eq? x 'host-language) "lua"]
+    [(eq? x 'host-language) (QUOTE 'lua)]
     [(pair? x) (APPLY (car x) (cdr x))]
     [(symbol? x) (primcase
                   x
@@ -114,7 +114,7 @@
     ['lambda (LAMBDA (first xs) (%BEGIN (cdr xs)))]
     ['begin (BEGIN xs)]
     ['quote (QUOTE (first xs))]
-    ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
+    ['ffi (FFI 'lua EVAL xs)]
     [_
      (primcase
       f

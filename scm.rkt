@@ -15,71 +15,69 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (provide scm)
 (require "codegen.rkt")
-(new-lisp-getid
- id
-
- null?
- pair?
- cons
- car
- cdr
-
- error
- raise
- with-exception-handler
-
- procedure?
- apply
-
- string-append
- string?
-
- symbol?
- symbol->string
- string->symbol
-
- boolean?
- <if>
-
- number?
- number->string
- string->number
- eq?
- +
- -
- *
- /
- <
- >
- <=
- >=
-
- [putstr display]
- newline
- )
+(define id lisp-getid)
 (define (EVAL x)
   (cond
-    [(eq? x 'host-language) "scheme"]
+    [(eq? x 'host-language) '(quote scheme)]
     [(pair? x) (APPLY (car x) (cdr x))]
-    [(symbol? x) (id x)]
+    [(symbol? x) (primcase
+                  x
+                  null?
+                  pair?
+                  cons
+                  car
+                  cdr
+
+                  raise
+                  with-exception-handler
+
+                  procedure?
+                  apply
+
+                  string-append
+                  string?
+
+                  symbol?
+                  symbol->string
+                  string->symbol
+
+                  boolean?
+
+                  number?
+                  number->string
+                  string->number
+                  eq?
+                  +
+                  -
+                  *
+                  /
+                  <
+                  >
+                  <=
+                  >=
+
+                  [putstr 'display]
+                  newline
+
+                  (id x))]
     [else x]))
 (define (APPLY f xs)
   (match f
     ['lambda (LAMBDA (first xs) (cdr xs))]
     ['begin (BEGIN xs)]
     ['quote `(quote ,(car xs))]
-    ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
+    ['ffi (FFI 'scheme EVAL xs)]
     ['if `(if ,(EVAL (first xs)) ,(EVAL (second xs)) ,(EVAL (third xs)))]
     [_ (cons (EVAL f) (map EVAL xs))]))
 (define (BEGIN xs)
   (if (null? (cdr xs))
       (EVAL (car xs))
       (cons 'begin
-           (map (λ (x)
-                  (match x
-                    [`(define ,i ,v) `(define ,(id i) ,(EVAL v))]
-                    [`(set! ,i ,v) `(set! ,i ,v)]
-                    [_ (EVAL x)])) xs))))
+            (map (λ (x)
+                   (match x
+                     [`(define ,i ,v) `(define ,(id i) ,(EVAL v))]
+                     [`(set! ,i ,v) `(set! ,i ,v)]
+                     [_ (EVAL x)])) xs))))
 (define (LAMBDA args x)
   `(lambda ,(%LAMBDA args)
      ,(BEGIN x)))
@@ -90,10 +88,4 @@
     [(pair? x) (cons (%LAMBDA (car x)) (%LAMBDA (cdr x)))]
     [else (error "%LAMBDA" x)]))
 
-(compiler scm0 [number display ffi [atom 'set!]] EVAL)
-
-(define
-  pre
-  '())
-
-(define (scm c) (scm0 (append pre c)))
+(compiler scm [number display [atom 'set!]] EVAL)

@@ -19,10 +19,14 @@
 (define-syntax builtinname
   (syntax-rules ()
     [(_ r) (string->symbol (string-append "__" (symbol->string (quote r))))]))
-(define-syntax-rule (primcase f [p x] ... v)
-  (cond
-    [(eq? f (builtinname p)) x] ...
-    [else v]))
+(define-syntax %primcase
+  (syntax-rules ()
+    [(_ f v) v]
+    [(_ f [p x] r ...) (if (eq? f (builtinname p)) x (%primcase f r ...))]
+    [(_ f x r ...) (%primcase f [x (quote x)] r ...)]))
+(define-syntax-rule (primcase f x ...)
+  (let ([f0 f])
+    (%primcase f0 x ...)))
 
 (define (c-getid x)
   (apply string-append
@@ -40,3 +44,10 @@
   (if (and (pair? x) (eq? (car x) 'begin))
       (cdr x)
       (list x)))
+
+(define (FFI lang evaler xs)
+  (if (null? (cdr xs))
+      (evaler (car xs))
+      (if (eq? lang (first (car xs)))
+          (second (car xs))
+          (FFI lang evaler (cdr xs)))))

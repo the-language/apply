@@ -18,35 +18,34 @@
 (define id lisp-getid)
 (define (EVAL x)
   (cond
-    [(eq? x 'host-language) "mal"]
+    [(eq? x 'host-language) '(quote mal)]
     [(pair? x) (APPLY (car x) (cdr x))]
     [(symbol? x)
      (primcase
       x
       [null? 'empty?]
       [pair? 'jpair?]
-      [cons 'cons]
-      [car 'car]
-      [cdr 'cdr]
-      [raise 'raise]
+      cons
+      car
+      cdr
+      raise
       [with-exception-handler 'weh]
-      [procedure? 'procedure?]
-      [apply 'apply]
+      procedure?
+      apply
       [string-append 'str]
-      [string? 'string?]
-      [symbol? 'symbol?]
+      string?
+      symbol?
       [symbol->string 'str]
       [string->symbol 'symbol]
-      [string? 'string?]
       [str->lst '(fn* (s)
                       (let* (r (seq s))
                         (if (nil? r)
                             ()
                             r)))]
-      [boolean? 'boolean?]
-      [number? 'number?]
+      boolean?
+      number?
       [number->string 'str]
-      [string->number 'string->number] ; 没有实现
+      string->number ; 没有实现
       [equal? '=]
       [atom! 'atom]
       [atom-get 'deref]
@@ -58,7 +57,7 @@
       [hash-has-key? 'contains?]
       [make-immutable-hash '(fn* (xs)
                                  (apply hash-map xs))]
-      [vector 'vector]
+      vector
       [vector? 'vvector?]
       [vector-length 'count]
       [vector-ref 'nth]
@@ -66,16 +65,16 @@
                           (apply vector xs))]
       [vector->list '(fn* (xs)
                           (apply list xs))]
-      [putstr 'putstr]
-      [newline 'newline]
-      [+ '+]
-      [- '-]
-      [* '*]
-      [/ '/]
-      [< '<]
-      [> '>]
-      [<= '<=]
-      [>= '>=]
+      putstr
+      newline
+      +
+      -
+      *
+      /
+      <
+      >
+      <=
+      >=
       [= 'eqs]
       (id x))]
     [(eq? x #t) 'true]
@@ -86,7 +85,7 @@
     ['lambda (LAMBDA (first xs) (cdr xs))]
     ['begin (BEGIN xs)]
     ['quote (QUOTE (car xs))]
-    ['ffi (if (null? (cdr xs)) (car xs) (error "APPLY: ffi" f xs))]
+    ['ffi (FFI 'mal EVAL xs)]
     ['if `(if ,(EVAL (first xs)) ,(EVAL (second xs)) ,(EVAL (third xs)))]
     [_ (cons (EVAL f) (map EVAL xs))]))
 (define (QUOTE x)
