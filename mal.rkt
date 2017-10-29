@@ -57,7 +57,7 @@
       [hash-ref 'get]
       [hash-has-key? 'contains?]
       [make-immutable-hash '(fn* (xs)
-                                 (apply hash-map xs))]
+                                 (apply hash-map xs))] ;BUG
       vector
       [vector? 'vvector?]
       [vector-length 'count]
