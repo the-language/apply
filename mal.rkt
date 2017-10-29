@@ -23,7 +23,7 @@
     [(symbol? x)
      (primcase
       x
-      [null? 'empty?]
+      null?
       [pair? 'jpair?]
       cons
       car
@@ -152,7 +152,10 @@
            (if (number/fn? x)
                (not (slow-number? x))
                false)))
-    
+
+    (def! null?
+      (fn* (x)
+           (and (list? x) (empty? x))))
     (def! raise
       (fn* (x)
            (throw (list 'raise x))))
