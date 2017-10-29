@@ -87,7 +87,7 @@
                   [apply "apply"]
                   [with-exception-handler "weh"]
                   [putstr "io.write"]
-                  [newline "print()"]
+                  [newline "print"]
                   [atom! "atom"]
                   [atom-get "atomget"]
                   [atom-set! "atomset"]
