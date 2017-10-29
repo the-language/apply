@@ -47,6 +47,7 @@
       [number->string 'str]
       string->number ; 没有实现
       [equal? '=]
+      atom?
       [atom! 'atom]
       [atom-get 'deref]
       [atom-set! 'reset!]

@@ -247,7 +247,8 @@
          '()
          (cons (cons (car xs) (cadr xs)) (%hash (cddr xs)))))
    (define (hash . xs) (make-immutable-hash (%hash xs)))
-   (define (memorize1 f) f) ; zaoqil-core
+   (define (memroizeeq f) f) ; zaoqil-core
+   (define (memorize1eq f) f) ; zaoqil-core
 
    (define (zero? x) (eq? x 0))
    (define (positive? x) (> x 0))
@@ -326,6 +327,9 @@
              (car xs)
              (assf f (cdr xs)))))
    (define (assoc x xs) (assf (λ (y) (equal? x y)) xs))
+
+   (define gensym% (atom! 0))
+   (define (gensym) (atom-map! (λ (x) (+ x 1)) gensym%))
    ))
 
 (prelude
