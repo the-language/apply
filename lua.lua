@@ -56,6 +56,7 @@ local function vecref(v,k)assert(isvec(x))return x[2][k+1]end
 local function lst2vec(l)return{vectort,list2lua(l)}end
 local function vec2lst(v)assert(isvec(x))return lst(x[2])end
 local function is_symbol(x)return(is_table(x)and x[1]==symbolt)end
+local function symbol(x)return{symbolt,x}end
 local function sym2str(x)assert(is_symbol(x))return x[2]end
 local function eq(x,y)return x==y or (is_symbol(x) and is_symbol(y) and eq(sym2str(x),sym2str(y)))end
 

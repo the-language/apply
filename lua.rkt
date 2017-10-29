@@ -100,6 +100,7 @@
                   [list->vector "lst2vec"]
                   [vector->list "vec2lst"]
                   [number->string "tostring"]
+                  [string->symbol "symbol"]
                   (id x))]
     [else (QUOTE x)]))
 (define (type s x)
@@ -131,8 +132,6 @@ r[i]=str:sub(i,i)
 end
 return lst(r)
 end")]
-
-      [string->symbol (exp "{symbolt," (EVAL (first xs)) "}")]
 
       [boolean? (exp "type(" (EVAL (first xs)) ")==\"boolean\"")]
 
