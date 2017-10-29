@@ -155,7 +155,9 @@
 
     (def! null?
       (fn* (x)
-           (and (list? x) (empty? x))))
+           (if (list? x)
+               (empty? x)
+               false)))
     (def! raise
       (fn* (x)
            (throw (list 'raise x))))
