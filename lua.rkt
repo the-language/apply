@@ -43,7 +43,7 @@
        (apply ++ vs) "end"))
 (define (function... xs rest . vs)
   (exp "function(" (apply %function (append xs (list "..."))) ")"
-       "local " rest "=list(...)\n"
+       "local " rest "=lst{...}\n"
        (apply ++ vs) "end"))
 (define %function
   (case-lambda
@@ -138,7 +138,7 @@ end")]
 
       [number? (exp "type(" (EVAL (first xs)) ")==\"number\"")]
       [string->number (exp (EVAL (first xs)) "+0")]
-      [eq? (exp (EVAL (first xs)) "=" (EVAL (second xs)))]
+      [eq? (exp (EVAL (first xs)) "==" (EVAL (second xs)))]
       [+/2 (exp (EVAL (first xs)) "+" (EVAL (second xs)))]
       [-/2 (exp (EVAL (first xs)) "-" (EVAL (second xs)))]
       [*2 (exp (EVAL (first xs)) "*" (EVAL (second xs)))]

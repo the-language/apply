@@ -761,15 +761,19 @@
             (append (BEGINappend macros (cdr c)) (BEGINappend macros (cdr cs)))
             (cons c (BEGINappend macros (cdr cs)))))))
 (define (BEGIN conf macros xs)
-  (BEGINgc
-   (BEGINappend
-    macros
-    (map
-     (λ (x)
-       (if (define? x)
-           (DEFINE conf macros (cadr x) (cddr x))
-           (EVAL conf macros x)))
-     xs))))
+  (if (null? (cdr xs))
+      (EVAL conf macros (car xs))
+      (BEGINgc
+       (BEGINappend
+        macros
+        (map
+         (λ (x)
+           (if (define? x)
+               (DEFINE conf macros (cadr x) (cddr x))
+               (EVAL conf macros x))) ;这里会GC
+         (BEGINappend
+          macros
+          xs)))))) ;在GC前append
 (define (QUOTE1 conf x)
   (cond
     [(pair? x) (list 'cons (QUOTE1 conf (car x)) (QUOTE1 conf (cdr x)))]
