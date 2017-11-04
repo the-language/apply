@@ -101,6 +101,7 @@
                   [vector->list "vec2lst"]
                   [number->string "tostring"]
                   [string->symbol "symbol"]
+                  [eq? "eq"]
                   (id x))]
     [else (QUOTE x)]))
 (define (type s x)
@@ -137,7 +138,6 @@ end")]
 
       [number? (exp "type(" (EVAL (first xs)) ")==\"number\"")]
       [string->number (exp (EVAL (first xs)) "+0")]
-      [eq? (exp (EVAL (first xs)) "==" (EVAL (second xs)))]
       [+/2 (exp (EVAL (first xs)) "+" (EVAL (second xs)))]
       [-/2 (exp (EVAL (first xs)) "-" (EVAL (second xs)))]
       [*2 (exp (EVAL (first xs)) "*" (EVAL (second xs)))]
