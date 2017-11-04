@@ -501,6 +501,7 @@
      '((define (_putstr_ x) (__putstr x))
        (define (display x)
          (cond
+           [(null? x) (_putstr_ "()")]
            [(string? x) (_putstr_ x)]
            [(symbol? x) (_putstr_ (symbol->string x))]
            [(number? x) (_putstr_ (number->string x))]
@@ -600,7 +601,7 @@
          (if (hash? h)
              (__hash-hash-key? h k)
              (error "hash-hash-key?: isn't hash" h))))
-     '((define-record-type hash
+     '((define-record-type make-immutable-hash
          (%make-immutable-hash xs)
          hash?
          (xs hash->list))
