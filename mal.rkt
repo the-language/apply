@@ -126,42 +126,7 @@
   (cons 'do (append pre (undo (EVAL xs)))))
 
 (define pre
-  '((def! all?
-      (fn* [pred lst]
-           (if (empty? lst)
-               true
-               (if (pred (first lst))
-                   (all? pred (rest lst))
-                   false))))
-    (def! *digits-set* (hash-map "0" true "1" true "2" true "3" true "4" true
-                                 "5" true "6" true "7" true "8" true "9" true "." true "/" true "e" true "+" true))
-    (def! all-digits?
-      (fn* [chars]
-           (all? (fn* [c] (contains? *digits-set* c)) chars)))
-    (def! slow-number?
-      (fn* [x]
-           (let* [chars (seq (str x))]
-             (if (= "-" (first chars))
-                 (all-digits? (rest chars))
-                 (all-digits? chars)))))
-    (def! boolean?
-      (fn* [x]
-           (or (true? x) (false? x))))
-    (def! number/fn?
-      (fn* [x]
-           (not (or (nil? x) (true? x) (false? x) (string? x) (symbol? x) (keyword? x) (list? x) (vector? x) (map? x) (atom? x)))))
-    (def! number?
-      (fn* [x]
-           (if (number/fn? x)
-               (slow-number? x)
-               false)))
-    (def! fn?
-      (fn* [x]
-           (if (number/fn? x)
-               (not (slow-number? x))
-               false)))
-
-    (def! null?
+  '((def! null?
       (fn* (x)
            (if (list? x)
                (empty? x)
