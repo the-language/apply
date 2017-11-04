@@ -240,6 +240,11 @@
    (define (string . xs) (list->string xs))
    (define (displayln x) (display x) (newline))
    (define eqv? equal?)
+   (define hasheq hash)
+   (define hasheqv hash)
+   (define make-immutable-hasheqv make-immutable-hash)
+   (define make-immutable-hasheq make-immutable-hash)
+
    (defmacro delay-force
      (λ (x)
        `(delay (force ,x))))
