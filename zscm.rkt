@@ -144,6 +144,12 @@
      (if (struct? x)
          (cdr (_vec->lst_ x))
          (error "struct->list: isn't struct" x)))
+   (define (struct->vector x)
+     (if (struct? x)
+         (list->vector (cons (string->symbol
+                              (string-append "struct:" (symbol->string (_struct_type_ x))))
+                             (struct->list x)))
+         (error "struct->vector: isn't struct" x)))
    (define (vector? x) (and (_vec?_ x) (not (struct? x))))
    (define (vector-length v)
      (if (vector? v)
@@ -507,11 +513,7 @@
            [(number? x) (_putstr_ (number->string x))]
            [(boolean? x) (if x (_putstr_ "#t") (_putstr_ "#f"))]
            [(char? x) (_putstr_ (string x))]
-           [(struct? x) (begin
-                          (_putstr_ "(")
-                          (_putstr_ (symbol->string (_struct_type_ x)))
-                          (%dis%* (struct->list x))
-                          (_putstr_ ")"))]
+           [(struct? x) (display (struct->vector x))]
            [(pair? x) (begin
                         (_putstr_ "(")
                         (display (car x))
@@ -601,7 +603,7 @@
          (if (hash? h)
              (__hash-hash-key? h k)
              (error "hash-hash-key?: isn't hash" h))))
-     '((define-record-type make-immutable-hash
+     '((define-record-type hash
          (%make-immutable-hash xs)
          hash?
          (xs hash->list))
@@ -611,7 +613,7 @@
              (let ([x (car xs)])
                (hash-set (make-immutable-hash (cdr xs)) (car x) (cdr x)))))
        (define (hash-set hash key v)
-         (let ([h (%hash-set hash key (λ (x) v))])
+         (let ([h (%hash-set hash key v)])
            (if h
                h
                (%make-immutable-hash (cons (cons key v) (hash->list hash))))))
@@ -625,7 +627,7 @@
              (let ([x (car hash)])
                (if (equal? (car x) key)
                    (s (cons (cons (car x) v) (cdr hash)))
-                   (%%hash-set (cdr hash) key v (λ (r) (cons x r)) u)))))
+                   (%%hash-set (cdr hash) key v (λ (r) (s (cons x r))) u)))))
        (define (hash-ref hash key . f)
          (let ([r (assoc key (hash->list hash))])
            (if r
