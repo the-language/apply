@@ -512,21 +512,21 @@
      '((define (_putstr_ x) (__putstr x))
        (define (display x)
          (cond
-           [(null? x) (_putstr_ "()")]
-           [(string? x) (_putstr_ x)]
-           [(symbol? x) (_putstr_ (symbol->string x))]
-           [(number? x) (_putstr_ (number->string x))]
-           [(boolean? x) (if x (_putstr_ "#t") (_putstr_ "#f"))]
-           [(char? x) (_putstr_ (string x))]
-           [(struct? x) (display (struct->vector x))]
            [(pair? x) (begin
                         (_putstr_ "(")
                         (display (car x))
                         (%dis%* (cdr x))
                         (_putstr_ ")"))]
+           [(null? x) (_putstr_ "()")]
+           [(string? x) (_putstr_ x)]
+           [(symbol? x) (_putstr_ (symbol->string x))]
+           [(number? x) (_putstr_ (number->string x))]
            [(vector? x) (begin
                           (_putstr_ "#")
                           (display (vector->list x)))]
+           [(boolean? x) (if x (_putstr_ "#t") (_putstr_ "#f"))]
+           [(struct? x) (display (struct->vector x))]
+           [(char? x) (_putstr_ (string x))]
            [(atom? x) (begin
                         (_putstr_ "#<atom:")
                         (display (atom-get x))

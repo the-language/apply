@@ -24,7 +24,7 @@
      (primcase
       x
       null?
-      [pair? 'jpair?]
+      [pair? 'pair?]
       cons
       car
       cdr
@@ -42,7 +42,7 @@
                         (if (nil? r)
                             ()
                             r)))]
-      boolean?
+      [boolean? '(fn* (x) (or (true? x) (false? x)))]
       number?
       [number->string 'str]
       string->number ; 没有实现
