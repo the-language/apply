@@ -530,8 +530,8 @@
              (if (pair? x)
                  (begin
                    (_putstr_ " ")
-                   (display (car xs))
-                   (%dis%* (cdr xs)))
+                   (display (car x))
+                   (%dis%* (cdr x)))
                  (begin
                    (_putstr_ " . ")
                    (display x)))))
