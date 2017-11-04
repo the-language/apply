@@ -526,6 +526,7 @@
                         (_putstr_ "#<atom:")
                         (display (atom-get x))
                         (_putstr_ ">"))]
+           [(procedure? x) (_putstr_ "#<procedure>")]
            [else (error "display" x)]))
        (define (%dis%* x)
          (if (null? x)
