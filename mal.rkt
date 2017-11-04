@@ -56,8 +56,16 @@
       [hash-set 'assoc]
       [hash-ref 'get]
       [hash-has-key? 'contains?]
+      [hash 'hash-map]
       [make-immutable-hash '(fn* (xs)
-                                 (apply hash-map xs))] ;BUG
+                                 (do
+                                     (def! loop
+                                       (fn* [h xs]
+                                            (if (null? xs)
+                                                h
+                                                (let* [x (car xs)]
+                                                  (loop (assoc h (car x) (cdr x)) (cdr xs))))))
+                                   (loop (hash-map) xs)))]
       vector
       [vector? 'vvector?]
       [vector-length 'count]

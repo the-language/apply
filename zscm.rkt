@@ -242,11 +242,6 @@
        (if (null? f)
            (hash-ref hash key)
            (hash-ref hash key (car f))))))
-   (define (%hash xs)
-     (if (null? xs)
-         '()
-         (cons (cons (car xs) (cadr xs)) (%hash (cddr xs)))))
-   (define (hash . xs) (make-immutable-hash (%hash xs)))
    (define (memroizeeq f) f) ; zaoqil-core
    (define (memorize1eq f) f) ; zaoqil-core
 
@@ -582,6 +577,7 @@
  get
  (if (get 'hash)
      '((define (make-immutable-hash x) (__make-immutable-hash x))
+       (define hash __hash)
        (define (hash->list h)
          (if (hash? h)
              (__hash->list h)
@@ -604,15 +600,11 @@
          (%make-immutable-hash xs)
          hash?
          (xs hash->list))
-       (define (make-immutable-hash . xs)
-         (if (null? xs)
-             (%make-immutable-hash '())
-             (%do-make-immutable-hash (car xs))))
-       (define (%do-make-immutable-hash xs)
+       (define (make-immutable-hash xs)
          (if (null? xs)
              (%make-immutable-hash '())
              (let ([x (car xs)])
-               (hash-set (%do-make-immutable-hash (cdr xs)) (car x) (cdr x)))))
+               (hash-set (make-immutable-hash (cdr xs)) (car x) (cdr x)))))
        (define (hash-set hash key v)
          (let ([h (%hash-set hash key (λ (x) v))])
            (if h
@@ -642,7 +634,13 @@
        (define (hash-has-key? hash key)
          (if (hash-ref hash key #f) ; 非boolean,所以要if
              #t
-             #f)))))
+             #f))
+
+       (define (%hash xs)
+         (if (null? xs)
+             '()
+             (cons (cons (car xs) (cadr xs)) (%hash (cddr xs)))))
+       (define (hash . xs) (make-immutable-hash (%hash xs))))))
 (prelude
  get
  (match (get 'charstr)
