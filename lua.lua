@@ -54,7 +54,7 @@ local function isvec(x)return type(x)=="table"and x[1]==vectort end
 local function veclen(x)assert(isvec(x))return #x[2]end
 local function vecref(v,k)assert(isvec(v))return v[2][k+1]end
 local function lst2vec(l)return{vectort,list2lua(l)}end
-local function vec2lst(v)assert(isvec(x))return lst(x[2])end
+local function vec2lst(v)assert(isvec(v))return lst(v[2])end
 local function is_symbol(x)return type(x)=="table"and x[1]==symbolt end
 local function symbol(x)return{symbolt,x}end
 local function sym2str(x)assert(is_symbol(x))return x[2]end
