@@ -52,7 +52,7 @@ local function atommap(f,x)assert(isatom(x)) local n=f(x[2]) x[2]=n return n end
 local function vec(...)return{vectort,{...}}end
 local function isvec(x)return type(x)=="table"and x[1]==vectort end
 local function veclen(x)assert(isvec(x))return #x[2]end
-local function vecref(v,k)assert(isvec(x))return x[2][k+1]end
+local function vecref(v,k)assert(isvec(v))return v[2][k+1]end
 local function lst2vec(l)return{vectort,list2lua(l)}end
 local function vec2lst(v)assert(isvec(x))return lst(x[2])end
 local function is_symbol(x)return type(x)=="table"and x[1]==symbolt end
