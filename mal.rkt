@@ -163,7 +163,9 @@
                false)))
     (def! pair?
       (fn* (x)
-           (or (jpair? x) (list? x))))
+           (if (jpair? x)
+               true
+               (list? x))))
     (def! car
       (fn* (x)
            (if (jpair? x)
