@@ -20,45 +20,9 @@
   (cond
     [(eq? x 'host-language) '(quote scheme)]
     [(pair? x) (APPLY (car x) (cdr x))]
-    [(symbol? x) (primcase
-                  x
-                  null?
-                  pair?
-                  cons
-                  car
-                  cdr
-
-                  raise
-                  with-exception-handler
-
-                  procedure?
-                  apply
-
-                  string-append
-                  string?
-
-                  symbol?
-                  symbol->string
-                  string->symbol
-
-                  boolean?
-
-                  number?
-                  number->string
-                  string->number
-                  eq?
-                  +
-                  -
-                  *
-                  /
-                  <
-                  >
-                  <=
-                  >=
-
+    [(prim? x) => (λ (f) f)]
+    [(symbol? x) (primcase x
                   [putstr 'display]
-                  newline
-
                   (id x))]
     [else x]))
 (define (APPLY f xs)

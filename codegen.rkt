@@ -27,16 +27,21 @@
 (define-syntax-rule (primcase f x ...)
   (let ([f0 f])
     (%primcase f0 x ...)))
+(define (prim? x)
+  (and (symbol? x)
+       (match (string->list (symbol->string x))
+         [`(#\_ #\_ . ,f) (string->symbol (list->string f))]
+         [_ #f])))
 
 (define (c-getid x)
   (apply string-append
-            (cons "zs" (map
-                        (λ (x) (if (or (char-alphabetic? x) (char-numeric? x))
-                                   (string x)
-                                   (string-append
-                                    "_"
-                                    (number->string (char->integer x)))))
-                        (string->list (symbol->string x))))))
+         (cons "zs" (map
+                     (λ (x) (if (or (char-alphabetic? x) (char-numeric? x))
+                                (string x)
+                                (string-append
+                                 "_"
+                                 (number->string (char->integer x)))))
+                     (string->list (symbol->string x))))))
 (define (lisp-getid x)
   (string->symbol (string-append "zs-" (symbol->string x))))
 
