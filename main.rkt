@@ -10,10 +10,16 @@
  [("-m" "--mal") "Compile to mal" (to mal)]
  [("-l" "--lua") "Compile to lua" (to lua)]
  #:args fs
- (define s (if (null? fs)
-               (port->list)
-               (foldr append '() (map file->list fs))))
- (define x ((to) s))
- (if (string? x)
+ (define-values (s f)
+   (match fs
+     ['() (values (port->list) "")]
+     [`(,f) (values (file->list f) f)]))
+ (define s2 (cons
+             `(macrobegin
+               (define _FILE_ ,f)
+               '(void))
+             s))
+ (define x ((to) s2))
+ (if (set-member? (seteq html lua) (to))
        (displayln x)
        (writeln x)))
