@@ -140,7 +140,7 @@
      (if (struct? x)
          (cdr (_vec_ref_ x 0))
          (error "isn't struct" x)))
-   (define (struct->list x)
+   (define (struct->list x) ;BUG 可变的struct 结果不正确
      (if (struct? x)
          (cdr (_vec->lst_ x))
          (error "struct->list: isn't struct" x)))
@@ -560,22 +560,22 @@
 (prelude
  get
  (if (get 'atom)
-     '((define-record-type delay-v
-         (%delay-v lazy)
+     '((define-record-type delay
+         (%delay v)
          promise?
-         (lazy %lazydelay-vv %set%delay!))
+         (v %force))
        (defmacro delay
          (λ (x)
-           `(%delay-v (lambda () ,x))))
-       (define (promise-forced? x) (pair? (%lazydelay-vv x)))
+           `(%delay (atom! (lambda () ,x)))))
+       (define (promise-forced? x) (pair? (atom-get x)))
        (define (force x)
-         (let ([v (%lazydelay-vv x)])
-           (if (pair? v)
-               (car v)
-               (let ([f (v)])
-                 (begin
-                   (%set%delay! x (list f))
-                   f))))))
+         (car
+          (atom-map!
+           (λ (x) (if (pair? x)
+                      x
+                      (list (x))))
+           (%force x))))
+       )
      '((define-record-type delay-v
          (%delay-v lazy)
          promise?
