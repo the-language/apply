@@ -14,173 +14,7 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (provide run compiler)
-(define-syntax newconf
-  (syntax-rules ()
-    [(_) (hasheq)]
-    [(_ [c v] x ...) (hash-set (newconf x ...) (quote c) v)]
-    [(_ c x ...) (hash-set (newconf x ...) (quote c) #t)]))
-(define (conf-get c x) (hash-ref c x #f))
-
-(define preludes '())
-(define-syntax-rule (prelude get x)
-  (set! preludes
-        (cons (λ (c)
-                (let ([get (λ (v) (conf-get c v))])
-                  x))
-              preludes)))
-(define (runprelude conf)
-  (foldl append '() (map (λ (f) (f conf)) preludes)))
-
-(prelude
- get
- '((defmacro and
-     (λ xs
-       (if (null? xs)
-           #t
-           (if (null? (cdr xs))
-               (car xs)
-               (let ([s (gensym)])
-                 `(let ([,s ,(car xs)])
-                    (if ,s
-                        (and ,@(cdr xs))
-                        #f)))))))
-   (defmacro or
-     (λ xs
-       (if (null? xs)
-           #f
-           (if (null? (cdr xs))
-               (car xs)
-               (let ([s (gensym)])
-                 `(let ([,s ,(car xs)])
-                    (if ,s
-                        ,s
-                        (or ,@(cdr xs)))))))))
-   (defmacro let
-     (λ (p . xs)
-       `((λ ,(map car p)
-           ,@xs) ,@(map second p))))
-   (defmacro letrec
-     (λ (p . xs)
-       `(begin
-          ,@(map
-             (λ (x)
-               `(define ,(car x) ,(second x)))
-             p)
-          ,@xs)))
-   (defmacro let*
-     (λ (p . xs)
-       (if (null? p)
-           `(begin ,@xs)
-           (let ([x (car p)])
-             `(let ([,(car x) ,(second x)])
-                (let* ,(cdr p) ,@xs))))))
-   (defmacro cond
-     (λ xs
-       (if (null? xs)
-           `(error "cond")
-           (let ([c (car xs)])
-             (let ([g (car c)] [v (cdr c)])
-               (if (eq? g 'else)
-                   `(begin ,@v)
-                   `(if ,g
-                        (begin ,@v)
-                        (cond ,@(cdr xs)))))))))
-   ))
-
-(prelude
- get
- '((defmacro define-record-type
-     (λ (name constructor pred . fs)
-       (define (mkc fs)
-         (if (null? fs)
-             '()
-             (cons
-              (match (car fs)
-                [`(,x ,a) x]
-                [`(,x ,a ,set) `(atom! ,x)])
-              (mkc (cdr fs)))))
-       (define (deffs name pred c fs)
-         (if (null? fs)
-             '()
-             (append
-              (match (car fs)
-                [`(,f ,a)
-                 `((define (,a x)
-                     (if (,pred x)
-                         (_vec_ref_ x ,c)
-                         (error ,(symbol->string name) ,(symbol->string a) x))))]
-                [`(,f ,a ,set)
-                 `((define (,a x)
-                     (if (,pred x)
-                         (atom-get (_vec_ref_ x ,c))
-                         (error ,(symbol->string name) ,(symbol->string a) x)))
-                   (define (,set x v)
-                     (if (,pred x)
-                         (atom-set! (_vec_ref_ x ,c) v)
-                         (error ,(symbol->string name) ,(symbol->string a) x))))])
-              (deffs name pred (+ 1 c) (cdr fs)))))
-       `(begin
-          (define ,constructor
-            (vector
-             (cons '_%struct%_ (quote ,name))
-             ,@(mkc fs)))
-          (define (,pred x)
-            (and
-             (struct? x)
-             (eq? (cdr (_vec_ref_ x 0))
-                  (quote ,name))))
-          ,@(deffs name pred 1 fs))))
-   (define (struct? x)
-     (and (_vec?_ x)
-          (not (_vec_len_0?_ x))
-          (let ([x (_vec_ref_ x 0)])
-            (and (pair? x)
-                 (eq? (car x) '_%struct%_)))))
-   (define (_struct_type_ x)
-     (if (struct? x)
-         (cdr (_vec_ref_ x 0))
-         (error "isn't struct" x)))
-   (define (struct->list x) ;BUG 可变的struct 结果不正确
-     (if (struct? x)
-         (cdr (_vec->lst_ x))
-         (error "struct->list: isn't struct" x)))
-   (define (struct->vector x)
-     (if (struct? x)
-         (list->vector (cons (string->symbol
-                              (string-append "struct:" (symbol->string (_struct_type_ x))))
-                             (struct->list x)))
-         (error "struct->vector: isn't struct" x)))
-   (define (vector? x) (and (_vec?_ x) (not (struct? x))))
-   (define (vector-length v)
-     (if (vector? v)
-         (_vec_len_ v)
-         (error "vector-length: isn't vector" x)))
-   (define (vector-ref v i)
-     (if (vector? x)
-         (_vec_ref_ v i)
-         (error "vector-ref: isn't vector" x)))
-   (define (vector->list v)
-     (if (vector? v)
-         (_vec->lst_ v)
-         (error "vector->list: isn't vector" v)))
-
-   (defmacro struct
-     (λ (name fs . c)
-       `(define-record-type ,name
-          (,name ,@(map (λ (x) (if (symbol? x) x (car x))) fs))
-          ,(string->symbol (string-append (symbol->string name) "?"))
-          ,@(map
-             (λ (f)
-               (if (symbol? f)
-                   `(,f ,(string->symbol
-                          (string-append (symbol->string name) "-" (symbol->string f))))
-                   (let ([f (car f)]) ;mutable
-                     (let ([g (string-append (symbol->string name) "-" (symbol->string f))])
-                       `(,f ,(string->symbol g)
-                            ,(string->symbol
-                              (string-append "set-" g "!")))))))
-             fs))))
-   ))
+(require "conf.rkt")
 
 (prelude
  get
@@ -240,33 +74,13 @@
    (define (string . xs) (list->string xs))
    (define (displayln x) (display x) (newline))
    (define eqv? equal?)
-   (define hasheq hash)
-   (define hasheqv hash)
-   (define make-immutable-hasheqv make-immutable-hash)
-   (define make-immutable-hasheq make-immutable-hash)
 
    (defmacro delay-force
      (λ (x)
        `(delay (force ,x))))
    (define (make-promise x) (if (promise? x) x (delay x)))
-   (define (hash-update hash key updater . f)
-     (hash-set
-      hash
-      key
-      (updater
-       (if (null? f)
-           (hash-ref hash key)
-           (hash-ref hash key (car f))))))
    (define (memroizeeq f) f) ; zaoqil-core
    (define (memorize1eq f) f) ; zaoqil-core
-
-   (define (zero? x) (eq? x 0))
-   (define (positive? x) (> x 0))
-   (define (negative? x) (< x 0))
-   (define (%max x y) (if (> x y) x y))
-   (define (max x . xs) (foldl %max x xs))
-   (define (%min x y) (if (< x y) x y))
-   (define (min x . xs) (foldl %min x xs))
 
    (define (list . xs) xs)
    (define (list? xs) (or (null? xs) (and (pair? xs) (list? (cdr xs)))))
@@ -344,31 +158,6 @@
 
 (prelude
  get
- (if (get 'vector)
-     '((define (pair? x) (__pair? x))
-       (define vector __vector)
-       (define (_vec?_ x) (__vector? x))
-       (define (_vec_len_ x) (__vector-length x))
-       (define (_vec_ref_ vector k) (__vector-ref vector k))
-       (define (list->vector x)
-         (if (list? x)
-             (__list->vector x)
-             (error "list->vector: isn't list" x)))
-       (define (_vec->lst_ x) (__vector->list x))
-       (define (_vec_len_0?_ v) (zero? (_vec_len_ v)))
-       )
-     '((define (pair? x) (and (__pair? x) (not (_vec?_ x))))
-       (define (vector . xs) (cons '_%vec%_ xs))
-       (define (_vec?_ x) (and (__pair? x) (eq? (__car x) '_%vec%_)))
-       (define (_vec_len_ x) (length (__cdr x)))
-       (define (_vec_ref_ x i) (list-ref (__cdr x) i))
-       (define (list->vector xs) (cons '_%vec%_ xs))
-       (define (_vec->lst_ x) (__cdr x))
-       (define (_vec_len_0?_ x) (null? (_vec->lst_ x)))
-       )))
-
-(prelude
- get
  (if (get 'equal)
      '((define (eq? x y) (__equal? x y))
        (define (equal? x y) (__equal? x y))
@@ -384,82 +173,6 @@
                             (equal? (_vec->lst_ x) (_vec->lst_ y)))]
            [else #f]))
        )))
-
-(prelude
- get
- (if (get '+-*/<>=)
-     '((define < __<)
-       (define > __>)
-       (define = __=)
-       (define <= __<=)
-       (define >= __>=)
-       (define + __+)
-       (define - __-)
-       (define * __*)
-       (define / __/)
-       )
-     (let loop ([c '((define (_+_ x y)
-                       (if (number? x)
-                           (if (number? y)
-                               (__+/2 x y)
-                               (error "+: isn't number" y))
-                           (error "+: isn't number" x)))
-                     (define (_-_ x y)
-                       (if (number? x)
-                           (if (number? y)
-                               (__-2 x y)
-                               (error "-: isn't number" y))
-                           (error "-: isn't number" x)))
-                     (define (_*_ x y)
-                       (if (number? x)
-                           (if (number? y)
-                               (__*2 x y)
-                               (error "*: isn't number" y))
-                           (error "*: isn't number" x)))
-                     (define (_/_ x y)
-                       (if (number? x)
-                           (if (number? y)
-                               (__/2 x y)
-                               (error "/: isn't number" y))
-                           (error "/: isn't number" x)))
-                     (define (+ . xs) (foldl _+_ 0 xs))
-                     (define (* . xs) (foldl _*_ 1 xs))
-                     (define (- x . xs)
-                       (if (null? xs)
-                           (_-_ 0 x)
-                           (foldl (λ (n x) (_-_ x n)) x xs)))
-                     (define (/ x . xs)
-                       (if (null? xs)
-                           (_/_ 1 x)
-                           (foldl (λ (n x) (_/_ x n)) x xs))))]
-                [ops (list
-                      (cons '< '__<2)
-                      (cons '> '__>2)
-                      (cons '= 'eq?)
-                      (cons '<= '__<=2)
-                      (cons '>= '__>=2))])
-       (if (null? ops)
-           c
-           (let* ([op (car ops)]
-                  [f (cdr op)]
-                  [fn (gensym f)]
-                  [d (car op)]
-                  [doop (gensym d)])
-             (loop
-              (append
-               `((define (,fn x y)
-                   (if (number? x)
-                       (if (number? y)
-                           (,f x y)
-                           (error "isn't number" y))
-                       (error "isn't number" x)))
-                 (define (,doop x y xs)
-                   (if (null? xs)
-                       (,fn x y)
-                       (and (,fn x y) (,doop y (car xs) (cdr xs)))))
-                 (define (,d x y . xs) (,doop x y xs)))
-               c)
-              (cdr ops)))))))
 
 (prelude
  get
@@ -588,74 +301,6 @@
 
 (prelude
  get
- (if (get 'hash)
-     '((define (make-immutable-hash x) (__make-immutable-hash x))
-       (define hash __hash)
-       (define (hash->list h)
-         (if (hash? h)
-             (__hash->list h)
-             (error "hash->list: isn't hash" h)))
-       (define (hash-set h k v)
-         (if (hash? h)
-             (__hash-set h k v)
-             (error "hash-set: isn't hash" h)))
-       (define (hash-ref hash key . f)
-         (if (hash-hash-key? hash key)
-             (__hash-ref hash key)
-             (if (procedure? (car f))
-                 ((car f))
-                 (car f))))
-       (define (hash-hash-key? h k)
-         (if (hash? h)
-             (__hash-hash-key? h k)
-             (error "hash-hash-key?: isn't hash" h))))
-     '((define-record-type hash
-         (%make-immutable-hash xs)
-         hash?
-         (xs hash->list))
-       (define (make-immutable-hash xs)
-         (if (null? xs)
-             (%make-immutable-hash '())
-             (let ([x (car xs)])
-               (hash-set (make-immutable-hash (cdr xs)) (car x) (cdr x)))))
-       (define (hash-set hash key v)
-         (let ([h (%hash-set hash key v)])
-           (if h
-               h
-               (%make-immutable-hash (cons (cons key v) (hash->list hash))))))
-       (define (%hash-set hash key v)
-         (%%hash-set (hash->list hash) key v
-                     %make-immutable-hash
-                     (λ () #f)))
-       (define (%%hash-set hash key v s u)
-         (if (null? hash)
-             (u)
-             (let ([x (car hash)])
-               (if (equal? (car x) key)
-                   (s (cons (cons (car x) v) (cdr hash)))
-                   (%%hash-set (cdr hash) key v (λ (r) (s (cons x r))) u)))))
-       (define (hash-ref hash key . f)
-         (let ([r (assoc key (hash->list hash))])
-           (if r
-               (cdr r)
-               (if (null? f)
-                   (error "hash-ref" hash key)
-                   (let ([x (car f)])
-                     (if (procedure? x)
-                         (x)
-                         x))))))
-       (define (hash-has-key? hash key)
-         (if (hash-ref hash key #f) ; 非boolean,所以要if
-             #t
-             #f))
-
-       (define (%hash xs)
-         (if (null? xs)
-             '()
-             (cons (cons (car xs) (cadr xs)) (%hash (cddr xs)))))
-       (define (hash . xs) (make-immutable-hash (%hash xs))))))
-(prelude
- get
  (match (get 'charstr)
    ['nochar ;不能和quote一起使用
     '((define-record-type char
@@ -672,6 +317,8 @@
     '((define (char? x) (__char? x))
       (define (list->string x) (__list->string x))
       (define (string->list s) (__string->list s)))]))
+
+(require "prelude/prelude.rkt")
 
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))
