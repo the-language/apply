@@ -1,6 +1,7 @@
 #lang racket
 (require racket/cmdline)
 (require "codegens.rkt")
+(require "conf.rkt")
 (define to (make-parameter scm))
 (command-line
  #:program "zscheme"
@@ -14,12 +15,12 @@
    (match fs
      ['() (values (port->list) "")]
      [`(,f) (values (file->list f) f)]))
- (define s2 (cons
-             `(macrobegin
-               (define _FILE_ ,f)
-               '(void))
-             s))
- (define x ((to) s2))
+ (prelude
+  get
+  `((macrobegin
+    (set! _FILE_ ,f)
+    '(void))))
+ (define x ((to) s))
  (if (set-member? (seteq html lua) (to))
-       (displayln x)
-       (writeln x)))
+     (displayln x)
+     (writeln x)))

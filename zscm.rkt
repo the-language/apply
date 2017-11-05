@@ -183,6 +183,9 @@
 (require racket/sandbox)
 (define evalp (make-evaluator 'racket))
 (define (macroexpand macros x)
+  (define d (with-handlers ([(λ (x) #t) (λ (x) #f)])
+              (evalp '(_DIR_))))
+  (when d (current-directory d))
   (match x
     [`(defmacro ,f ,x)
      (let-values ([(nf nx) (if (pair? f)
@@ -190,7 +193,13 @@
                                (values f x))])
        (hash-set! macros nf (evalp nx))
        '(void))]
-    [(cons 'macrobegin xs) (evalp (cons 'begin xs))]
+    [(cons 'macrobegin xs) (macroexpand macros (evalp (cons 'begin xs)))]
+    [`(macro-eval ,x ,t)
+     (match x
+       [`(file->list ,f)
+        (macroexpand macros (t (file->list f)))]
+       [`(file->lines ,f)
+        (macroexpand macros (t (file->lines f)))])]
     [_ (let ([f (and (pair? x) (hash-ref macros (car x) #f))])
          (if f
              (macroexpand macros (apply f (cdr x)))

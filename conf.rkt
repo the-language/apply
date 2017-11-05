@@ -31,3 +31,15 @@
   (%prelude (λ (get) x)))
 (define (runprelude conf)
   (foldl append '() (map (λ (f) (f conf)) preludes)))
+(prelude
+ get
+ `((macrobegin
+    (define _FILE_ "")
+    (define (_DIR_)
+      (if (eq? _FILE_ "")
+          #f
+          (let-values ([(d f md) (split-path _FILE_)])
+            (if (path-for-some-system? d)
+                d
+                #f))))
+    '(void))))
