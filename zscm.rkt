@@ -119,7 +119,7 @@
                    (display x)))))
        (define (newline) (__newline)))
      '((define (display x) (error "display: can't display" x))
-       (define (newline) (error "newline: can't newline" x)))))
+       (define (newline) (error "newline: can't newline")))))
 
 (prelude
  get
@@ -233,17 +233,17 @@
            (let-values ([(nf nx) (if (pair? f)
                                      (values (car f) `(λ ,(cdr f) ,x))
                                      (values f x))])
-             (cons `(defmacro ,nf ,nx) (BEGIN0 env xs)))]
+             (cons `(defmacro ,nf ,nx) (BEGIN0 (hash-set env nf (evalp nx)) xs)))] ; BUG evalp
           [`(void) (BEGIN0 env xs)]
           [(or `(,(or 'λ 'lambda) ,_ ,@_) `(define ,_ ,_) `(if ,_ ,_ ,_) `(quote ,_))
            (cons x (BEGIN0 env xs))]
           [(cons (and (? symbol?) f) args)
-           (let ([x (hash-ref env f rtv)])
+           (let ([y (hash-ref env f rtv)])
              (cond
-               [(pair? x) (BEGIN0 env (cons (apply (car x) args) xs))]
-               [(procedure? x) (BEGIN0 env (cons (apply x args) xs))]
-               [(just? x) (BEGIN0 env (cons (cons (just-x x) args) xs))]
-               [(rtv? x) (cons x (BEGIN0 env xs))]))]
+               [(pair? y) (BEGIN0 env (cons (apply (car y) args) xs))]
+               [(procedure? y) (BEGIN0 env (cons (apply y args) xs))]
+               [(just? y) (BEGIN0 env (cons (cons (just-x y) args) xs))]
+               [(rtv? y) (cons x (BEGIN0 env xs))]))]
           [_ (cons x (BEGIN0 env xs))]))))
 (define (defmacro? x) (and (pair? x) (eq? (car x) 'defmacro)))
 (define (define? x) (and (pair? x) (eq? (car x) 'define)))
