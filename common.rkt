@@ -1,0 +1,10 @@
+#lang racket
+(provide (all-defined-out))
+(define (defmacro? x) (and (pair? x) (eq? (car x) 'defmacro)))
+(define (define? x) (and (pair? x) (eq? (car x) 'define)))
+(define (lambda? x) (and (pair? x) (eq? (car x) 'lambda)))
+(define (begin? x) (and (pair? x) (eq? (car x) 'begin)))
+(define (mk-begin x)
+  (if (null? (cdr x))
+      (car x)
+      (cons 'begin x)))

@@ -17,5 +17,5 @@
 (define passes '())
 (define (defpass f)
   (set! passes (cons f passes)))
-(define (runpass x)
-  (foldl (λ (f x) (f x)) x passes))
+(define (runpass conf x)
+  (foldl (λ (f x) (f conf x)) x passes))

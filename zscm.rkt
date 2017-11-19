@@ -15,6 +15,8 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 (provide run compiler)
 (require "conf.rkt")
+(require "common.rkt")
+(require "pass/pass.rkt")
 
 (prelude
  get
@@ -82,7 +84,7 @@
 (prelude
  get
  (if (get 'display)
-     '((define (_putstr_ x) (__putstr x))
+     '((define _putstr_ __putstr)
        (define (display x)
          (cond
            [(pair? x) (begin
@@ -117,7 +119,7 @@
                  (begin
                    (_putstr_ " . ")
                    (display x)))))
-       (define (newline) (__newline)))
+       (define newline __newline))
      '((define (display x) (error "display: can't display" x))
        (define (newline) (error "newline: can't newline")))))
 
@@ -196,11 +198,7 @@
 (define (EVAL env x)
   (match x
     [`(,(or 'λ 'lambda) ,a ,@b) (LAMBDA env a b)]
-    [`(begin ,@b)
-     (let ([b (BEGIN env b)])
-       (if (null? (cdr b))
-           (car b)
-           `(begin ,@b)))]
+    [`(begin ,@b) (mk-begin (BEGIN env b))]
     [`(if ,b ,x ,y) `(if ,(EVAL env b) ,(EVAL env x) ,(EVAL env y))]
     [(? define?) (error "bad syntax")]
     [(? defmacro?) (error "bad syntax")]
@@ -245,10 +243,6 @@
                [(just? y) (BEGIN0 env (cons (cons (just-x y) args) xs))]
                [(rtv? y) (cons x (BEGIN0 env xs))]))]
           [_ (cons x (BEGIN0 env xs))]))))
-(define (defmacro? x) (and (pair? x) (eq? (car x) 'defmacro)))
-(define (define? x) (and (pair? x) (eq? (car x) 'define)))
-(define (lambda? x) (and (pair? x) (eq? (car x) 'lambda)))
-(define (begin? x) (and (pair? x) (eq? (car x) 'begin)))
 (define (envv? x)
   (or (procedure? x)
       (just? x)
@@ -288,21 +282,20 @@
 (define (LAMBDA env args body)
   (match args
     [(list-rest x ... r)
-     (let ([v (BEGIN
-               (hash+ env
-                      (make-immutable-hash
-                       (map
-                        (λ (id) (cons id rtv))
-                        (if (null? r)
-                            x
-                            (cons r x)))))
-               body)])
-       (if (null? (cdr v))
-           `(lambda ,args ,(car v))
-           `(lambda ,args (begin ,@v))))]))
+     `(lambda ,args
+        ,(mk-begin
+          (BEGIN
+           (hash+ env
+                  (make-immutable-hash
+                   (map
+                    (λ (id) (cons id rtv))
+                    (if (null? r)
+                        x
+                        (cons r x)))))
+           body)))]))
 
 (define (run conf xs)
-  (EVAL (hash) (cons 'begin (append (runprelude conf) xs))))
+  (runpass conf (EVAL (hash) (cons 'begin (append (runprelude conf) xs)))))
 
 (define-syntax-rule (compiler name [c ...] evalf)
   (define (name p) (evalf (run (newconf c ...) p))))
