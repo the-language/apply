@@ -13,15 +13,14 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide defpass runpass)
-(define passes '())
-(define (defpass f)
-  (set! passes (cons f passes)))
-(define (runpass conf x)
-  (let loop ([ps passes])
-    (if (null? ps)
-        x
-        (let ([nx ((car ps) conf x)])
-          (if (equal? nx x)
-              (loop (cdr ps))
-              (runpass conf nx))))))
+(require "../pass.rkt")
+(require "../conf.rkt")
+(define (EVAL x)
+  (match x
+    [(? char?) `(%char ,(string x))]
+    [(cons a d) (cons (EVAL a) (EVAL d))]
+    [_ x]))
+(defpass (λ (conf x)
+           (match (conf-get conf 'charstr)
+             ['nochar (EVAL x)]
+             [_ x])))

@@ -1,4 +1,4 @@
 #lang racket
 (provide runpass)
-(require "begin.rkt")
+(require "char.rkt")
 (require "../pass.rkt")

@@ -13,8 +13,8 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require "../pass.rkt")
-(require "../common.rkt")
+(provide (rename-out [EVAL EVALgc]))
+(require "common.rkt")
 (define (EVAL x)
   (match x
     [`(,(or 'λ 'lambda) ,a ,b) `(lambda ,a ,(EVAL b))]
@@ -48,4 +48,3 @@
                 (loop (append (map car fdefs) marked)
                       fdefs1
                       defs1))))))))
-(defpass (λ (conf x) (EVAL x)))

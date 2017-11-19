@@ -17,6 +17,7 @@
 (require "conf.rkt")
 (require "common.rkt")
 (require "pass/pass.rkt")
+(require "gc.rkt")
 
 (prelude
  get
@@ -164,7 +165,7 @@
 (prelude
  get
  (match (get 'charstr)
-   ['nochar ;不能和quote一起使用
+   ['nochar
     '((define-record-type char
         (%char v)
         char?
@@ -295,7 +296,8 @@
            body)))]))
 
 (define (run conf xs)
-  (runpass conf (EVAL (hash) (cons 'begin (append (runprelude conf) xs)))))
+  (EVALgc
+   (runpass conf (EVAL (hash) (cons 'begin (append (runprelude conf) xs))))))
 
 (define-syntax-rule (compiler name [c ...] evalf)
   (define (name p) (evalf (run (newconf c ...) p))))
