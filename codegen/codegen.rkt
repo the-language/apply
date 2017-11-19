@@ -13,20 +13,29 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(require "zscm.rkt")
-(provide (all-defined-out) (all-from-out "zscm.rkt"))
+(require "../zscm.rkt")
+(provide (all-defined-out) (all-from-out "../zscm.rkt"))
 
 (define-syntax builtinname
   (syntax-rules ()
     [(_ r) (string->symbol (string-append "__" (symbol->string (quote r))))]))
-(define-syntax %primcase
-  (syntax-rules ()
-    [(_ f v) v]
-    [(_ f [p x] r ...) (if (eq? f (builtinname p)) x (%primcase f r ...))]
-    [(_ f x r ...) (%primcase f [x (quote x)] r ...)]))
-(define-syntax-rule (primcase f x ...)
-  (let ([f0 f])
-    (%primcase f0 x ...)))
+(define-syntax primcase
+  (syntax-rules (else)
+    [(_ f [p x] ... [(else e) ex] rr)
+     (let ([fb (prim? f)])
+       (if fb
+           (cond
+             [(eq? (quote p) fb) x] ...
+             [else (let ([e fb])
+                     ex)])
+           rr))]
+    [(_ f [p x] ... rr)
+     (let ([fb (prim? f)])
+       (if fb
+           (cond
+             [(eq? (quote p) fb) x] ...
+             [else rr])
+           rr))]))
 
 (define (c-getid x)
   (apply string-append
