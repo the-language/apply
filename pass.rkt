@@ -13,21 +13,9 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide newconf conf-get %prelude prelude runprelude)
-(define-syntax newconf
-  (syntax-rules ()
-    [(_) (hasheq)]
-    [(_ [c v] x ...) (hash-set (newconf x ...) (quote c) v)]
-    [(_ c x ...) (hash-set (newconf x ...) (quote c) #t)]))
-(define (conf-get c x) (hash-ref c x #f))
-
-(define preludes '())
-(define (%prelude f)
-  (set! preludes
-        (cons (λ (c)
-                (f (λ (v) (conf-get c v))))
-              preludes)))
-(define-syntax-rule (prelude get x)
-  (%prelude (λ (get) x)))
-(define (runprelude conf)
-  (foldl append '() (map (λ (f) (f conf)) preludes)))
+(provide defpass runpass)
+(define passes '())
+(define (defpass f)
+  (set! passes (cons f passes)))
+(define (runpass x)
+  (foldl (λ (f x) (f x)) x passes))

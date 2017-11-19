@@ -1,5 +1,4 @@
 #lang racket
-(require "load.rkt")
 (require "vrectord.rkt")
 (require "racket.rkt")
 (require "num.rkt")
@@ -40,7 +39,7 @@
    (define (symbol->string x)
      (if (symbol? x)
          (__symbol->string x)
-         (erro "symbol->string: isn't symbol" x)))
+         (error "symbol->string: isn't symbol" x)))
    (define (string->symbol x)
      (if (string? x)
          (__string->symbol x)
