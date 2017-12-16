@@ -99,50 +99,56 @@
            (if (pair? x)
                (list x)
                '()))))
-(define (doCOMPILEp ms x k)
+(define (doCOMPILEp ms exp x k)
   (cond
     [(pair? x)
      (let ([a (car x)] [xs (cdr x)])
        (cond
-         [(map-get ms a #f) => (λ (m) (doCOMPILEp ms (apply m xs) k))]
+         [(map-get ms a #f) => (λ (m) (doCOMPILEp ms exp (apply m xs) k))]
          [(eq? a 'DEFMACROz) (k (map-set ms (first xs) (eval (second xs))) 'VOIDz)]
-         [(eq? a 'define) (DEFINE ms xs k)]
-         [(eq? a 'begin) (BEGIN ms xs k)]
+         [(eq? a 'define)
+          (if exp
+              (error 'compile "invalid context for definition" x)
+              (DEFINE ms xs k))]
+         [(eq? a 'begin)
+          (if exp
+              (list (cons 'lambda (cons '() (BEGIN ms xs k))))
+              (BEGIN ms xs k))]
          [(eq? a 'quote) (k ms (QUOTE (first xs)))]
          [(eq? a 'if)
-          (doCOMPILEp ms (first xs)
-                    (λ (ms b)
-                      (doCOMPILEp ms (second xs) ; BUG 当if中有define,begin等
-                                (λ (ms x)
-                                  (doCOMPILEp ms (third xs)
-                                            (λ (ms y)
-                                              (k ms (list 'if b x y))))))))]
+          (doCOMPILEp ms exp (first xs)
+                      (λ (ms b)
+                        (doCOMPILEp ms #t (second xs)
+                                    (λ (ms x)
+                                      (doCOMPILEp ms #t (third xs)
+                                                  (λ (ms y)
+                                                    (k ms (list 'if b x y))))))))]
          [(or (eq? a 'λ) (eq? a 'lambda))
           (k ms (cons 'lambda (cons (car xs) (BEGIN ms (cdr xs) (λ (ms v) (list v))))))]
          [else
-          (doCOMPILEp ms a
-                    (λ (ms f)
-                      (COMPILE* ms xs
-                                (λ (ms xs)
-                                  (k ms (cons f xs))))))]))]
+          (doCOMPILEp ms exp a
+                      (λ (ms f)
+                        (COMPILE* ms exp xs
+                                  (λ (ms xs)
+                                    (k ms (cons f xs))))))]))]
     [(symbol? x) (k ms x)]
     [(or (number? x) (char? x) (string? x) (null? x)) (k ms x)]
-    [else (error "undefined")]))
+    [else (error 'compile "invalid syntax" x)]))
 (define (BEGIN ms xs k)
   (if (null? (cdr xs))
-      (doCOMPILEp ms (car xs) k)
-      (doCOMPILEp ms (car xs)
-                (λ (nms v)
-                  (if (pair? v)
-                      (cons v (BEGIN nms (cdr xs) k))
-                      (BEGIN nms (cdr xs) k))))))
+      (doCOMPILEp ms #f (car xs) k)
+      (doCOMPILEp ms #f (car xs)
+                  (λ (nms v)
+                    (if (pair? v)
+                        (cons v (BEGIN nms (cdr xs) k))
+                        (BEGIN nms (cdr xs) k))))))
 (define (DEFINE ms xs k)
   (let ([f (first xs)])
     (if (symbol? f)
-        (doCOMPILEp ms (second xs)
-                  (λ (ms v)
-                    (cons (list 'define (first xs) v)
-                          (k ms 'VOIDz))))
+        (doCOMPILEp ms #f (second xs)
+                    (λ (ms v)
+                      (cons (list 'define (first xs) v)
+                            (k ms 'VOIDz))))
         (DEFINE ms (list (car f) (cons 'λ (cons (cdr f) (cdr xs)))) k))))
 (define (QUOTE x)
   (cond
@@ -150,11 +156,11 @@
     [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
     [(symbol? x) (list 'quote x)]
     [else x]))
-(define (COMPILE* ms xs k)
+(define (COMPILE* ms exp xs k)
   (if (null? (cdr xs))
-      (doCOMPILEp ms (car xs) (λ (ms v) (k ms (list v))))
-      (doCOMPILEp ms (car xs)
-                (λ (ms a)
-                  (COMPILE* ms (cdr xs)
-                            (λ (ms d)
-                              (k ms (cons a d))))))))
+      (doCOMPILEp ms exp (car xs) (λ (ms v) (k ms (list v))))
+      (doCOMPILEp ms exp (car xs)
+                  (λ (ms a)
+                    (COMPILE* ms exp (cdr xs)
+                              (λ (ms d)
+                                (k ms (cons a d))))))))
