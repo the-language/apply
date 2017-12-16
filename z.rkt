@@ -1,3 +1,4 @@
+#lang racket
 ;;  Copyright (C) 2017  Zaoqi
 
 ;;  This program is free software: you can redistribute it and/or modify
@@ -18,21 +19,23 @@
       (let ([x (car xs)] [xs (cdr xs)])
         (if (and (pair? x) (eq? (car x) 'load))
             ((λ ()
-              (define rcd (current-directory))
-              (current-directory dir)
-              (define f (simplify-path (second x)))
-              (let-values ([(d i0 i1) (split-path f)])
-                (define file (file->list f))
-                (current-directory rcd)
-                (append (LOADp d f) (LOADp dir xs)))))
+               (define rcd (current-directory))
+               (current-directory dir)
+               (define f (simplify-path (second x)))
+               (let-values ([(d i0 i1) (split-path f)])
+                 (define file (file->list f))
+                 (current-directory rcd)
+                 (append (LOADp d f) (LOADp dir xs)))))
             (cons x (LOADp dir xs))))))
-; BUGs
 (define (TOP ms xs k)
   (if (null? xs)
-      '()
+      (k ms '())
       (let ([x (car xs)] [xs (cdr xs)])
         (if (pair? x)
             (let ([a (car x)])
-        (cond
-          [(hash-ref ms a #f) => (λ (m) (TOP ms (cons (apply m (cdr x)) xs) k))]
-          [(eq? a 'DEFMACROz) (TOP (hash-set ms (second x) (eval (third x))) xs k)]
+              (cond
+                [(hash-ref ms a #f) => (λ (m) (TOP ms (cons (apply m (cdr x)) xs) k))]
+                [(eq? a 'DEFMACROz) (TOP (hash-set ms (second x) (eval (third x))) xs k)]
+                [(eq? a 'begin) (TOP ms (append (cdr x) xs) k)]
+                [else (TOP ms xs (λ (nms nxs) (k nms (cons x nxs))))]))
+            (TOP ms xs k)))))
