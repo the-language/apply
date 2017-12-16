@@ -13,33 +13,59 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(define (LOADp dir xs)
-  (if (null? xs)
-      '()
-      (let ([x (car xs)] [xs (cdr xs)])
-        (if (and (pair? x) (eq? (car x) 'load))
-            ((λ ()
-               (define rcd (current-directory))
-               (current-directory dir)
-               (define f (simplify-path (second x)))
-               (let-values ([(d i0 i1) (split-path f)])
-                 (define file (file->list f))
-                 (current-directory rcd)
-                 (append (LOADp d f) (LOADp dir xs)))))
-            (cons x (LOADp dir xs))))))
-
-(define (TOPp ms xs k)
+(define null-hash (hasheq))
+(define list->hash make-immutable-hasheq)
+(define (dir-of/file->list dir path k)
+  (define rcd (current-directory))
+  (current-directory dir)
+  (define f (simplify-path path))
+  (define-values (d i0 i1) (split-path f))
+  (define xs (file->list f))
+  (current-directory rcd)
+  (k d xs))
+(define (partition/k f xs k)
+  (let-values ([(x y) (partition f xs)])
+    (k x y)))
+(define (TOP ms dir xs k) ; ms=macros
   (if (null? xs)
       (k ms '())
       (let ([x (car xs)] [xs (cdr xs)])
         (if (pair? x)
             (let ([a (car x)])
               (cond
-                [(hash-ref ms a #f) => (λ (m) (TOPp ms (cons (apply m (cdr x)) xs) k))]
-                [(eq? a 'DEFMACROz) (TOPp (hash-set ms (second x) (eval (third x))) xs k)]
-                [(eq? a 'begin) (TOPp ms (append (cdr x) xs) k)]
-                [else (TOPp ms xs (λ (nms nxs) (k nms (cons x nxs))))]))
-            (TOPp ms xs k)))))
+                [(hash-ref ms a #f) => (λ (m) (TOP ms dir (cons (apply m (cdr x)) xs) k))]
+                [(eq? a 'DEFMACROz) (TOP (hash-set ms (second x) (eval (third x))) dir xs k)]
+                [(eq? a 'begin) (TOP ms dir (append (cdr x) xs) k)]
+                [(eq? a 'load) (dir-of/file->list dir (second x)
+                                                  (λ (ndir file)
+                                                    (TOP ms ndir file
+                                                         (λ (ms ys)
+                                                           (TOP ms dir xs
+                                                                (λ (ms xs)
+                                                                  (k ms (append ys xs))))))))]
+                [else (TOP ms dir xs (λ (nms nxs) (k nms (cons x nxs))))]))
+            (TOP ms dir xs k)))))
+; exports : (list <导出标识> <值>)
+(struct module (name exports body))
+(define (TOPp dir xs)
+  (TOP
+   null-hash dir xs
+   (λ (ms xs)
+     (partition/k
+      (λ (s) (eq? (car s) 'MODULEz)) xs
+      (λ (modules xs)
+        (let ([mods (map (λ (m)
+                           (let ([m (cdr m)])
+                             (let ([name (car m)] [exports (cadr m)] [body (cddr m)])
+                               (module name exports body)))))])
+        (let ([module-infos (list->hash (map
+                                         (λ (m)
+                                               (cons (module-name m) (map first (module-exports m)))) mods))])
+          (MODULEp module-infos ms modules xs)))))))
+(define (MODULEp module-infos ms modules xs)
+  (MODULE-IMPORTp
+  (map (λ (m) (EXPAND-MODULE module-infos ms null-hash m)) modules)
+             
 
 (define (COMPILEp ms x k)
   (cond
