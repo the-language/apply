@@ -61,7 +61,27 @@
         (let ([module-infos (list->hash (map
                                          (λ (m)
                                                (cons (module-name m) (map first (module-exports m)))) mods))])
-          (MODULEp module-infos ms modules xs)))))))
+          (MODULEp module-infos ms modules xs))))))))
+(define (IDin-mod m s)
+  (string->symbol
+   (string-append
+    (symbol->string m)
+    (string-append
+    "@"
+    (string-append
+     (symbol->string s)
+     "Mz")))))
+(define (IDmod m)
+  (string->symbol
+   (string-append
+    (symbol->string m)
+    "@Mz")))
+(define (EXPAND-MODULE module-infos ms m)
+  (TOP ; bug: ms未使用
+   null-hash ""
+   (λ (ms xs)
+     
+     
 (define (MODULEp module-infos ms modules xs)
   (MODULE-IMPORTp
   (map (λ (m) (EXPAND-MODULE module-infos ms null-hash m)) modules)
