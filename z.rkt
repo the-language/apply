@@ -26,30 +26,30 @@
 (define (partition/k f xs k)
   (let-values ([(x y) (partition f xs)])
     (k x y)))
-(define (TOP ms dir xs k) ; ms=macros
+(define (TOP roms ms dir xs k) ; ms=macros
   (if (null? xs)
       (k ms '())
       (let ([x (car xs)] [xs (cdr xs)])
         (if (pair? x)
             (let ([a (car x)])
               (cond
-                [(hash-ref ms a #f) => (λ (m) (TOP ms dir (cons (apply m (cdr x)) xs) k))]
-                [(eq? a 'DEFMACROz) (TOP (hash-set ms (second x) (eval (third x))) dir xs k)]
-                [(eq? a 'begin) (TOP ms dir (append (cdr x) xs) k)]
+                [(or (hash-ref ms a #f) (hash-ref roms a #f)) => (λ (m) (TOP roms ms dir (cons (apply m (cdr x)) xs) k))]
+                [(eq? a 'DEFMACROz) (TOP roms (hash-set ms (second x) (eval (third x))) dir xs k)]
+                [(eq? a 'begin) (TOP roms ms dir (append (cdr x) xs) k)]
                 [(eq? a 'load) (dir-of/file->list dir (second x)
                                                   (λ (ndir file)
-                                                    (TOP ms ndir file
+                                                    (TOP roms ms ndir file
                                                          (λ (ms ys)
-                                                           (TOP ms dir xs
+                                                           (TOP roms ms dir xs
                                                                 (λ (ms xs)
                                                                   (k ms (append ys xs))))))))]
-                [else (TOP ms dir xs (λ (nms nxs) (k nms (cons x nxs))))]))
-            (TOP ms dir xs k)))))
+                [else (TOP roms ms dir xs (λ (nms nxs) (k nms (cons x nxs))))]))
+            (TOP roms ms dir xs k)))))
 ; exports : (list <导出标识> <值>)
 (struct module (name exports body))
 (define (TOPp dir xs)
   (TOP
-   null-hash dir xs
+   null-hash null-hash dir xs
    (λ (ms xs)
      (partition/k
       (λ (s) (eq? (car s) 'MODULEz)) xs
@@ -77,9 +77,10 @@
     (symbol->string m)
     "@Mz")))
 (define (EXPAND-MODULE module-infos ms m)
-  (TOP ; bug: ms未使用
-   null-hash ""
-   (λ (ms xs)
+  (TOP
+   ms null-hash ""
+   (λ (module-ms xs)
+     
      
      
 (define (MODULEp module-infos ms modules xs)
