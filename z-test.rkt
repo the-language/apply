@@ -19,7 +19,7 @@
   (begin
     (check-equal? (f (quote src)) (quote dist)) ...))
 (test
- COMPILE/TOPp
+ z-current
  [[(begin (define x 0) (define y 0)) y (displayln y)]
-  [(define x 0) (define y 0) (displayln y)]]
+  [0]]
  )

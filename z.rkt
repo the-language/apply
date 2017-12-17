@@ -13,7 +13,9 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(provide z z-current)
 (define null-set (set))
+(define null-hash (hash))
 ; map/symbol = Hash Symbol _
 (define null-map/symbol (hasheq))
 (define map/symbol-set hash-set)
@@ -31,6 +33,11 @@
 (define (partition/k f xs k)
   (let-values ([(x y) (partition f xs)])
     (k x y)))
+
+(define (z dir xs)
+  (TOP/k null-hash null-map/symbol null-set dir xs
+         (λ (modules macros defines xs) xs)))
+(define (z-current xs) (z (current-directory) xs))
 
 (struct module (export-macros export-values))
 (define (TOP/k modules macros defines dir xs k) ; (k modules macros defines xs)
@@ -160,6 +167,6 @@
        macros defines dir exp (car xs)
        (λ (macros defines cs1 a)
          (COMPILE/k*
-          macros defines dir exp (car xs)
+          macros defines dir exp (cdr xs)
           (λ (macros defines cs2 d)
             (k macros defines (append cs1 cs2) (cons a d))))))))
