@@ -29,5 +29,8 @@
                       (λ () 0)))
   (IMPALLz (exp))
   (displayln (m))]
- [0]]
+ [(define exp@_Mz ((lambda () (define a 0) (list a))))
+  (define exp@a@Mz (list-ref exp@_Mz 0))
+  (define a exp@a@Mz)
+  (displayln 0)]]
  )
