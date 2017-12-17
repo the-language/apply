@@ -13,6 +13,8 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(define %eval%ns (make-base-namespace))
+(define (EVAL x) (eval x %eval%ns))
 (provide z z-current)
 (define null-set (set))
 (define null-hash (hash))
@@ -51,7 +53,7 @@
                  (let ([name (car args)] [exports+body (cdr args)])
                    (MODULE/k
                     name modules macros defines dir (car exports+body) (cdr exports+body)
-                             (λ (macros defines module cs)
+                             (λ (defines module cs)
                                (TOP/k (hash-set modules name module) macros defines dir xs
                                       (λ (modules macros defines cs2)
                                         (k modules macros defines (append cs cs2)))))))]
@@ -77,26 +79,26 @@
                (list->map/symbol
                 (map
                 (λ (e)
-                  (cons (first e) (map/symbol-get macros (second e))))))]
+                  (cons (first e) (map/symbol-get macros (second e)))) exportmacros))]
               [export-values (map first exports)])
           (MODULEdo name export-macros export-values exports xs defines k)))))))
 (define (MODULEmk1/k name m c export-values defines k)
   (if (null? export-values)
       (k defines '())
-      (MODULEmk1/k name m (+ 1 c) (cdr export-values)
+      (MODULEmk1/k name m (+ 1 c) (cdr export-values) defines
                  (λ (defines xs)
                    (let ([n (MODULEvalue-name name (car export-values))])
                      (k (set-add defines n) (cons `(define ,n (list-ref ,m ,c)) xs)))))))
 (define (MODULEvalue-name m v)
   (string->symbol
    (string-append
-   (foldr string-append
+   (foldr string-append ""
     (map (λ (s) (string-append (symbol->string s) "@")) (append m (list v))))
    "Mz")))
 (define (MODULEname m)
   (string->symbol
    (string-append
-    (foldr string-append
+    (foldr string-append ""
            (map (λ (s) (string-append (symbol->string s) "@")) m))
     "_Mz")))
 (define (MODULEdo name export-macros export-values exports xs defines k)
@@ -122,7 +124,7 @@
      (let ([f (car x)] [args (cdr x)])
        (cond
          [(map/symbol-get macros f #f) => (λ (m) (COMPILE/k macros defines dir exp (apply m args) k))]
-         [(eq? f 'DEFMACROz) (k (map/symbol-set macros (first args) (eval (second args))) defines '() 'VOIDz)]
+         [(eq? f 'DEFMACROz) (k (map/symbol-set macros (first args) (EVAL (second args))) defines '() 'VOIDz)]
          [(eq? f 'define)
           (DEF/k
            (car args) (cdr args)
@@ -135,6 +137,7 @@
           (if exp
               (COMPILE/k macros defines dir exp `((lambda () ,@args)) k)
               (BEGIN macros defines dir args k))]
+         
          [else
           (COMPILE/k
            macros defines dir exp f

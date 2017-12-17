@@ -21,5 +21,13 @@
 (test
  z-current
  [[(begin (define x 0) (define y 0)) y (displayln y)]
-  [0]]
+  [(define x 0) (define y 0) (displayln y)]]
+ [[(MODULEz (exp)
+           [(m m1) (a a)]
+           (define a 0)
+           (DEFMACROz m1
+                      (λ () 0)))
+  (IMPALLz (exp))
+  (displayln (m))]
+ [0]]
  )
