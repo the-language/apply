@@ -13,13 +13,13 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-(provide COMPILE/TOPp)
-; map = Hash Symbol _
-(define null-map (hasheq))
-(define list->map make-immutable-hasheq)
-(define map? hash?)
-(define map-set hash-set)
-(define map-get hash-ref)
+(define null-set (set))
+; map/symbol = Hash Symbol _
+(define null-map/symbol (hasheq))
+(define map/symbol-set hash-set)
+(define map/symbol-get hash-ref)
+(define map/symbol-has? hash-has-key?)
+(define list->map/symbol make-immutable-hasheq)
 (define (dir-of/file->list dir path k)
   (define rcd (current-directory))
   (current-directory dir)
@@ -31,136 +31,135 @@
 (define (partition/k f xs k)
   (let-values ([(x y) (partition f xs)])
     (k x y)))
-;(define (TOP roms ms dir xs k) ; ms=macros
-;  (if (null? xs)
-;      (k ms '())
-;      (let ([x (car xs)] [xs (cdr xs)])
-;        (if (pair? x)
-;            (let ([a (car x)])
-;              (cond
-;                [(or (hash-ref ms a #f) (hash-ref roms a #f)) => (λ (m) (TOP roms ms dir (cons (apply m (cdr x)) xs) k))]
-;                [(eq? a 'DEFMACROz) (TOP roms (hash-set ms (second x) (eval (third x))) dir xs k)]
-;                [(eq? a 'begin) (TOP roms ms dir (append (cdr x) xs) k)]
-;                [(eq? a 'load) (dir-of/file->list dir (second x)
-;                                                  (λ (ndir file)
-;                                                    (TOP roms ms ndir file
-;                                                         (λ (ms ys)
-;                                                           (TOP roms ms dir xs
-;                                                                (λ (ms xs)
-;                                                                  (k ms (append ys xs))))))))]
-;                [else (TOP roms ms dir xs (λ (nms nxs) (k nms (cons x nxs))))]))
-;            (TOP roms ms dir xs k)))))
-;; exports : (list <导出标识> <值>)
-;(struct module (name exports body))
-;(define (TOPp dir xs)
-;  (TOP
-;   null-hash null-hash dir xs
-;   (λ (ms xs)
-;     (partition/k
-;      (λ (s) (eq? (car s) 'MODULEz)) xs
-;      (λ (modules xs)
-;        (let ([mods (map (λ (m)
-;                           (let ([m (cdr m)])
-;                             (let ([name (car m)] [exports (cadr m)] [body (cddr m)])
-;                               (module name exports body)))))])
-;        (let ([module-infos (list->hash (map
-;                                         (λ (m)
-;                                               (cons (module-name m) (map first (module-exports m)))) mods))])
-;          (MODULEp module-infos ms modules xs))))))))
-;(define (IDin-mod m s)
-;  (string->symbol
-;   (string-append
-;    (symbol->string m)
-;    (string-append
-;    "@"
-;    (string-append
-;     (symbol->string s)
-;     "Mz")))))
-;(define (IDmod m)
-;  (string->symbol
-;   (string-append
-;    (symbol->string m)
-;    "@Mz")))
-;(define (EXPAND-MODULE module-infos ms m)
-;  (TOP
-;   ms null-hash ""
-;   (λ (module-ms xs)
-;     
-;     
-;     
-;(define (MODULEp module-infos ms modules xs)
-;  (MODULE-IMPORTp
-;  (map (λ (m) (EXPAND-MODULE module-infos ms null-hash m)) modules)
-;             
 
-(define (COMPILE/TOPp xs)
-  (BEGIN null-map xs
-         (λ (ms x)
-           (if (pair? x)
-               (list x)
-               '()))))
-(define (doCOMPILEp ms exp x k)
+(struct module (export-macros export-values))
+(define (TOP/k modules macros defines dir xs k) ; (k modules macros defines xs)
+  (if (null? xs)
+      (k modules macros defines '())
+      (let ([x (car xs)] [xs (cdr xs)])
+        (if (pair? x)
+            (let ([f (car x)] [args (cdr x)])
+              (cond
+                [(eq? f 'MODULEz)
+                 (let ([name (car args)] [exports+body (cdr args)])
+                   (MODULE/k
+                    name modules macros defines dir (car exports+body) (cdr exports+body)
+                             (λ (macros defines module cs)
+                               (TOP/k (hash-set modules name module) macros defines dir xs
+                                      (λ (modules macros defines cs2)
+                                        (k modules macros defines (append cs cs2)))))))]
+                [else
+                 (COMPILE1/k
+                  macros defines dir x
+                  (λ (macros defines cs v)
+                    (append cs
+                    (if (pair? v)
+                        (TOP/k modules macros defines dir xs
+                               (λ (modules macros defines xs)
+                                 (k modules macros defines (cons v xs))))
+                        (TOP/k modules macros defines dir xs k)))))]))
+            (TOP/k modules macros defines dir xs k)))))
+(define (MODULE/k name modules macros defines dir exports body k) ; (k defines module xs)
+  (COMPILE-TOP/k
+   macros defines dir body
+   (λ (macros defines xs)
+     (partition/k
+      (λ (export) (map/symbol-has? macros (second export))) exports
+      (λ (exportmacros exports)
+        (let ([export-macros
+               (list->map/symbol
+                (map
+                (λ (e)
+                  (cons (first e) (map/symbol-get macros (second e))))))]
+              [export-values (map first exports)])
+          (MODULEdo name export-macros export-values exports xs defines k)))))))
+(define (MODULEmk1/k name m c export-values defines k)
+  (if (null? export-values)
+      (k defines '())
+      (MODULEmk1/k name m (+ 1 c) (cdr export-values)
+                 (λ (defines xs)
+                   (let ([n (MODULEvalue-name name (car export-values))])
+                     (k (set-add defines n) (cons `(define ,n (list-ref ,m ,c)) xs)))))))
+(define (MODULEvalue-name m v)
+  (string->symbol
+   (string-append
+   (foldr string-append
+    (map (λ (s) (string-append (symbol->string s) "@")) (append m (list v))))
+   "Mz")))
+(define (MODULEname m)
+  (string->symbol
+   (string-append
+    (foldr string-append
+           (map (λ (s) (string-append (symbol->string s) "@")) m))
+    "_Mz")))
+(define (MODULEdo name export-macros export-values exports xs defines k)
+  (let ([n (MODULEname name)])
+    (MODULEmk1/k
+     name n 0 export-values defines
+                 (λ (defines cs1)
+                   (k defines (module export-macros export-values)
+                      (cons
+                       `(define ,n ((lambda () ,@xs (list ,@(map second exports)))))
+                       cs1))))))
+
+(define (COMPILE1/k macros defines dir x k)
+  (COMPILE/k macros defines dir #f x k))
+           (define (COMPILE-TOP/k macros defines dir xs k)
+             (BEGIN
+   macros defines dir (append xs (list 'VOIDz))
+         (λ (macros defines xs v)
+           (k macros defines xs))))
+(define (COMPILE/k macros defines dir exp x k) ; (k macros defines xs v)
   (cond
     [(pair? x)
-     (let ([a (car x)] [xs (cdr x)])
+     (let ([f (car x)] [args (cdr x)])
        (cond
-         [(map-get ms a #f) => (λ (m) (doCOMPILEp ms exp (apply m xs) k))]
-         [(eq? a 'DEFMACROz) (k (map-set ms (first xs) (eval (second xs))) 'VOIDz)]
-         [(eq? a 'define)
+         [(map/symbol-get macros f #f) => (λ (m) (COMPILE/k macros defines dir exp (apply m args) k))]
+         [(eq? f 'DEFMACROz) (k (map/symbol-set macros (first args) (eval (second args))) defines '() 'VOIDz)]
+         [(eq? f 'define)
+          (DEF/k
+           (car args) (cdr args)
+                 (λ (f v)
+                   (COMPILE/k
+                    macros defines dir exp v
+                    (λ (macros defines xs v)
+                      (k macros (set-add defines f) (append xs (list `(define ,f ,v))) 'VOIDz)))))]
+         [(eq? f 'begin)
           (if exp
-              (error 'compile "invalid context for definition" x)
-              (DEFINE ms xs k))]
-         [(eq? a 'begin)
-          (if exp
-              (list (cons 'lambda (cons '() (BEGIN ms xs k))))
-              (BEGIN ms xs k))]
-         [(eq? a 'quote) (k ms (QUOTE (first xs)))]
-         [(eq? a 'if)
-          (doCOMPILEp ms exp (first xs)
-                      (λ (ms b)
-                        (doCOMPILEp ms #t (second xs)
-                                    (λ (ms x)
-                                      (doCOMPILEp ms #t (third xs)
-                                                  (λ (ms y)
-                                                    (k ms (list 'if b x y))))))))]
-         [(or (eq? a 'λ) (eq? a 'lambda))
-          (k ms (cons 'lambda (cons (car xs) (BEGIN ms (cdr xs) (λ (ms v) (list v))))))]
+              (COMPILE/k macros defines dir exp `((lambda () ,@args)) k)
+              (BEGIN macros defines dir args k))]
          [else
-          (doCOMPILEp ms exp a
-                      (λ (ms f)
-                        (COMPILE* ms exp xs
-                                  (λ (ms xs)
-                                    (k ms (cons f xs))))))]))]
-    [(symbol? x) (k ms x)]
-    [(or (number? x) (char? x) (string? x) (null? x)) (k ms x)]
-    [else (error 'compile "invalid syntax" x)]))
-(define (BEGIN ms xs k)
+          (COMPILE/k
+           macros defines dir exp f
+           (λ (macros defines xs f)
+             (COMPILE/k*
+              macros defines dir exp args
+              (λ (macros defines ys args)
+                (k macros defines (append xs ys) (cons f args))))))]))]
+    [else (k macros defines '() x)]))
+(define (DEF/k a d k)
+  (if (symbol? a)
+      (k a (car d))
+      (DEF/k (car a) (cons 'λ (cons (cdr a) d)) k)))
+(define (BEGIN macros defines dir xs k)
   (if (null? (cdr xs))
-      (doCOMPILEp ms #f (car xs) k)
-      (doCOMPILEp ms #f (car xs)
-                  (λ (nms v)
-                    (if (pair? v)
-                        (cons v (BEGIN nms (cdr xs) k))
-                        (BEGIN nms (cdr xs) k))))))
-(define (DEFINE ms xs k)
-  (let ([f (first xs)])
-    (if (symbol? f)
-        (doCOMPILEp ms #f (second xs)
-                    (λ (ms v)
-                      (cons (list 'define (first xs) v)
-                            (k ms 'VOIDz))))
-        (DEFINE ms (list (car f) (cons 'λ (cons (cdr f) (cdr xs)))) k))))
-(define (QUOTE x)
-  (cond
-    [(list? x) (cons 'list (map QUOTE x))]
-    [(pair? x) (list 'cons (QUOTE (car x)) (QUOTE (cdr x)))]
-    [(symbol? x) (list 'quote x)]
-    [else x]))
-(define (COMPILE* ms exp xs k)
-  (if (null? (cdr xs))
-      (doCOMPILEp ms exp (car xs) (λ (ms v) (k ms (list v))))
-      (doCOMPILEp ms exp (car xs)
-                  (λ (ms a)
-                    (COMPILE* ms exp (cdr xs)
-                              (λ (ms d)
-                                (k ms (cons a d))))))))
+      (COMPILE/k macros defines dir exp (car xs) k)
+      (COMPILE/k
+       macros defines dir exp (car xs)
+       (λ (macros defines cs1 v)
+         (BEGIN
+          macros defines dir (cdr xs)
+          (λ (macros defines cs2 r)
+            (if (pair? v)
+                (k macros defines (append cs1 (cons v cs2)) r)
+                (k macros defines (append cs1 cs2) r))))))))
+(define (COMPILE/k* macros defines dir exp xs k)
+  (if (null? xs)
+      (k macros defines '() '())
+      (COMPILE/k
+       macros defines dir exp (car xs)
+       (λ (macros defines cs1 a)
+         (COMPILE/k*
+          macros defines dir exp (car xs)
+          (λ (macros defines cs2 d)
+            (k macros defines (append cs1 cs2) (cons a d))))))))
