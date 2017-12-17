@@ -44,9 +44,25 @@
       s
       (set-append (set-add s (car xs)) (cdr xs))))
 
+;(struct $if (b x y) #:transparent)
+;(struct $VOID ())
+;(define $void ($VOID))
+;(struct $$apply (f xs) #:transparent)
+;(struct $$define (x v) #:transparent)
+;(struct $$lambda (defines args xs x) #:transparent)
+;(struct $$top (defines xs) #:transparent)
+;(struct $$var (x) #:transparent)
+(define ($if b x y) `(if ,b ,x ,y))
+(define $void 'VOIDz)
+(define ($$apply f xs) (cons f xs))
+(define ($$define x v) `(define ,x ,v))
+(define ($$lambda defines args xs x) `(lambda ,args ,@xs ,x))
+(define ($$top defines xs) xs)
+(define ($$var x) x)
+
 (define (z dir xs)
   (TOP/k null-hash null-map/symbol null-set dir xs
-         (λ (modules macros defines xs) xs)))
+         (λ (modules macros defines xs) ($$top defines xs))))
 (define (z-current xs) (z (current-directory) xs))
 
 (struct module (export-macros export-values))
@@ -87,14 +103,17 @@
                 (λ (e)
                   (cons (first e) (map/symbol-get macros (second e)))) exportmacros)]
               [export-values (map first exports)])
-          (MODULEdo name export-macros export-values exports xs defines k)))))))
+          (MODULEdo modules macros dir name export-macros export-values exports xs defines k)))))))
 (define (MODULEmk1/k name m c export-values defines k)
   (if (null? export-values)
       (k defines '())
       (MODULEmk1/k name m (+ 1 c) (cdr export-values) defines
                    (λ (defines xs)
                      (let ([n (MODULEvalue-name name (car export-values))])
-                       (k (set-add defines n) (cons `(define ,n (list-ref ,m ,c)) xs)))))))
+                       (k (set-add defines n)
+                          (cons ($$define n ($$apply ($$var 'list-ref)
+                                                     (list ($$var m) ($$var c))))
+                                xs)))))))
 (define (MODULEvalue-name m v)
   (string->symbol
    (string-append
@@ -107,14 +126,15 @@
     (foldr string-append ""
            (map (λ (s) (string-append (symbol->string s) "@")) m))
     "_Mz")))
-(define (MODULEdo name export-macros export-values exports xs defines k)
+(define (MODULEdo modules macros dir name export-macros export-values exports xs defines k)
   (let ([n (MODULEname name)])
     (MODULEmk1/k
      name n 0 export-values defines
      (λ (defines cs1)
        (k defines (module export-macros export-values)
           (cons
-           `(define ,n ((lambda () ,@xs (list ,@(map second exports)))))
+           ($$define n
+                     ($$apply (LAMBDA modules macros dir '() (append xs `((list ,@(map second exports))))) '()))
            cs1))))))
 
 (define (COMPILE1/k modules macros defines dir x k)
@@ -130,7 +150,7 @@
      (let ([f (car x)] [args (cdr x)])
        (cond
          [(map/symbol-get macros f #f) => (λ (m) (COMPILE/k modules macros defines dir exp (apply m args) k))]
-         [(eq? f 'DEFMACROz) (k (map/symbol-set macros (first args) (EVAL (second args))) defines '() 'VOIDz)]
+         [(eq? f 'DEFMACROz) (k (map/symbol-set macros (first args) (EVAL (second args))) defines '() $void)]
          [(eq? f 'define)
           (DEF/k
            (car args) (cdr args)
@@ -138,7 +158,7 @@
              (COMPILE/k
               modules macros defines dir exp v
               (λ (macros defines xs v)
-                (k macros (set-add defines f) (append xs (list `(define ,f ,v))) 'VOIDz)))))]
+                (k macros (set-add defines f) (append xs (list ($$define f v))) $void)))))]
          [(eq? f 'begin)
           (if exp
               (COMPILE/k modules macros defines dir exp `((lambda () ,@args)) k)
@@ -148,6 +168,7 @@
             (IMPALL/k macros defines name (hash-ref modules name)
                       (λ (macros defines xs)
                         (k macros defines xs 'VOIDz))))]
+         [(eq? f 'lambda) (LAMBDA modules macros dir (car args) (cdr args))]
          [else
           (COMPILE/k
            modules macros defines dir exp f
@@ -155,7 +176,7 @@
              (COMPILE/k*
               modules macros defines dir exp args
               (λ (macros defines ys args)
-                (k macros defines (append xs ys) (cons f args))))))]))]
+                (k macros defines (append xs ys) ($$apply f args))))))]))]
     [else (k macros defines '() x)]))
 (define (IMPALL/k macros defines name module k)
   (let ([module-macros (module-export-macros module)]
@@ -163,7 +184,7 @@
     (k (map/symbol-append macros module-macros) (set-append defines values)
        (map
         (λ (x)
-          `(define ,x ,(MODULEvalue-name name x)))
+          ($$define x ($$var (MODULEvalue-name name x))))
         values))))
 (define (DEF/k a d k)
   (if (symbol? a)
@@ -191,3 +212,8 @@
           modules macros defines dir exp (cdr xs)
           (λ (macros defines cs2 d)
             (k macros defines (append cs1 cs2) (cons a d))))))))
+(define (LAMBDA modules macros dir args body)
+  (BEGIN
+   modules macros null-set dir body
+   (λ (macros defines1 cs v)
+     ($$lambda defines1 args cs v))))

@@ -17,11 +17,11 @@
 (require rackunit)
 (define-syntax-rule (test f [src dist] ...)
   (begin
-    (check-equal? (f (quote src)) (quote dist)) ...))
+    (check-equal? (f (quote src)) dist) ...))
 (test
  z-current
  [[(begin (define x 0) (define y 0)) y (displayln y)]
-  [(define x 0) (define y 0) (displayln y)]]
+  0]
  [[(MODULEz (exp)
            [(m m1) (a a)]
            (define a 0)
@@ -29,8 +29,5 @@
                       (λ () 0)))
   (IMPALLz (exp))
   (displayln (m))]
- [(define exp@_Mz ((lambda () (define a 0) (list a))))
-  (define exp@a@Mz (list-ref exp@_Mz 0))
-  (define a exp@a@Mz)
-  (displayln 0)]]
+ 0]
  )
