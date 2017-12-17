@@ -81,7 +81,7 @@
 (define (z-current xs) (z (current-directory) xs))
 
 (struct module (export-macros export-values))
-(define (MODULE/k state name modules macros defines dir exports body k) ; (k state defines module xs)
+(define (MODULE/k state name modules macros defines dir exports body k) ; (k state defines modules xs)
   (COMPILE-TOP/k
    state modules macros defines dir body
    (λ (state modules macros defines xs)
@@ -120,11 +120,11 @@
     (MODULEmk1/k
      name n 0 export-values defines
      (λ (defines cs1)
-       (k state defines (module export-macros export-values)
+       (LAMBDA/k state modules macros dir '() (append xs `((LISTz ,@(map second exports))))
+               (λ (state modules lam)
+       (k state defines (hash-set modules name (module export-macros export-values))
           (cons
-           ($$define n
-                     ($$apply (LAMBDA state modules macros dir '() (append xs `((LISTz ,@(map second exports))))) '()))
-           cs1)))))) ; state: BUG
+           ($$define n ($$apply lam '())) cs1))))))))
 
 (define null-state null-map/symbol)
 (define (COMPILE1/k modules macros defines dir x k)
@@ -134,7 +134,7 @@
    state modules macros defines dir #f (append xs (list 'VOIDz))
    (λ (state modules macros defines xs v)
      (k state modules macros defines xs))))
-(define (COMPILE/k state modules macros defines dir exp? x k) ; (k macros defines xs v)
+(define (COMPILE/k state modules macros defines dir exp? x k) ; (k state modules macros defines xs v)
   (cond
     [(pair? x)
      (let ([f (car x)] [args (cdr x)])
@@ -158,7 +158,9 @@
             (IMPALL/k state macros defines name (hash-ref modules name)
                       (λ (state modules macros defines xs)
                         (k state modules macros defines xs 'VOIDz))))]
-         [(eq? f 'lambda) (LAMBDA state modules macros dir (car args) (cdr args))]
+         [(eq? f 'lambda) (LAMBDA/k state modules macros dir (car args) (cdr args)
+                                    (λ (state modules lam)
+                                      (k state modules macros defines '() lam)))]
          [(eq? f 'LISTz)
           (COMPILE/k* state
                       modules macros defines dir exp? args
@@ -168,8 +170,8 @@
           (let ([name (car args)] [exports+body (cdr args)])
             (MODULE/k
              state name modules macros defines dir (car exports+body) (cdr exports+body)
-             (λ (state defines module cs)
-               (k state (hash-set modules name module) macros defines cs $void))))]
+             (λ (state defines modules cs)
+               (k state modules macros defines cs $void))))]
          [else
           (COMPILE/k state
                      modules macros defines dir exp? f
@@ -221,8 +223,8 @@
                                modules macros defines dir exp? (cdr xs)
                                (λ (state modules macros defines cs2 d)
                                  (k state modules macros defines (append cs1 cs2) (cons a d))))))))
-(define (LAMBDA state modules macros dir args body)
+(define (LAMBDA/k state modules macros dir args body k) ; (k state modules lambda)
   (BEGIN
    state modules macros null-set dir #f body
    (λ (state modules macros defines1 cs v)
-     ($$lambda defines1 args cs v))))
+     (k state modules ($$lambda defines1 args cs v)))))
