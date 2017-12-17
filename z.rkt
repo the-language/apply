@@ -75,40 +75,16 @@
 (define ($list-ref xs k) `(list-ref ,xs ,k))
 
 (define (z dir xs)
-  (TOP/k null-hash null-map/symbol null-set dir xs
-         (λ (modules macros defines xs) ($$top defines xs))))
+  (COMPILE-TOP/k null-map/symbol null-hash null-map/symbol null-set dir xs
+                 (λ (state modules macros defines xs)
+                   ($$top defines xs))))
 (define (z-current xs) (z (current-directory) xs))
 
 (struct module (export-macros export-values))
-(define (TOP/k modules macros defines dir xs k) ; (k modules macros defines xs)
-  (if (null? xs)
-      (k modules macros defines '())
-      (let ([x (car xs)] [xs (cdr xs)])
-        (if (pair? x)
-            (let ([f (car x)] [args (cdr x)])
-              (cond
-                [(eq? f 'MODULEz)
-                 (let ([name (car args)] [exports+body (cdr args)])
-                   (MODULE/k
-                    name modules macros defines dir (car exports+body) (cdr exports+body)
-                    (λ (defines module cs)
-                      (TOP/k (hash-set modules name module) macros defines dir xs
-                             (λ (modules macros defines cs2)
-                               (k modules macros defines (append cs cs2)))))))]
-                [else
-                 (COMPILE1/k
-                  modules macros defines dir x
-                  (λ (macros defines cs v)
-                    (TOP/k modules macros defines dir xs
-                           (λ (modules macros defines xs)
-                             (if (pair? v)
-                                 (k modules macros defines (append cs (cons v xs)))
-                                 (k modules macros defines (append cs xs)))))))]))
-            (TOP/k modules macros defines dir xs k)))))
-(define (MODULE/k name modules macros defines dir exports body k) ; (k defines module xs)
+(define (MODULE/k state name modules macros defines dir exports body k) ; (k defines module xs)
   (COMPILE-TOP/k
-   modules macros defines dir body
-   (λ (macros defines xs)
+   state modules macros defines dir body
+   (λ (state modules macros defines xs)
      (partition/k
       (λ (export) (map/symbol-has? macros (second export))) exports
       (λ (exportmacros exports)
@@ -147,66 +123,74 @@
        (k defines (module export-macros export-values)
           (cons
            ($$define n
-                     ($$apply (LAMBDA modules macros dir '() (append xs `((LISTz ,@(map second exports))))) '()))
-           cs1))))))
+                     ($$apply (LAMBDA null-state modules macros dir '() (append xs `((LISTz ,@(map second exports))))) '()))
+           cs1)))))) ; null-state:BUG
 
+(define null-state null-map/symbol)
 (define (COMPILE1/k modules macros defines dir x k)
-  (COMPILE/k modules macros defines dir #f x k))
-(define (COMPILE-TOP/k modules macros defines dir xs k)
+  (COMPILE/k null-state modules macros defines dir #f x k))
+(define (COMPILE-TOP/k state modules macros defines dir xs k)
   (BEGIN
-   modules macros defines dir (append xs (list 'VOIDz))
-   (λ (macros defines xs v)
-     (k macros defines xs))))
-(define (COMPILE/k modules macros defines dir exp x k) ; (k macros defines xs v)
+   state modules macros defines dir (append xs (list 'VOIDz))
+   (λ (state modules macros defines xs v)
+     (k state modules macros defines xs))))
+(define (COMPILE/k state modules macros defines dir exp x k) ; (k macros defines xs v)
   (cond
     [(pair? x)
      (let ([f (car x)] [args (cdr x)])
        (cond
-         [(map/symbol-get macros f #f) => (λ (m) (COMPILE/k modules macros defines dir exp (apply m args) k))]
-         [(eq? f 'DEFMACROz) (k (map/symbol-set macros (first args) (EVAL (second args))) defines '() $void)]
+         [(map/symbol-get macros f #f) => (λ (m) (COMPILE/k state modules macros defines dir exp (apply m args) k))]
+         [(eq? f 'DEFMACROz) (k state modules (map/symbol-set macros (first args) (EVAL (second args))) defines '() $void)]
          [(eq? f 'define)
           (DEF/k
            (car args) (cdr args)
            (λ (f v)
-             (COMPILE/k
-              modules macros defines dir exp v
-              (λ (macros defines xs v)
-                (k macros (set-add defines f) (append xs (list ($$define f v))) $void)))))]
+             (COMPILE/k state
+                        modules macros defines dir exp v
+                        (λ (state modules macros defines xs v)
+                          (k state modules macros (set-add defines f) (append xs (list ($$define f v))) $void)))))]
          [(eq? f 'begin)
           (if exp
-              (COMPILE/k modules macros defines dir exp `((lambda () ,@args)) k)
-              (BEGIN modules macros defines dir args k))]
+              (COMPILE/k state modules macros defines dir exp `((lambda () ,@args)) k)
+              (BEGIN state modules macros defines dir args k))]
          [(eq? f 'IMPALLz)
           (let ([name (first args)])
-            (IMPALL/k macros defines name (hash-ref modules name)
-                      (λ (macros defines xs)
-                        (k macros defines xs 'VOIDz))))]
+            (IMPALL/k state macros defines name (hash-ref modules name)
+                      (λ (state modules macros defines xs)
+                        (k state modules macros defines xs 'VOIDz))))]
          [(eq? f 'lambda) (LAMBDA modules macros dir (car args) (cdr args))]
          [(eq? f 'LISTz)
-          (COMPILE/k*
-              modules macros defines dir exp args
-              (λ (macros defines ys args)
-                (k macros defines ys ($list args))))]
+          (COMPILE/k* state
+                      modules macros defines dir exp args
+                      (λ (state modules macros defines ys args)
+                        (k state modules macros defines ys ($list args))))]
+         [(eq? f 'MODULEz)
+          (let ([name (car args)] [exports+body (cdr args)])
+            (MODULE/k
+             state name modules macros defines dir (car exports+body) (cdr exports+body)
+             (λ (defines module cs)
+               (k state (hash-set modules name module) macros defines cs $void))))]
          [else
-          (COMPILE/k
-           modules macros defines dir exp f
-           (λ (macros defines xs f)
-             (COMPILE/k*
-              modules macros defines dir exp args
-              (λ (macros defines ys args)
-                (k macros defines (append xs ys) ($$apply f args))))))]))]
-    [else (k macros defines '()
+          (COMPILE/k state
+                     modules macros defines dir exp f
+                     (λ (state modules macros defines xs f)
+                       (COMPILE/k* state
+                                   modules macros defines dir exp args
+                                   (λ (state modules macros defines ys args)
+                                     (k state modules macros defines (append xs ys) ($$apply f args))))))]))]
+    [else (k state modules macros defines '()
              (cond
+               [(eq? x 'VOIDz) $void]
                [(symbol? x) ($$var x)]
                [(number? x) ($$number x)]
                [(char? x) ($$char x)]
                [(string? x) ($$string x)]
                [(null? x) $null]
                [else (error 'compile "invalid syntax" x)]))]))
-(define (IMPALL/k macros defines name module k)
+(define (IMPALL/k state macros defines name module k)
   (let ([module-macros (module-export-macros module)]
         [values (module-export-values module)])
-    (k (map/symbol-append macros module-macros) (set-append defines values)
+    (k state macros (map/symbol-append macros module-macros) (set-append defines values)
        (map
         (λ (x)
           ($$define x ($$var (MODULEvalue-name name x))))
@@ -215,30 +199,30 @@
   (if (symbol? a)
       (k a (car d))
       (DEF/k (car a) (cons 'λ (cons (cdr a) d)) k)))
-(define (BEGIN modules macros defines dir xs k)
+(define (BEGIN state modules macros defines dir xs k)
   (if (null? (cdr xs))
-      (COMPILE/k modules macros defines dir exp (car xs) k)
-      (COMPILE/k
-       modules macros defines dir exp (car xs)
-       (λ (macros defines cs1 v)
-         (BEGIN
-          modules macros defines dir (cdr xs)
-          (λ (macros defines cs2 r)
-            (if (pair? v)
-                (k macros defines (append cs1 (cons v cs2)) r)
-                (k macros defines (append cs1 cs2) r))))))))
-(define (COMPILE/k* modules macros defines dir exp xs k)
+      (COMPILE/k state modules macros defines dir exp (car xs) k)
+      (COMPILE/k state
+                 modules macros defines dir exp (car xs)
+                 (λ (state modules macros defines cs1 v)
+                   (BEGIN
+                    state modules macros defines dir (cdr xs)
+                    (λ (state modules macros defines cs2 r)
+                      (if (pair? v)
+                          (k state modules macros defines (append cs1 (cons v cs2)) r)
+                          (k state modules macros defines (append cs1 cs2) r))))))))
+(define (COMPILE/k* state modules macros defines dir exp xs k)
   (if (null? xs)
-      (k macros defines '() '())
-      (COMPILE/k
-       modules macros defines dir exp (car xs)
-       (λ (macros defines cs1 a)
-         (COMPILE/k*
-          modules macros defines dir exp (cdr xs)
-          (λ (macros defines cs2 d)
-            (k macros defines (append cs1 cs2) (cons a d))))))))
-(define (LAMBDA modules macros dir args body)
+      (k state modules macros defines '() '())
+      (COMPILE/k state
+                 modules macros defines dir exp (car xs)
+                 (λ (state modules macros defines cs1 a)
+                   (COMPILE/k* state
+                               modules macros defines dir exp (cdr xs)
+                               (λ (state modules macros defines cs2 d)
+                                 (k state modules macros defines (append cs1 cs2) (cons a d))))))))
+(define (LAMBDA state modules macros dir args body)
   (BEGIN
-   modules macros null-set dir body
-   (λ (macros defines1 cs v)
+   state modules macros null-set dir body
+   (λ (state modules macros defines1 cs v)
      ($$lambda defines1 args cs v))))
