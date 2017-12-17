@@ -44,31 +44,35 @@
       s
       (set-append (set-add s (car xs)) (cdr xs))))
 
-(struct $if (b x y) #:transparent)
-(struct $VOID ())
-(define $void ($VOID))
-(struct $$apply (f xs) #:transparent)
-(struct $$define (x v) #:transparent)
-(struct $$lambda (defines args xs x) #:transparent)
-(struct $$top (defines xs) #:transparent)
-(struct $$var (x) #:transparent)
-(struct $$number (x) #:transparent)
-(struct $$char (x) #:transparent)
-(struct $$string (x) #:transparent)
-(struct $NULL ())
-(define $null ($NULL))
+;(struct $if (b x y) #:transparent)
+;(struct $VOID ())
+;(define $void ($VOID))
+;(struct $$apply (f xs) #:transparent)
+;(struct $$define (x v) #:transparent)
+;(struct $$lambda (defines args xs x) #:transparent)
+;(struct $$top (defines xs) #:transparent)
+;(struct $$var (x) #:transparent)
+;(struct $$number (x) #:transparent)
+;(struct $$char (x) #:transparent)
+;(struct $$string (x) #:transparent)
+;(struct $NULL ())
+;(define $null ($NULL))
+;(struct $list (xs) #:transparent)
+;(struct $list-ref (xs k) #:transparent)
 
-;(define ($if b x y) `(if ,b ,x ,y))
-;(define $void 'VOIDz)
-;(define ($$apply f xs) (cons f xs))
-;(define ($$define x v) `(define ,x ,v))
-;(define ($$lambda defines args xs x) `(lambda ,args ,@xs ,x))
-;(define ($$top defines xs) xs)
-;(define ($$var x) x)
-;(define ($$number x) x)
-;(define ($$char x) x)
-;(define ($$string x) x)
-;(define $null ''())
+(define ($if b x y) `(if ,b ,x ,y))
+(define $void 'VOIDz)
+(define ($$apply f xs) (cons f xs))
+(define ($$define x v) `(define ,x ,v))
+(define ($$lambda defines args xs x) `(lambda ,args ,@xs ,x))
+(define ($$top defines xs) xs)
+(define ($$var x) x)
+(define ($$number x) x)
+(define ($$char x) x)
+(define ($$string x) x)
+(define $null ''())
+(define ($list xs) `(list ,xs))
+(define ($list-ref xs k) `(list-ref ,xs ,k))
 
 (define (z dir xs)
   (TOP/k null-hash null-map/symbol null-set dir xs
@@ -121,8 +125,7 @@
                    (λ (defines xs)
                      (let ([n (MODULEvalue-name name (car export-values))])
                        (k (set-add defines n)
-                          (cons ($$define n ($$apply ($$var 'list-ref)
-                                                     (list ($$var m) ($$var c))))
+                          (cons ($$define n ($list-ref ($$var m) ($$var c)))
                                 xs)))))))
 (define (MODULEvalue-name m v)
   (string->symbol
@@ -144,7 +147,7 @@
        (k defines (module export-macros export-values)
           (cons
            ($$define n
-                     ($$apply (LAMBDA modules macros dir '() (append xs `((list ,@(map second exports))))) '()))
+                     ($$apply (LAMBDA modules macros dir '() (append xs `((LISTz ,@(map second exports))))) '()))
            cs1))))))
 
 (define (COMPILE1/k modules macros defines dir x k)
@@ -179,6 +182,11 @@
                       (λ (macros defines xs)
                         (k macros defines xs 'VOIDz))))]
          [(eq? f 'lambda) (LAMBDA modules macros dir (car args) (cdr args))]
+         [(eq? f 'LISTz)
+          (COMPILE/k*
+              modules macros defines dir exp args
+              (λ (macros defines ys args)
+                (k macros defines ys ($list args))))]
          [else
           (COMPILE/k
            modules macros defines dir exp f
