@@ -44,21 +44,31 @@
       s
       (set-append (set-add s (car xs)) (cdr xs))))
 
-;(struct $if (b x y) #:transparent)
-;(struct $VOID ())
-;(define $void ($VOID))
-;(struct $$apply (f xs) #:transparent)
-;(struct $$define (x v) #:transparent)
-;(struct $$lambda (defines args xs x) #:transparent)
-;(struct $$top (defines xs) #:transparent)
-;(struct $$var (x) #:transparent)
-(define ($if b x y) `(if ,b ,x ,y))
-(define $void 'VOIDz)
-(define ($$apply f xs) (cons f xs))
-(define ($$define x v) `(define ,x ,v))
-(define ($$lambda defines args xs x) `(lambda ,args ,@xs ,x))
-(define ($$top defines xs) xs)
-(define ($$var x) x)
+(struct $if (b x y) #:transparent)
+(struct $VOID ())
+(define $void ($VOID))
+(struct $$apply (f xs) #:transparent)
+(struct $$define (x v) #:transparent)
+(struct $$lambda (defines args xs x) #:transparent)
+(struct $$top (defines xs) #:transparent)
+(struct $$var (x) #:transparent)
+(struct $$number (x) #:transparent)
+(struct $$char (x) #:transparent)
+(struct $$string (x) #:transparent)
+(struct $NULL ())
+(define $null ($NULL))
+
+;(define ($if b x y) `(if ,b ,x ,y))
+;(define $void 'VOIDz)
+;(define ($$apply f xs) (cons f xs))
+;(define ($$define x v) `(define ,x ,v))
+;(define ($$lambda defines args xs x) `(lambda ,args ,@xs ,x))
+;(define ($$top defines xs) xs)
+;(define ($$var x) x)
+;(define ($$number x) x)
+;(define ($$char x) x)
+;(define ($$string x) x)
+;(define $null ''())
 
 (define (z dir xs)
   (TOP/k null-hash null-map/symbol null-set dir xs
@@ -177,7 +187,14 @@
               modules macros defines dir exp args
               (λ (macros defines ys args)
                 (k macros defines (append xs ys) ($$apply f args))))))]))]
-    [else (k macros defines '() x)]))
+    [else (k macros defines '()
+             (cond
+               [(symbol? x) ($$var x)]
+               [(number? x) ($$number x)]
+               [(char? x) ($$char x)]
+               [(string? x) ($$string x)]
+               [(null? x) $null]
+               [else (error 'compile "invalid syntax" x)]))]))
 (define (IMPALL/k macros defines name module k)
   (let ([module-macros (module-export-macros module)]
         [values (module-export-values module)])
