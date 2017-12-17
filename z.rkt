@@ -71,7 +71,7 @@
 (define ($$char x) x)
 (define ($$string x) x)
 (define $null ''())
-(define ($list xs) `(list ,xs))
+(define ($list xs) `(list ,@xs))
 (define ($list-ref xs k) `(list-ref ,xs ,k))
 
 (define (z dir xs)
