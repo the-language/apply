@@ -23,8 +23,7 @@
 (define (z dir xs)
   (COMPILE-TOP/k null-hash null-hash null-hash null-set dir xs
                  (λ (state modules macros defines xs)
-                   ($$top defines xs))))
-(define (z-current xs) (z (current-directory) xs))
+                   ($$top (set->list defines) xs))))
 
 (define-record-type module
   (module export-macros export-values)
@@ -177,4 +176,4 @@
   (BEGIN
    state modules macros null-set dir #f body
    (λ (state modules macros defines1 cs v)
-     (k state modules ($$lambda defines1 args cs v)))))
+     (k state modules ($$lambda (set->list defines1) args cs v)))))
