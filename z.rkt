@@ -23,11 +23,6 @@
 (provide z z-current)
 (define null-set (set))
 (define null-hash (hash))
-; map/symbol = Hash Symbol _
-(define null-map/symbol (hasheq))
-(define map/symbol-set hash-set)
-(define map/symbol-get hash-ref)
-(define map/symbol-has? hash-has-key?)
 (define (dir-of/file->list dir path k)
   (define rcd (current-directory))
   (current-directory dir)

@@ -14,14 +14,14 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (define (map/symbol-append map xs)
-  (foldl (λ (p map) (map/symbol-set map (car p) (cdr p))) map xs))
+  (foldl (λ (p map) (hash-set map (car p) (cdr p))) map xs))
 (define (set-append s xs)
   (if (null? xs)
       s
       (set-append (set-add s (car xs)) (cdr xs))))
 
 (define (z dir xs)
-  (COMPILE-TOP/k null-map/symbol null-hash null-map/symbol null-set dir xs
+  (COMPILE-TOP/k null-hash null-hash null-hash null-set dir xs
                  (λ (state modules macros defines xs)
                    ($$top defines xs))))
 (define (z-current xs) (z (current-directory) xs))
@@ -36,12 +36,12 @@
    state modules macros defines dir body
    (λ (state modules macros defines xs)
      (partition/k
-      (λ (export) (map/symbol-has? macros (second export))) exports
+      (λ (export) (hash-has-key? macros (second export))) exports
       (λ (exportmacros exports)
         (let ([export-macros
                (map
                 (λ (e)
-                  (cons (first e) (map/symbol-get macros (second e)))) exportmacros)]
+                  (cons (first e) (hash-ref macros (second e)))) exportmacros)]
               [export-values (map first exports)])
           (MODULEdo state modules macros dir name export-macros export-values exports xs defines k)))))))
 (define (MODULEmk1/k name m c export-values defines k)
@@ -76,7 +76,7 @@
           (cons
            ($$define n ($$apply lam '())) cs1))))))))
 
-(define null-state null-map/symbol)
+(define null-state null-hash)
 (define (COMPILE1/k modules macros defines dir x k)
   (COMPILE/k null-state modules macros defines dir #f x k))
 (define (COMPILE-TOP/k state modules macros defines dir xs k)
@@ -89,8 +89,8 @@
     [(pair? x)
      (let ([f (car x)] [args (cdr x)])
        (cond
-         [(map/symbol-get macros f #f) => (λ (m) (COMPILE/k state modules macros defines dir exp? (apply m args) k))]
-         [(eq? f 'DEFMACROz) (k state modules (map/symbol-set macros (first args) (EVAL (second args))) defines '() $void)]
+         [(hash-ref macros f #f) => (λ (m) (COMPILE/k state modules macros defines dir exp? (apply m args) k))]
+         [(eq? f 'DEFMACROz) (k state modules (hash-set macros (first args) (EVAL (second args))) defines '() $void)]
          [(eq? f 'define)
           (DEF/k
            (car args) (cdr args)
