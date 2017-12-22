@@ -14,6 +14,7 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
+(require compatibility/defmacro)
 ;(define %eval%ns (make-base-namespace))
 (require srfi/9) ; R7RS
 ;(define (EVAL x) (eval x %eval%ns))
@@ -38,6 +39,7 @@
 (define (partition/k f xs k)
   (let-values ([(x y) (partition f xs)])
     (k x y)))
+(define-macro (load x) `(include ,x))
 
 ;(struct $if (b x y) #:transparent)
 ;(struct $VOID ())
@@ -69,4 +71,4 @@
 (define ($list xs) `(list ,@xs))
 (define ($list-ref xs k) `(list-ref ,xs ,k))
 
-(include "z.scm")
+(load "z.scm")
