@@ -14,27 +14,7 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(require compatibility/defmacro)
-;(define %eval%ns (make-base-namespace))
-(require srfi/9) ; R7RS
-;(define (EVAL x) (eval x %eval%ns))
-(require racket/sandbox)
-(define EVAL (make-evaluator 'racket))
 (provide z z-current)
-(define null-set (set))
-(define null-hash (hash))
-(define (dir-of/file->list dir path k)
-  (define rcd (current-directory))
-  (current-directory dir)
-  (define f (simplify-path path))
-  (define-values (d i0 i1) (split-path f))
-  (define xs (file->list f))
-  (current-directory rcd)
-  (k d xs))
-(define (partition/k f xs k)
-  (let-values ([(x y) (partition f xs)])
-    (k x y)))
-(define-macro (load x) `(include ,x))
 
 ;(struct $if (b x y) #:transparent)
 ;(struct $VOID ())
@@ -66,4 +46,5 @@
 (define ($list xs) `(list ,@xs))
 (define ($list-ref xs k) `(list-ref ,xs ,k))
 
-(load "z.scm")
+(include "scm.rkt")
+(include "z.scm")
