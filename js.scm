@@ -36,8 +36,8 @@
 (define ($$char x) (**new (**var 'CHAR_) (list (**string (string x)))))
 (define $$string **string)
 (define $null (**vector '()))
-(define ($list xs) `(list ,@xs))
-(define ($list-ref xs k) `(list-ref ,xs ,k))
+(define $list **vector)
+(define $list-ref *vector-ref)
 (define prelude
   "
 function PAIR_(a,d){this.a=a;this.d=d;}
