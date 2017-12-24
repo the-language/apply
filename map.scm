@@ -14,6 +14,7 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (load "z.scm")
+(load "Map/js.scm")
 
 (define $if *if)
 (define $void *undefined)
