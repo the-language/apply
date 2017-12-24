@@ -15,10 +15,10 @@
 
 (load "z.scm")
 
-(define ($if b x y) (*if b x y))
+(define $if *if)
 (define $void *undefined)
-(define ($$apply f xs) (**apply f xs))
-(define ($$define x v) (**set! x v))
+(define $$apply **apply)
+(define $$define **set!)
 (define ($$lambda defines args xs x)
   (**lambda
    args
@@ -28,22 +28,32 @@
     (**return x))))
 (define ($$top defines xs)
   (**top
-   (append
-    (map **define-undefined defines)
-    xs)))
-(define $$var **var)
+   (cons
+    prelude
+    (append
+     (map **define-undefined defines)
+     xs))))
+(define ($$var x) (**var (string->symbol (string-append (symbol->string x) "Z"))))
 (define $$number **number)
-(define ($$char x) (**new (**var 'CHAR_) (list (**string (string x)))))
+(define ($$char x) (**apply* (**var 'CHAR_) (list (**string (string x)))))
 (define $$string **string)
-(define $null (**vector '()))
-(define $list **vector)
+(define $null (*vector '()))
+(define $list *vector*)
 (define $list-ref *vector-ref)
 (define prelude
-  "
-function PAIR_(a,d){this.a=a;this.d=d;}
-function IS_PAIR_(x){return x instanceof Array || x instanceof PAIR_;}
-function CONS_(a,d){if(d instanceof Array){return [a].concat(d);}else{return new PAIR_(a,d);}}
-function IS_LIST_(x){return x instanceof Array;}
-function CHAR_(x){this.c=x;}
-function IS_CHAR_(x){return x instanceof CHAR_;}
-")
+  (*exp
+   '(begin
+      (struct char?Z CHAR_ (x))
+      (struct JPAIR_? JPAIR_ (a d))
+      (define consZ
+        (lambda (a d)
+          (if-boolean/do (vector? d)
+                         [(return (vector-append (vector a) d))]
+                         [(return (JPAIR_ a d))])))
+      (define IS_LIST_ (lambda (xs) (vector? xs)))
+      (define CAR_
+        (lambda (p)
+          (return (if-boolean (JPAIR_? p) (@ p a) (vector-head p)))))
+      (define CDR_
+        (lambda (p)
+          (return (if-boolean (JPAIR_? p) (@ p d) (vector-tail p))))))))
