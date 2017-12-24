@@ -1,4 +1,4 @@
-U=unsafe
+U=unsafe,二元
 ```scheme
 '(
 raise
@@ -12,15 +12,14 @@ boolean?
 eq?
 
 symbol?
-
 string?
+string-appendU
 symbol->stringU
 string->symbolU
 number->stringU
 string->numberU
 
 char?
-stringU
 list->stringU
 string->listU
 char->integerU
@@ -32,7 +31,7 @@ cons
 carU
 cdrU
 list?
-appendU
+appendU ; 仅列表
 mapU
 
 number?
@@ -45,6 +44,5 @@ number?
 =U
 <=U
 >=U
-
 )
 ```
