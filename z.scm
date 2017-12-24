@@ -178,3 +178,5 @@
    state modules macros null-set dir #f body
    (λ (state modules macros defines1 cs v)
      (k state modules ($$lambda (set->list defines1) args cs v)))))
+
+(define (z-current xs) (z (current-directory) xs))

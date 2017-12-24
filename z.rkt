@@ -50,4 +50,3 @@
 
 (include "scm.rkt")
 (include "z.scm")
-(define (z-current xs) (z (current-directory) xs))

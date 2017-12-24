@@ -14,11 +14,10 @@
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 (load "z.scm")
-(load "Map/js.scm")
 
 (define $if *if)
 (define $void *undefined)
-(define $$apply **apply)
+(define $$apply **apply*)
 (define $$define **set!)
 (define ($$lambda defines args xs x)
   (**lambda
@@ -38,7 +37,7 @@
 (define $$number **number)
 (define ($$char x) (**apply* (**var 'CHAR_) (list (**string (string x)))))
 (define $$string **string)
-(define $null (*vector '()))
+(define $null (*vector* '()))
 (define $list *vector*)
 (define $list-ref *vector-ref)
 (define ($$record pred new fs)
