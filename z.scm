@@ -121,7 +121,7 @@
              state name modules macros defines dir (car exports+body) (cdr exports+body)
              (λ (state defines modules cs)
                (k state modules macros defines cs $void))))]
-         [(eq? f 'RECORDz) ($$record (car args) (cadr args) (cddr args))]
+         [(eq? f 'RECORDz) (k state modules macros defines (list ($$record (car args) (cadr args) (cddr args))) $void)]
          [else
           (COMPILE/k state
                      modules macros defines dir exp? f

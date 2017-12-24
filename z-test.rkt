@@ -23,14 +23,84 @@
  [[(begin (define x 0) (define y 0)) y (displayln y)]
   '[(define x 0) (define y 0) (displayln y)]]
  [[(MODULEz (exp)
-           [(m m1) (a a)]
-           (define a 0)
-           (DEFMACROz m1
-                      (λ () 0)))
-  (IMPALLz (exp))
-  (displayln (m))]
- '[(define exp@_Mz ((lambda () (define a 0) (list a))))
-  (define exp@a@Mz (list-ref exp@_Mz 0))
-  (define a exp@a@Mz)
-  (displayln 0)]]
+            [(m m1) (a a)]
+            (define a 0)
+            (DEFMACROz m1
+                       (λ () 0)))
+   (IMPALLz (exp))
+   (displayln (m))]
+  '[(define exp@_Mz ((lambda () (define a 0) (list a))))
+    (define exp@a@Mz (list-ref exp@_Mz 0))
+    (define a exp@a@Mz)
+    (displayln 0)]]
+ [[(DEFMACROz define-macro
+              (λ (id . body)
+                (if (pair? id)
+                    `(DEFMACROz ,(car id) (λ ,(cdr id) ,@body))
+                    `(DEFMACROz ,id ,@body))))
+   (define-macro (defmacro id formals . body)
+     `(define-macro ,id (λ ,formals ,@body)))
+   (define-macro (quasiquote x)
+     (define (Q n x)
+       (cond
+         [(pair? x)
+          (let ([f (first x)])
+            (cond
+              [(eq? f 'unquote)
+               (if (zero? n)
+                   (second x)
+                   (list 'list ''unquote (Q (- n 1) (second x))))]
+              [(and (pair? f) (eq? (first f) 'unquote-splicing))
+               (if (zero? n)
+                   (list 'append (second f) (Q 0 (cdr x)))
+                   (list 'cons (list 'list ''unquote-splicing (Q (- n 1) (second f))) (Q n (cdr x))))]
+              [(eq? f 'quasiquote) (list 'list ''quasiquote (Q (+ n 1) (second x)))]
+              [else (list 'cons (Q n f) (Q n (cdr x)))]))]
+         [else (list 'quote x)]))
+     (Q 0 x))
+
+   (define (not x) (if x #f #t))
+   (define-macro (and . xs)
+     (cond
+       [(null? xs) #t]
+       [(null? (cdr xs)) (car xs)]
+       [else `(if ,(car xs)
+                  (and ,@(cdr xs))
+                  #f)]))
+   (define-macro (or . xs)
+     (cond
+       [(null? xs) #f]
+       [(null? (cdr xs)) (car xs)]
+       [else (let ([s (gensym)])
+               `(let ([,s ,(car xs)])
+                  (if ,s
+                      ,s
+                      (or ,@(cdr xs)))))]))
+   (define-macro (let ps . vs)
+     `((λ ,(map first ps) ,@vs) ,@(map second ps)))
+   (define-macro (let* ps . body)
+     (if (or (null? ps) (null? (cdr ps)))
+         `(let ,ps ,@body)
+         `(let (,(car ps)) (let* ,(cdr ps) ,@body))))
+
+   (define-macro (define-record-type name constructor pred . fields)
+     (let ([c-fields (cdr constructor)] [c (car constructor)])
+       (let ([f-hash (make-immutable-hash
+                      (map (λ (filed)
+                             (cons (first filed) (second filed)))
+                           fields))])
+         `(RECORDz ,pred
+                   ,c ,@(map (λ (c-f) (hash-ref f-hash c-f)) c-fields)))))
+   (define-record-type error-object
+     (error-object message irritants)
+     error-object?
+     (message error-object-message)
+     (irritants error-object-irritants))
+   ] '((define not λ)
+  (define-record-type
+   error-object?
+   (error-object error-object-message error-object-irritants)
+   error-object?
+   (error-object-message error-object-message)
+   (error-object-irritants error-object-irritants)))]
  )
