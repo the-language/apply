@@ -44,8 +44,8 @@
     [(null? xs) #t]
     [(null? (cdr xs)) (car xs)]
     [else `(if ,(car xs)
-                (and ,@(cdr xs))
-                #f)]))
+               (and ,@(cdr xs))
+               #f)]))
 (define-macro (or . xs)
   (cond
     [(null? xs) #f]
@@ -57,3 +57,16 @@
                    (or ,@(cdr xs)))))]))
 (define-macro (let ps . vs)
   `((λ ,(map first ps) ,@vs) ,@(map second ps)))
+(define-macro (let* ps . body)
+  (if (or (null? ps) (null? (cdr ps)))
+      `(let ,ps ,@body)
+      `(let (,(car ps)) (let* ,(cdr ps) ,@body))))
+
+(define-macro (define-record-type name constructor pred . fields)
+  (let ([c-fields (cdr constructor)] [c (car constructor)])
+    (let ([f-hash (make-immutable-hash
+                   (map (λ (filed)
+                          (cons (first filed) (second filed)))
+                        fields))])
+      `(RECORDz ,pred
+                ,c ,@(map (λ (c-f) (hash-ref f-hash c-f)) c-fields)))))
