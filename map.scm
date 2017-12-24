@@ -25,7 +25,7 @@
    (append
     (map **define-undefined defines)
     xs
-    (**return x))))
+    (list (**return x)))))
 (define ($$top defines xs)
   (**top
    (cons
@@ -40,6 +40,12 @@
 (define $null (*vector '()))
 (define $list *vector*)
 (define $list-ref *vector-ref)
+(define ($$record pred new fs)
+  (**begin*
+   (cons
+    (**struct pred new fs)
+    (map (λ (f)
+           (**define f (**lambda '(x) (list (**return (**@ (**var 'x) f)))))) fs))))
 (define prelude
   (*exp
    '(begin
