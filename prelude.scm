@@ -70,3 +70,8 @@
                         fields))])
       `(RECORDz ,pred
                 ,c ,@(map (λ (c-f) (hash-ref f-hash c-f)) c-fields)))))
+(define-record-type error-object
+  (error-object message irritants)
+  error-object?
+  (message error-object-message)
+  (irritants error-object-irritants))
