@@ -31,6 +31,7 @@
 ;(define $null ($NULL))
 ;(struct $list (xs) #:transparent)
 ;(struct $list-ref (xs k) #:transparent)
+;(struct $$record (pred cons fs) #:transparent)
 
 (define ($if b x y) `(if ,b ,x ,y))
 (define $void 'VOIDz)
@@ -45,6 +46,7 @@
 (define $null ''())
 (define ($list xs) `(list ,@xs))
 (define ($list-ref xs k) `(list-ref ,xs ,k))
+(define ($$record pred cons fs) `(define-record-type ,pred (,cons ,@fs) ,pred ,@(map (λ (x) `(,x ,x)) fs)))
 
 (include "scm.rkt")
 (include "z.scm")
