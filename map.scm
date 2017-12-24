@@ -30,11 +30,9 @@
     (list (**return x)))))
 (define ($$top defines xs)
   (**top
-   (cons
-    prelude
-    (append
-     (map **define-undefined defines)
-     xs))))
+   (append
+    (map **define-undefined defines)
+    xs)))
 (define ($$var x) (**var (Zid x)))
 (define $$number **number)
 (define ($$char x) (**apply* (**var 'CHAR_) (list (**string (string x)))))
@@ -65,12 +63,12 @@
       (define boolean?Z (lambda (x) (return (boolean? x))))
       (define eq?Z (lambda (x y) (return (eq? x y))))
 
- (struct symbol?Z string->symbolUZ (x))
- (define string?Z (lambda (x) (return (string? x))))
- (define string-appendUZ (lambda (x y) (return (string-append x y))))
- (define symbol->stringUZ (lambda (x) (return (@ x x))))
- (define number->stringUZ (lambda (x) (return (number->string x))))
- (define string->numberUZ (lambda (x) (return (string->number x))))
+      (struct symbol?Z string->symbolUZ (x))
+      (define string?Z (lambda (x) (return (string? x))))
+      (define string-appendUZ (lambda (x y) (return (string-append x y))))
+      (define symbol->stringUZ (lambda (x) (return (@ x x))))
+      (define number->stringUZ (lambda (x) (return (number->string x))))
+      (define string->numberUZ (lambda (x) (return (string->number x))))
 
       (struct char?Z char (x))
       (define list->stringUZ
@@ -124,3 +122,4 @@
       (define <=UZ (lambda (x y) (return (<= x y))))
       (define >=UZ (lambda (x y) (return (>= x y))))
       )))
+(define (+prelude x) (string-append prelude";"x))
