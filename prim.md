@@ -1,7 +1,11 @@
+U=unsafe
 ```scheme
 '(
+raise
+catchU ; (catchU handler thunk)
+
 procedure?
-apply
+applyU
 
 if
 boolean?
@@ -10,37 +14,37 @@ eq?
 symbol?
 
 string?
-symbol->string
-string->symbol
-number->string
-string->number
+symbol->stringU
+string->symbolU
+number->stringU
+string->numberU
 
 char?
-string
-list->string
-string->list
-char->integer
-integer->char
+stringU
+list->stringU
+string->listU
+char->integerU
+integer->charU
 
 null?
 pair?
 cons
-car
-cdr
+carU
+cdrU
 list?
-append
-map
+appendU
+mapU
 
 number?
-+
--
-*
-/
-<
->
-=
-<=
->=
++U
+-U
+*U
+/U
+<U
+>U
+=U
+<=U
+>=U
 
 )
 ```
