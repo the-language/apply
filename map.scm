@@ -15,13 +15,11 @@
 
 (load "z.scm")
 
-(define (Zid x) (string->symbol (string-append (symbol->string x) "Z")))
-
-(define $$tail-if **if)
+(define ($$tail-if b xs ys) (list (**if b xs ys)))
 (define $if *if)
 (define $void *undefined)
 (define $$apply **apply*)
-(define ($$define x v) (**set! (Zid x) v))
+(define ($$define x v) (**set! x v))
 (define ($$lambda defines args xs)
   (**lambda
    args
@@ -35,7 +33,7 @@
    (append
     (map **define-undefined defines)
     xs)))
-(define ($$var x) (**var (Zid x)))
+(define ($$var x) (**var x))
 (define $$number **number)
 (define ($$char x) (**apply* (**var 'CHAR_) (list (**string (string x)))))
 (define $$string **string)
