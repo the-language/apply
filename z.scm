@@ -70,10 +70,10 @@
      name n 0 export-values defines
      (λ (defines cs1)
        (LAMBDA/k state modules macros dir '() (append xs `((LISTz ,@(map second exports))))
-               (λ (state modules lam)
-       (k state defines (hash-set modules name (module export-macros export-values))
-          (cons
-           ($$define n ($$apply lam '())) cs1))))))))
+                 (λ (state modules lam)
+                   (k state defines (hash-set modules name (module export-macros export-values))
+                      (cons
+                       ($$define n ($$apply lam '())) cs1))))))))
 
 (define null-state null-hash)
 (define (COMPILE1/k modules macros defines dir x k)
@@ -122,6 +122,17 @@
              (λ (state defines modules cs)
                (k state modules macros defines cs $void))))]
          [(eq? f 'RECORDz) (k state modules macros defines (list ($$record (car args) (cadr args) (cddr args))) $void)]
+         [(eq? f 'if)
+          (COMPILE/k
+           state modules macros defines dir exp? (first args)
+                     (λ (state modules macros defines cs0 b)
+                       (COMPILE/k
+                        state modules macros defines dir #t (second args)
+                     (λ (state modules macros defines cs1 x)
+                       (COMPILE/k
+                        state modules macros defines dir #t (second args)
+                     (λ (state modules macros defines cs2 y)
+                       (k state modules macros defines (append cs0 cs1 cs2) ($if b x y))))))))]
          [else
           (COMPILE/k state
                      modules macros defines dir exp? f
@@ -139,6 +150,63 @@
                [(string? x) ($$string x)]
                [(null? x) $null]
                [else (error 'compile "invalid syntax" x)]))]))
+(define (COMPILE/tail state modules macros defines dir exp? x k) ; (k state modules macros defines xs)
+  (cond
+    [(pair? x)
+     (let ([f (car x)] [args (cdr x)])
+       (cond
+         [(hash-ref macros f #f) => (λ (m) (COMPILE/tail state modules macros defines dir exp? (apply m args) k))]
+         [(eq? f 'DEFMACROz) (error 'compile "invalid syntax" x)]
+         [(eq? f 'define) (error 'compile "invalid syntax" x)]
+         [(eq? f 'begin)
+          (if exp?
+              (COMPILE/tail state modules macros defines dir exp? `((lambda () ,@args)) k)
+              (BEGIN/tail state modules macros defines dir exp? args k))]
+         [(eq? f 'IMPALLz) (error 'compile "invalid syntax" x)]
+         [(eq? f 'lambda) (LAMBDA/k state modules macros dir (car args) (cdr args)
+                                    (λ (state modules lam)
+                                      (k state modules macros defines ($$tail-val lam))))]
+         [(eq? f 'LISTz)
+          (COMPILE/k* state
+                      modules macros defines dir exp? args
+                      (λ (state modules macros defines ys args)
+                        (k state modules macros defines ($$tail-val ($list args)))))]
+         [(eq? f 'MODULEz)
+          (let ([name (car args)] [exports+body (cdr args)])
+            (MODULE/k
+             state name modules macros defines dir (car exports+body) (cdr exports+body)
+             (λ (state defines modules cs)
+               (k state modules macros defines (append cs ($$tail-val $void))))))]
+         [(eq? f 'RECORDz) (error 'compile "invalid syntax" x)]
+         [(eq? f 'if)
+          (COMPILE/k
+           state modules macros defines dir exp? (first args)
+                     (λ (state modules macros defines cs0 b)
+                       (COMPILE/tail
+                        state modules macros defines dir #t (second args)
+                     (λ (state modules macros defines xs)
+                       (COMPILE/tail
+                        state modules macros defines dir #t (second args)
+                     (λ (state modules macros defines ys)
+                       (k state modules macros defines (append cs0 ($$tail-if b xs ys)))))))))]
+         [else
+          (COMPILE/k state
+                     modules macros defines dir exp? f
+                     (λ (state modules macros defines xs f)
+                       (COMPILE/k* state
+                                   modules macros defines dir exp? args
+                                   (λ (state modules macros defines ys args)
+                                     (k state modules macros defines (append xs ys ($$tail-apply f args)))))))]))]
+    [else (k state modules macros defines
+             ($$tail-val
+              (cond
+                [(eq? x 'VOIDz) $void]
+                [(symbol? x) ($$var x)]
+                [(number? x) ($$number x)]
+                [(char? x) ($$char x)]
+                [(string? x) ($$string x)]
+                [(null? x) $null]
+                [else (error 'compile "invalid syntax" x)])))]))
 (define (IMPALL/k state macros defines name module k)
   (let ([module-macros (module-export-macros module)]
         [values (module-export-values module)])
@@ -152,17 +220,33 @@
       (k a (car d))
       (DEF/k (car a) (cons 'λ (cons (cdr a) d)) k)))
 (define (BEGIN state modules macros defines dir exp? xs k)
-  (if (null? (cdr xs))
-      (COMPILE/k state modules macros defines dir exp? (car xs) k)
-      (COMPILE/k state
-                 modules macros defines dir exp? (car xs)
-                 (λ (state modules macros defines cs1 v)
-                   (BEGIN
-                    state modules macros defines dir exp? (cdr xs)
-                    (λ (state modules macros defines cs2 r)
-                      (if (pair? v)
-                          (k state modules macros defines (append cs1 (cons v cs2)) r)
-                          (k state modules macros defines (append cs1 cs2) r))))))))
+  (cond
+    [(null? (cdr xs)) (COMPILE/k state modules macros defines dir exp? (car xs) k)]
+    [(pair? (car xs))
+     (COMPILE/k state
+                modules macros defines dir exp? (car xs)
+                (λ (state modules macros defines cs1 v)
+                  (BEGIN
+                   state modules macros defines dir exp? (cdr xs)
+                   (λ (state modules macros defines cs2 r)
+                     (if (eq? v $void)
+                         (k state modules macros defines (append cs1 cs2) r)
+                         (k state modules macros defines (append cs1 (cons v cs2)) r))))))]
+    [else (BEGIN state modules macros defines dir exp? (cdr xs) k)]))
+(define (BEGIN/tail state modules macros defines dir exp? xs k)
+  (cond
+    [(null? (cdr xs)) (COMPILE/tail state modules macros defines dir exp? (car xs) k)]
+    [(pair? (car xs))
+     (COMPILE/k state
+                modules macros defines dir exp? (car xs)
+                (λ (state modules macros defines cs1 v)
+                  (BEGIN/tail
+                   state modules macros defines dir exp? (cdr xs)
+                   (λ (state modules macros defines cs2)
+                     (if (eq? v $void)
+                         (k state modules macros defines (append cs1 cs2))
+                         (k state modules macros defines (append cs1 (cons v cs2))))))))]
+    [else (BEGIN/tail state modules macros defines dir exp? (cdr xs) k)]))
 (define (COMPILE/k* state modules macros defines dir exp? xs k)
   (if (null? xs)
       (k state modules macros defines '() '())
@@ -174,9 +258,9 @@
                                (λ (state modules macros defines cs2 d)
                                  (k state modules macros defines (append cs1 cs2) (cons a d))))))))
 (define (LAMBDA/k state modules macros dir args body k) ; (k state modules lambda)
-  (BEGIN
+  (BEGIN/tail
    state modules macros null-set dir #f body
-   (λ (state modules macros defines1 cs v)
-     (k state modules ($$lambda (set->list defines1) args cs v)))))
+   (λ (state modules macros defines1 cs)
+     (k state modules ($$lambda (set->list defines1) args cs)))))
 
 (define (z-current xs) (z (current-directory) xs))

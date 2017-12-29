@@ -17,17 +17,19 @@
 
 (define (Zid x) (string->symbol (string-append (symbol->string x) "Z")))
 
+(define $$tail-if **if)
 (define $if *if)
 (define $void *undefined)
 (define $$apply **apply*)
 (define ($$define x v) (**set! (Zid x) v))
-(define ($$lambda defines args xs x)
+(define ($$lambda defines args xs)
   (**lambda
    args
    (append
     (map **define-undefined defines)
-    xs
-    (list (**return x)))))
+    xs)))
+(define ($$tail-apply f xs) (list (**return ($$apply f xs))))
+(define ($$tail-val x) (list (**return x)))
 (define ($$top defines xs)
   (**top
    (append

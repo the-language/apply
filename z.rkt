@@ -33,11 +33,17 @@
 ;(struct $list-ref (xs k) #:transparent)
 ;(struct $$record (pred cons fs) #:transparent)
 
+(define ($$tail-if b xs ys)
+  (list ($if b
+             (if (null? (cdr xs)) (car xs) `((λ () ,@xs)))
+             (if (null? (cdr ys)) (car ys) `((λ () ,@ys))))))
 (define ($if b x y) `(if ,b ,x ,y))
 (define $void 'VOIDz)
 (define ($$apply f xs) (cons f xs))
 (define ($$define x v) `(define ,x ,v))
-(define ($$lambda defines args xs x) `(lambda ,args ,@xs ,x))
+(define ($$lambda defines args xs) `(lambda ,args ,@xs))
+(define ($$tail-apply f xs) (list ($$apply f xs)))
+(define ($$tail-val x) (list x))
 (define ($$top defines xs) xs)
 (define ($$var x) x)
 (define ($$number x) x)
