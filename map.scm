@@ -46,6 +46,8 @@
     (**struct pred new fs)
     (map (λ (f)
            (**define f (**lambda '(x) (list (**return (**@ (**var 'x) f)))))) fs))))
+(define $true *true)
+(define $false *false)
 (define prelude
   (*exp
    '(begin

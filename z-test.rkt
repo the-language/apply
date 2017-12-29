@@ -96,11 +96,11 @@
      error-object?
      (message error-object-message)
      (irritants error-object-irritants))
-   ] '((define not λ)
-  (define-record-type
-   error-object?
-   (error-object error-object-message error-object-irritants)
-   error-object?
-   (error-object-message error-object-message)
-   (error-object-irritants error-object-irritants)))]
+   ] '((define not (lambda (x) (if x #f #t)))
+       (define-record-type
+         error-object?
+         (error-object error-object-message error-object-irritants)
+         error-object?
+         (error-object-message error-object-message)
+         (error-object-irritants error-object-irritants)))]
  )

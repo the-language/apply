@@ -150,6 +150,8 @@
                [(char? x) ($$char x)]
                [(string? x) ($$string x)]
                [(null? x) $null]
+               [(eq? x #t) $true]
+               [(eq? x #f) $false]
                [else (error 'compile "invalid syntax" x)]))]))
 (define (COMPILE/tail state modules macros defines dir exp? x k) ; (k state modules macros defines xs)
   (cond
@@ -208,6 +210,8 @@
                 [(char? x) ($$char x)]
                 [(string? x) ($$string x)]
                 [(null? x) $null]
+                [(eq? x #t) $true]
+                [(eq? x #f) $false]
                 [else (error 'compile "invalid syntax" x)])))]))
 (define (IMPALL/k state macros defines name module k)
   (let ([module-macros (module-export-macros module)]
