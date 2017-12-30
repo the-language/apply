@@ -290,10 +290,11 @@
      (k state modules ($$lambda (set->list (set-subtract vars (args->set args) defines1)) (set->list defines1) args cs)))))
 (define (HOST xs k1 k2)
   (let ([x (car xs)] [xs (cdr xs)])
-    (cond
-      [(eq? (first x) $host) (k1 (second x))]
-      [(eq? (first x) '_) (k2 (second x))]
-      [else (HOST xs k1 k2)])))
+    (let ([arch (first x)] [code (second x)])
+      (cond
+        [(or (eq? arch $host) (and (pair? arch) (member $host arch))) (k1 code)]
+        [(eq? (first x) '_) (k2 code)]
+        [else (HOST xs k1 k2)]))))
 
 (define prelude (file->list "prelude.scm"))
 (define preludeC

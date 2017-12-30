@@ -86,7 +86,7 @@
 
 (define raise
   (HOSTz
-   [r7rs raise]
+   [(r7rs r6rs r5rs scheme) raise]
    [map (^lambda (x) (^return (^raise x)))]))
 (define CATCHz
   (HOSTz
@@ -113,7 +113,7 @@
  [_ VOIDz])
 (define CARz
   (HOSTz
-   [r7rs car]
+   [(r7rs r6rs r5rs scheme) car]
    [map
     (^lambda (p)
              (^if-boolean/do (ISPAIRz p)
@@ -121,7 +121,7 @@
                              [(^return (^vector-head p))]))]))
 (define CDRz
   (HOSTz
-   [r7rs cdr]
+   [(r7rs r6rs r5rs scheme) cdr]
    [map
     (^lambda (p)
              (^if-boolean/do (ISPAIRz p)
@@ -129,7 +129,7 @@
                              [(^return (^vector-tail p))]))]))
 (define pair?
   (HOSTz
-   [r7rs pair?]
+   [(r7rs r6rs r5rs scheme) pair?]
    [map (^lambda (x) (^return (^or (^vector? x) (ISPAIRz x))))]))
 (define (car p)
   (if (pair? p)
@@ -141,11 +141,11 @@
       (error "cdr: isn't a pair:" p)))
 (define list?
   (HOSTz
-   [r7rs list?]
+   [(r7rs r6rs r5rs scheme) list?]
    [map (^lambda (x) (^return (^vector? x)))]))
 (define cons
   (HOSTz
-   [r7rs cons]
+   [(r7rs r6rs r5rs scheme) cons]
    [map (^lambda (a d)
                  (^if-boolean/do (^vector? d)
                                  [(^return (^vector-append (^vector a) d))]
