@@ -20,7 +20,7 @@
 (define $void *undefined)
 (define $$apply **apply*)
 (define ($$define x v) (**set! x v))
-(define ($$lambda defines args xs)
+(define ($$lambda vars defines args xs)
   (**lambda
    args
    (append

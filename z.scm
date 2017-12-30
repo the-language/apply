@@ -270,11 +270,16 @@
           vars state modules macros defines dir exp? (cdr xs)
           (λ (vars state modules macros defines cs2 d)
             (k vars state modules macros defines (append cs1 cs2) (cons a d))))))))
+(define (args->set args)
+  (cond
+    [(symbol? args) (set args)]
+    [(null? args) null-set]
+    [else (set-add (args->set (cdr args)) (car args))]))
 (define (LAMBDA/k state modules macros dir args body k) ; (k state modules lambda)
   (BEGIN/tail
    null-set state modules macros null-set dir body
    (λ (vars state modules macros defines1 cs)
-     (k state modules ($$lambda (set->list defines1) args cs)))))
+     (k state modules ($$lambda (set->list (set-subtract vars (args->set args) defines1)) (set->list defines1) args cs)))))
 (define (HOST xs k1 k2)
   (let ([x (car xs)] [xs (cdr xs)])
     (cond

@@ -24,7 +24,7 @@
 (define $void 'VOIDz)
 (define ($$apply f xs) (cons f xs))
 (define ($$define x v) `(define ,x ,v))
-(define ($$lambda defines args xs) `(lambda ,args ,@xs))
+(define ($$lambda vars defines args xs) `(lambda ,args ,@xs))
 (define ($$tail-apply f xs) (list ($$apply f xs)))
 (define ($$tail-val x) (list x))
 (define ($$top defines xs) xs)
