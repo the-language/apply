@@ -55,6 +55,8 @@
 (define ($list xs) `(list ,@xs))
 (define ($list-ref xs k) `(list-ref ,xs ,k))
 (define ($$record pred cons fs) `(define-record-type ,pred (,cons ,@fs) ,pred ,@(map (λ (x) `(,x ,x)) fs)))
+(define ($host-exp x) x)
+(define $host 'scheme)
 
 (include "scm.rkt")
 (include "z.scm")

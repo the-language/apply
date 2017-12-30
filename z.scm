@@ -90,6 +90,12 @@
        (cond
          [(hash-ref macros f #f) => (λ (m) (COMPILE/k state modules macros defines dir exp? (apply m args) k))]
          [(eq? f 'DEFMACROz) (k state modules (hash-set macros (first args) (EVAL (second args))) defines '() $void)]
+         [(eq? f 'HOSTz)
+          (HOST args
+                (λ (x)
+                  (k state modules macros defines '() ($host-exp x)))
+                (λ (x)
+                  (COMPILE/k state modules macros defines dir exp? x k)))]
          [(eq? f 'define)
           (DEF/k
            (car args) (cdr args)
@@ -153,18 +159,21 @@
                [(eq? x #t) $true]
                [(eq? x #f) $false]
                [else (error 'compile "invalid syntax" x)]))]))
-(define (COMPILE/tail state modules macros defines dir exp? x k) ; (k state modules macros defines xs)
+(define (COMPILE/tail state modules macros defines dir x k) ; (k state modules macros defines xs)
   (cond
     [(pair? x)
      (let ([f (car x)] [args (cdr x)])
        (cond
-         [(hash-ref macros f #f) => (λ (m) (COMPILE/tail state modules macros defines dir exp? (apply m args) k))]
+         [(hash-ref macros f #f) => (λ (m) (COMPILE/tail state modules macros defines dir (apply m args) k))]
          [(eq? f 'DEFMACROz) (error 'compile "invalid syntax" x)]
+         [(eq? f 'HOSTz)
+          (HOST args
+                (λ (x)
+                  (k state modules macros defines (list ($$tail-val ($host-exp x)))))
+                (λ (x)
+                  (COMPILE/tail state modules macros defines dir x k)))]
          [(eq? f 'define) (error 'compile "invalid syntax" x)]
-         [(eq? f 'begin)
-          (if exp?
-              (COMPILE/tail state modules macros defines dir exp? `((lambda () ,@args)) k)
-              (BEGIN/tail state modules macros defines dir exp? args k))]
+         [(eq? f 'begin) (BEGIN/tail state modules macros defines dir args k)]
          [(eq? f 'IMPALLz) (error 'compile "invalid syntax" x)]
          [(or (eq? f 'lambda) (eq? f 'λ))
           (LAMBDA/k state modules macros dir (car args) (cdr args)
@@ -172,7 +181,7 @@
                       (k state modules macros defines ($$tail-val lam))))]
          [(eq? f 'LISTz)
           (COMPILE/k* state
-                      modules macros defines dir exp? args
+                      modules macros defines dir #f args
                       (λ (state modules macros defines ys args)
                         (k state modules macros defines ($$tail-val ($list args)))))]
          [(eq? f 'MODULEz)
@@ -184,21 +193,21 @@
          [(eq? f 'RECORDz) (error 'compile "invalid syntax" x)]
          [(eq? f 'if)
           (COMPILE/k
-           state modules macros defines dir exp? (first args)
+           state modules macros defines dir #f (first args)
            (λ (state modules macros defines cs0 b)
              (COMPILE/tail
-              state modules macros defines dir #t (second args)
+              state modules macros defines dir (second args)
               (λ (state modules macros defines xs)
                 (COMPILE/tail
-                 state modules macros defines dir #t (third args)
+                 state modules macros defines dir (third args)
                  (λ (state modules macros defines ys)
                    (k state modules macros defines (append cs0 ($$tail-if b xs ys)))))))))]
          [else
           (COMPILE/k state
-                     modules macros defines dir exp? f
+                     modules macros defines dir #f f
                      (λ (state modules macros defines xs f)
                        (COMPILE/k* state
-                                   modules macros defines dir exp? args
+                                   modules macros defines dir #f args
                                    (λ (state modules macros defines ys args)
                                      (k state modules macros defines (append xs ys ($$tail-apply f args)))))))]))]
     [else (k state modules macros defines
@@ -239,20 +248,20 @@
                          (k state modules macros defines (append cs1 cs2) r)
                          (k state modules macros defines (append cs1 (cons v cs2)) r))))))]
     [else (BEGIN state modules macros defines dir exp? (cdr xs) k)]))
-(define (BEGIN/tail state modules macros defines dir exp? xs k)
+(define (BEGIN/tail state modules macros defines dir xs k)
   (cond
-    [(null? (cdr xs)) (COMPILE/tail state modules macros defines dir exp? (car xs) k)]
+    [(null? (cdr xs)) (COMPILE/tail state modules macros defines dir (car xs) k)]
     [(pair? (car xs))
      (COMPILE/k state
-                modules macros defines dir exp? (car xs)
+                modules macros defines dir #f (car xs)
                 (λ (state modules macros defines cs1 v)
                   (BEGIN/tail
-                   state modules macros defines dir exp? (cdr xs)
+                   state modules macros defines dir (cdr xs)
                    (λ (state modules macros defines cs2)
                      (if (eq? v $void)
                          (k state modules macros defines (append cs1 cs2))
                          (k state modules macros defines (append cs1 (cons v cs2))))))))]
-    [else (BEGIN/tail state modules macros defines dir exp? (cdr xs) k)]))
+    [else (BEGIN/tail state modules macros defines dir (cdr xs) k)]))
 (define (COMPILE/k* state modules macros defines dir exp? xs k)
   (if (null? xs)
       (k state modules macros defines '() '())
@@ -265,8 +274,13 @@
                                  (k state modules macros defines (append cs1 cs2) (cons a d))))))))
 (define (LAMBDA/k state modules macros dir args body k) ; (k state modules lambda)
   (BEGIN/tail
-   state modules macros null-set dir #f body
+   state modules macros null-set dir body
    (λ (state modules macros defines1 cs)
      (k state modules ($$lambda (set->list defines1) args cs)))))
+(define (HOST xs k1 k2)
+  (let ([x (car xs)] [xs (cdr xs)])
+    (cond
+      [(eq? (first x) $host) (k1 (second x))]
+      [(eq? (first x) '_) (k2 (second x))])))
 
 (define (z-current xs) (z (current-directory) xs))
