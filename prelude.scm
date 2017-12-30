@@ -65,16 +65,19 @@
 (define-macro (define-record-type name constructor pred . fields)
   (let ([c-fields (cdr constructor)] [c (car constructor)])
     (let* ([nf (map (λ (filed)
-                          (cons (first filed) (cons (gensym) (second filed))))
-                        fields)]
+                      (cons (first filed) (cons (gensym) (second filed))))
+                    fields)]
            [f-hash (make-immutable-hash nf)])
       `(begin
-      (RECORDz
-        ,pred ,c ,@(map (λ (c-f) (car (hash-ref f-hash c-f))) c-fields))
-      ,@(map (λ (nfe)
-               (let ([p (cdr nfe)])
-                 `(define ,(cdr p) ,(car p)))) nf)
-      ))))
+         (RECORDz
+          ,pred ,c ,@(map (λ (c-f) (car (hash-ref f-hash c-f))) c-fields))
+         ,@(map (λ (nfe)
+                  (let ([p (cdr nfe)])
+                    `(define (,(cdr p) x)
+                       (if (,pred x)
+                           ,(car p)
+                           (error ,(string-append (symbol->string (cdr p)) ": isn't a " (symbol->string name)) x)
+                           )))) nf)))))
 (define-record-type error-object
   (error-object message irritants)
   error-object?
