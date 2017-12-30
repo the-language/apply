@@ -16,23 +16,6 @@
 
 (provide z z-current)
 
-;(struct $if (b x y) #:transparent)
-;(struct $VOID ())
-;(define $void ($VOID))
-;(struct $$apply (f xs) #:transparent)
-;(struct $$define (x v) #:transparent)
-;(struct $$lambda (defines args xs x) #:transparent)
-;(struct $$top (defines xs) #:transparent)
-;(struct $$var (x) #:transparent)
-;(struct $$number (x) #:transparent)
-;(struct $$char (x) #:transparent)
-;(struct $$string (x) #:transparent)
-;(struct $NULL ())
-;(define $null ($NULL))
-;(struct $list (xs) #:transparent)
-;(struct $list-ref (xs k) #:transparent)
-;(struct $$record (pred cons fs) #:transparent)
-
 (define ($$tail-if b xs ys)
   (list ($if b
              (if (null? (cdr xs)) (car xs) `((λ () ,@xs)))
