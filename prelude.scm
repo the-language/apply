@@ -75,7 +75,7 @@
                   (let ([p (cdr nfe)])
                     `(define (,(cdr p) x)
                        (if (,pred x)
-                           ,(car p)
+                           (,(car p) x)
                            (error ,(string-append (symbol->string (cdr p)) ": isn't a " (symbol->string name)) x)
                            )))) nf)))))
 (define-record-type error-object
