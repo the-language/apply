@@ -94,6 +94,12 @@
                   (k vars state modules macros defines '() ($host-exp x)))
                 (λ (x)
                   (COMPILE/k vars state modules macros defines dir exp? x k)))]
+         [(eq? f 'HOSTCASEz)
+          (HOST args
+                (λ (x)
+                  (COMPILE/k vars state modules macros defines dir exp? x k))
+                (λ (x)
+                  (COMPILE/k vars state modules macros defines dir exp? x k)))]
          [(eq? f 'define)
           (DEF/k
            (car args) (cdr args)
@@ -168,6 +174,12 @@
           (HOST args
                 (λ (x)
                   (k vars state modules macros defines (list ($$tail-val ($host-exp x)))))
+                (λ (x)
+                  (COMPILE/tail vars state modules macros defines dir x k)))]
+         [(eq? f 'HOSTCASEz)
+          (HOST args
+                (λ (x)
+                  (COMPILE/tail vars state modules macros defines dir x k))
                 (λ (x)
                   (COMPILE/tail vars state modules macros defines dir x k)))]
          [(eq? f 'define) (error 'compile "invalid syntax" x)]
@@ -287,3 +299,4 @@
       [(eq? (first x) '_) (k2 (second x))])))
 
 (define (z-current xs) (z (current-directory) xs))
+(define prelude (file->list "prelude.scm"))

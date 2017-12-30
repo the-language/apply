@@ -75,3 +75,27 @@
   error-object?
   (message error-object-message)
   (irritants error-object-irritants))
+
+(define raise
+  (HOSTz
+   [r7rs raise]
+   [map (^lambda (x) (^return (^raise x)))]))
+(define CATCHz
+  (HOSTz
+   [r7rs
+    (lambda (t h)
+      (guard (e
+              [#t (h e)])
+             (t)))]
+   [map
+    (^lambda (t h)
+             (^try
+              [(^return (t))]
+              e
+              [(^return (h e))]))]))
+(define (error message . irritants)
+  (raise (error-object message irritants)))
+(define CARz
+  (HOSTz
+   [r7rs car]
+   [map

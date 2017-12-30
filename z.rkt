@@ -39,7 +39,7 @@
 (define ($list-ref xs k) `(list-ref ,xs ,k))
 (define ($$record pred cons fs) `(define-record-type ,pred (,cons ,@fs) ,pred ,@(map (λ (x) `(,x ,x)) fs)))
 (define ($host-exp x) x)
-(define $host 'scheme)
+(define $host 'r7rs)
 
 (include "scm.rkt")
 (include "z.scm")
