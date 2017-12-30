@@ -68,8 +68,8 @@
                    (map (λ (filed)
                           (cons (first filed) (second filed)))
                         fields))])
-      `(RECORDz ,pred
-                ,c ,@(map (λ (c-f) (hash-ref f-hash c-f)) c-fields)))))
+      `(RECORDz
+        ,pred ,c ,@(map (λ (c-f) (hash-ref f-hash c-f)) c-fields)))))
 (define-record-type error-object
   (error-object message irritants)
   error-object?
@@ -95,7 +95,50 @@
               [(^return (h e))]))]))
 (define (error message . irritants)
   (raise (error-object message irritants)))
+(HOSTCASEz
+ [map
+  (define-record-type PAIRz
+    (CONSz a d)
+    ISPAIRz
+    (a CARPz)
+    (d CDRPz))]
+ [_ VOIDz])
 (define CARz
   (HOSTz
    [r7rs car]
    [map
+    (^lambda (p)
+             (^if-boolean/do (ISPAIRz p)
+                             [(^return (CARPz p))]
+                             [(^return (^vector-head p))]))]))
+(define CDRz
+  (HOSTz
+   [r7rs cdr]
+   [map
+    (^lambda (p)
+             (^if-boolean/do (ISPAIRz p)
+                             [(^return (CDRPz p))]
+                             [(^return (^vector-tail p))]))]))
+(define pair?
+  (HOSTz
+   [r7rs pair?]
+   [map (^lambda (x) (^return (^or (^vector? x) (ISPAIRz x))))]))
+(define (car p)
+  (if (pair? p)
+      (CARz p)
+      (error "car: isn't a pair:" p)))
+(define (cdr p)
+  (if (pair? p)
+      (CDRz p)
+      (error "cdr: isn't a pair:" p)))
+(define list?
+  (HOSTz
+   [r7rs list?]
+   [map (^lambda (x) (^return (^vector? x)))]))
+(define cons
+  (HOSTz
+   [r7rs cons]
+   [map (^lambda (a d)
+                 (^if-boolean/do (^vector? d)
+                                 [(^return (^vector-append (^vector a) d))]
+                                 [(^return (CONSz a d))]))]))

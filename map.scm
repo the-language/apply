@@ -45,85 +45,87 @@
    (cons
     (**struct pred new fs)
     (map (λ (f)
-           (**define f (**lambda '(x) (list (**return (**@ (**var 'x) f)))))) fs))))
+           (**define f (**lambda
+                        '(x)
+                        (list (**return (**@ (**var 'x) f)))))) fs))))
 (define $true *true)
 (define $false *false)
 (define $host-exp *exp)
 (define $host 'map)
-(define prelude
-  (*exp
-   '(begin
-      (define raiseZ (lambda (x) (raise x)))
-      (define catchUZ
-        (lambda (handler thunk)
-          (try
-           [(return (thunk))]
-           e
-           [(return (handler e))])))
-
-      (define procedure?Z (lambda (x) (return (procedure? x))))
-      (define applyUZ (lambda (f xs) (return (apply f xs))))
-
-      (define boolean?Z (lambda (x) (return (boolean? x))))
-      (define eq?Z (lambda (x y) (return (eq? x y))))
-
-      (struct symbol?Z string->symbolUZ (x))
-      (define string?Z (lambda (x) (return (string? x))))
-      (define string-appendUZ (lambda (x y) (return (string-append x y))))
-      (define symbol->stringUZ (lambda (x) (return (@ x x))))
-      (define number->stringUZ (lambda (x) (return (number->string x))))
-      (define string->numberUZ (lambda (x) (return (string->number x))))
-
-      (struct char?Z char (x))
-      (define list->stringUZ
-        (lambda (xs)
-          (return
-           (list->string
-            (vector-map
-             (lambda (x) (return (@ x x))) xs)))))
-      (define string->listUZ
-        (lambda (s)
-          (return
-           (vector-map char (string->list s)))))
-      (define char->integerUZ
-        (lambda (c)
-          (return (char->integer (@ c x)))))
-      (define integer->charUZ
-        (lambda (x)
-          (return (char (integer->char x)))))
-
-      (define null?Z
-        (lambda (x)
-          (return (and (vector? x) (eq? (vector-length x) 0)))))
-      (struct JPAIR_? JPAIR_ (a d))
-      (define pair?Z
-        (lambda (x)
-          (return (or (JPAIR_? x) (and (vector? x) (not-eq? (vector-length x) 0))))))
-      (define consZ
-        (lambda (a d)
-          (if-boolean/do (vector? d)
-                         [(return (vector-append (vector a) d))]
-                         [(return (JPAIR_ a d))])))
-      (define carUZ
-        (lambda (p)
-          (return (if-boolean (JPAIR_? p) (@ p a) (vector-head p)))))
-      (define cdrUZ
-        (lambda (p)
-          (return (if-boolean (JPAIR_? p) (@ p d) (vector-tail p)))))
-      (define list?Z (lambda (xs) (return (vector? xs))))
-      (define appendUZ (lambda (xs ys) (return (vector-append xs ys))))
-      (define mapUZ (lambda (f xs) (return (vector-map f xs))))
-
-      (define number?Z (lambda (x) (return (number? x))))
-      (define +UZ (lambda (x y) (return (+ x y))))
-      (define -UZ (lambda (x y) (return (- x y))))
-      (define *UZ (lambda (x y) (return (* x y))))
-      (define /UZ (lambda (x y) (return (/ x y))))
-      (define +UZ (lambda (x y) (return (+ x y))))
-      (define <UZ (lambda (x y) (return (< x y))))
-      (define >UZ (lambda (x y) (return (> x y))))
-      (define =UZ (lambda (x y) (return (= x y))))
-      (define <=UZ (lambda (x y) (return (<= x y))))
-      (define >=UZ (lambda (x y) (return (>= x y))))
-      )))
-(define (+prelude x) (string-append prelude";"x))
+;(define prelude
+;  (*exp
+;   '(begin
+;      (define raiseZ (lambda (x) (raise x)))
+;      (define catchUZ
+;        (lambda (handler thunk)
+;          (try
+;           [(return (thunk))]
+;           e
+;           [(return (handler e))])))
+;
+;      (define procedure?Z (lambda (x) (return (procedure? x))))
+;      (define applyUZ (lambda (f xs) (return (apply f xs))))
+;
+;      (define boolean?Z (lambda (x) (return (boolean? x))))
+;      (define eq?Z (lambda (x y) (return (eq? x y))))
+;
+;      (struct symbol?Z string->symbolUZ (x))
+;      (define string?Z (lambda (x) (return (string? x))))
+;      (define string-appendUZ (lambda (x y) (return (string-append x y))))
+;      (define symbol->stringUZ (lambda (x) (return (@ x x))))
+;      (define number->stringUZ (lambda (x) (return (number->string x))))
+;      (define string->numberUZ (lambda (x) (return (string->number x))))
+;
+;      (struct char?Z char (x))
+;      (define list->stringUZ
+;        (lambda (xs)
+;          (return
+;           (list->string
+;            (vector-map
+;             (lambda (x) (return (@ x x))) xs)))))
+;      (define string->listUZ
+;        (lambda (s)
+;          (return
+;           (vector-map char (string->list s)))))
+;      (define char->integerUZ
+;        (lambda (c)
+;          (return (char->integer (@ c x)))))
+;      (define integer->charUZ
+;        (lambda (x)
+;          (return (char (integer->char x)))))
+;
+;      (define null?Z
+;        (lambda (x)
+;          (return (and (vector? x) (eq? (vector-length x) 0)))))
+;      (struct JPAIR_? JPAIR_ (a d))
+;      (define pair?Z
+;        (lambda (x)
+;          (return (or (JPAIR_? x) (and (vector? x) (not-eq? (vector-length x) 0))))))
+;      (define consZ
+;        (lambda (a d)
+;          (if-boolean/do (vector? d)
+;                         [(return (vector-append (vector a) d))]
+;                         [(return (JPAIR_ a d))])))
+;      (define carUZ
+;        (lambda (p)
+;          (return (if-boolean (JPAIR_? p) (@ p a) (vector-head p)))))
+;      (define cdrUZ
+;        (lambda (p)
+;          (return (if-boolean (JPAIR_? p) (@ p d) (vector-tail p)))))
+;      (define list?Z (lambda (xs) (return (vector? xs))))
+;      (define appendUZ (lambda (xs ys) (return (vector-append xs ys))))
+;      (define mapUZ (lambda (f xs) (return (vector-map f xs))))
+;
+;      (define number?Z (lambda (x) (return (number? x))))
+;      (define +UZ (lambda (x y) (return (+ x y))))
+;      (define -UZ (lambda (x y) (return (- x y))))
+;      (define *UZ (lambda (x y) (return (* x y))))
+;      (define /UZ (lambda (x y) (return (/ x y))))
+;      (define +UZ (lambda (x y) (return (+ x y))))
+;      (define <UZ (lambda (x y) (return (< x y))))
+;      (define >UZ (lambda (x y) (return (> x y))))
+;      (define =UZ (lambda (x y) (return (= x y))))
+;      (define <=UZ (lambda (x y) (return (<= x y))))
+;      (define >=UZ (lambda (x y) (return (>= x y))))
+;      )))
+;(define (+prelude x) (string-append prelude";"x))

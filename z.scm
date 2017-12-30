@@ -20,11 +20,6 @@
       s
       (set-append (set-add s (car xs)) (cdr xs))))
 
-(define (z dir xs)
-  (COMPILE-TOP/k null-hash null-hash null-hash null-set dir xs
-                 (λ (state modules macros defines xs)
-                   ($$top (set->list defines) xs))))
-
 (define-record-type module
   (module export-macros export-values)
   module?
@@ -132,7 +127,8 @@
              state name modules macros defines dir (car exports+body) (cdr exports+body)
              (λ (state defines modules cs)
                (k vars state modules macros defines cs $void))))]
-         [(eq? f 'RECORDz) (k vars state modules macros defines (list ($$record (car args) (cadr args) (cddr args))) $void)]
+         [(eq? f 'RECORDz)
+          (k vars state modules macros defines (list ($$record (car args) (cadr args) (cddr args))) $void)]
          [(eq? f 'if)
           (COMPILE/k
            vars state modules macros defines dir exp? (first args)
@@ -296,7 +292,21 @@
   (let ([x (car xs)] [xs (cdr xs)])
     (cond
       [(eq? (first x) $host) (k1 (second x))]
-      [(eq? (first x) '_) (k2 (second x))])))
+      [(eq? (first x) '_) (k2 (second x))]
+      [else (HOST xs k1 k2)])))
 
-(define (z-current xs) (z (current-directory) xs))
 (define prelude (file->list "prelude.scm"))
+(define preludeC
+  (COMPILE-TOP/k null-hash null-hash null-hash null-set (current-directory) prelude
+                 (λ (state modules macros defines xs)
+                   (list state modules macros defines xs))))
+(define prelude-state (apply (λ (state modules macros defines xs) state) preludeC))
+(define prelude-modules (apply (λ (state modules macros defines xs) modules) preludeC))
+(define prelude-macros (apply (λ (state modules macros defines xs) macros) preludeC))
+(define prelude-defines (apply (λ (state modules macros defines xs) defines) preludeC))
+(define prelude-xs (apply (λ (state modules macros defines xs) xs) preludeC))
+(define (z dir xs)
+  (COMPILE-TOP/k prelude-state prelude-modules prelude-macros prelude-defines dir xs
+                 (λ (state modules macros defines xs)
+                   ($$top (set->list defines) (append prelude-xs xs)))))
+(define (z-current xs) (z (current-directory) xs))
