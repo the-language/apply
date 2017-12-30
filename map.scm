@@ -48,6 +48,8 @@
            (**define f (**lambda '(x) (list (**return (**@ (**var 'x) f)))))) fs))))
 (define $true *true)
 (define $false *false)
+(define $host-exp *exp)
+(define $host 'map)
 (define prelude
   (*exp
    '(begin
