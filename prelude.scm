@@ -87,7 +87,7 @@
 (define raise
   (HOSTz
    [(r7rs r6rs r5rs scheme) raise]
-   [map (^lambda (x) (^return (^raise x)))]))
+   [map (^lambda (x) (^raise x))]))
 (define CATCHz
   (HOSTz
    [r7rs

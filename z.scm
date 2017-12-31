@@ -25,7 +25,7 @@
   module?
   (export-macros module-export-macros)
   (export-values module-export-values))
-(define (MODULE/k state name modules macros defines dir exports body k) ; (k state defines modules xs)
+(define (MODULE/k state name modules macros defines dir exports body k) ; (k vars state defines modules xs)
   (COMPILE-TOP/k
    state modules macros defines dir body
    (λ (state modules macros defines xs)
@@ -65,8 +65,8 @@
      name n 0 export-values defines
      (λ (defines cs1)
        (LAMBDA/k state modules macros dir '() (append xs `((LISTz ,@(map second exports))))
-                 (λ (state modules lam)
-                   (k state defines (hash-set modules name (module export-macros export-values))
+                 (λ (vars state modules lam)
+                   (k vars state defines (hash-set modules name (module export-macros export-values))
                       (cons
                        ($$define n ($$apply lam '())) cs1))))))))
 
@@ -114,8 +114,8 @@
                         (k vars state modules macros defines xs 'VOIDz))))]
          [(or (eq? f 'lambda) (eq? f 'λ))
           (LAMBDA/k state modules macros dir (car args) (cdr args)
-                    (λ (state modules lam)
-                      (k vars state modules macros defines '() lam)))]
+                    (λ (vars1 state modules lam)
+                      (k (set-union vars1 vars) state modules macros defines '() lam)))]
          [(eq? f 'LISTz)
           (COMPILE/k*
            vars state modules macros defines dir exp? args
@@ -125,8 +125,8 @@
           (let ([name (car args)] [exports+body (cdr args)])
             (MODULE/k
              state name modules macros defines dir (car exports+body) (cdr exports+body)
-             (λ (state defines modules cs)
-               (k vars state modules macros defines cs $void))))]
+             (λ (vars1 state defines modules cs)
+               (k (set-union vars1 vars) state modules macros defines cs $void))))]
          [(eq? f 'RECORDz)
           (k vars state modules macros defines (list ($$record (car args) (cadr args) (cddr args))) $void)]
          [(eq? f 'if)
@@ -183,8 +183,8 @@
          [(eq? f 'IMPALLz) (error 'compile "invalid syntax" x)]
          [(or (eq? f 'lambda) (eq? f 'λ))
           (LAMBDA/k state modules macros dir (car args) (cdr args)
-                    (λ (state modules lam)
-                      (k vars state modules macros defines ($$tail-val lam))))]
+                    (λ (vars1 state modules lam)
+                      (k (set-union vars1 vars) state modules macros defines ($$tail-val lam))))]
          [(eq? f 'LISTz)
           (COMPILE/k*
            vars state modules macros defines dir #f args
@@ -283,11 +283,12 @@
     [(symbol? args) (set args)]
     [(null? args) null-set]
     [else (set-add (args->set (cdr args)) (car args))]))
-(define (LAMBDA/k state modules macros dir args body k) ; (k state modules lambda)
+(define (LAMBDA/k state modules macros dir args body k) ; (k vars state modules lambda)
   (BEGIN/tail
    null-set state modules macros null-set dir body
    (λ (vars state modules macros defines1 cs)
-     (k state modules ($$lambda (set->list (set-subtract vars (args->set args) defines1)) (set->list defines1) args cs)))))
+     (let ([vars (set-subtract vars (args->set args) defines1)])
+       (k vars state modules ($$lambda (set->list vars) (set->list defines1) args cs))))))
 (define (HOST xs k1 k2)
   (let ([x (car xs)] [xs (cdr xs)])
     (let ([arch (first x)] [code (second x)])

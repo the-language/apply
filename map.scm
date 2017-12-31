@@ -13,8 +13,6 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(load "z.scm")
-
 (define ($$tail-if b xs ys) (list (**if b xs ys)))
 (define $if *if)
 (define $void *undefined)
@@ -129,3 +127,5 @@
 ;      (define >=UZ (lambda (x y) (return (>= x y))))
 ;      )))
 ;(define (+prelude x) (string-append prelude";"x))
+
+(load "z.scm")
