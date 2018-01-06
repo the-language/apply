@@ -318,8 +318,8 @@
 (define-record-type module
   (module exports vars defines define-la xs)
   module?
-  (export-macros module-export-macros)
-  (export-values module-export-values))
+  _!_
+  )
 (define-record-type macro
   (macro src proc)
   macro?
@@ -329,10 +329,13 @@
   (just x)
   just?
   (x run-just))
-; (MODULEz <name> ([<export-name> <value>] ...) <body> ...)
+; (MODULEz <name> ([<export-name> <id>] ...) <body> ...)
 (define (MODULE/k dir env vars state modules xs k)
   (let ([name (car xs)] [exports (cadr xs)] [body (cddr xs)])
-    
+    (let ([exports (map
+     (λ (e)
+       (cons (first e) (hash-ref env (second e)))) exports)])
+      _!_)))
 (define-record-type define-lambda
   (define-lambda vars defines define-lambdas xs)
   define-lambda?
