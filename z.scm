@@ -13,8 +13,8 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(define (map/symbol-append map xs)
-  (foldl (λ (p map) (hash-set map (car p) (cdr p))) map xs))
+(define (hash-append h xs)
+  (foldl (λ (p h) (hash-set h (car p) (cdr p))) h xs))
 (define (set-append s xs)
   (if (null? xs)
       s
@@ -312,3 +312,249 @@
                  (λ (state modules macros defines xs)
                    ($$top (set->list defines) (append prelude-xs xs)))))
 (define (z-current xs) (z (current-directory) xs))
+;-----------------------------------rewrite
+(define (hash-append h xs)
+  (foldl (λ (p h) (hash-set h (car p) (cdr p))) h xs))
+(define-record-type module
+  (module exports vars defines define-la xs)
+  module?
+  (export-macros module-export-macros)
+  (export-values module-export-values))
+(define-record-type macro
+  (macro src proc)
+  macro?
+  (src macro-src)
+  (proc macro-proc))
+(define-record-type just
+  (just x)
+  just?
+  (x run-just))
+; (MODULEz <name> ([<export-name> <value>] ...) <body> ...)
+(define (MODULE/k dir env vars state modules xs k)
+  (let ([name (car xs)] [exports (cadr xs)] [body (cddr xs)])
+    
+(define-record-type define-lambda
+  (define-lambda vars defines define-lambdas xs)
+  define-lambda?
+  (vars define-lambda-vars)
+  (defines define-lambda-defines)
+  (define-lambdas define-lambda-define-lambdas)
+  (xs define-lambda-xs))
+(define (macroexpand dir env state modules x)
+  (if (pair? x)
+      (let ([f (car x)] [args (cdr x)])
+        (let ([m (hash-ref env f #f)])
+          (if (macro? m)
+              (macroexpand dir env state modules (apply (macro-proc m) args))
+              x)))
+      x))
+(define (DEF/k a d k)
+  (if (symbol? a)
+      (k a (car d))
+      (DEF/k (car a) (list (cons 'λ (cons (cdr a) d))) k)))
+(define (TOP/k compile-define-name compile-define dir env vars state modules xs k) ; (k vars state modules env defines define-lambdas xs)
+  (preTOP/k
+   dir env state modules xs
+   (λ (env state modules defines xs)
+     (postTOP/k
+      compile-define
+      dir
+      (hash-append env (map (λ (d) (cons d (compile-define-name d))) defines))
+      vars
+      state
+      modules
+      xs
+      (λ (vars state modules env define-lambdas xs)
+        (k vars state modules env defines define-lambdas xs))))))
+(define (preTOP/k dir env state modules xs k) ; (k env state modules defines xs)
+  (if (null? xs)
+      (k env state modules defines '())
+      (let ([x (macroexpand dir env state modules (car xs))] [xs (cdr xs)])
+        (if (pair? x)
+            (let ([f (car x)] [args (cdr x)])
+              (cond
+                [(eq? f 'begin)
+                 (preTOP/k dir env state modules (append args xs) k)]
+                [(eq? f 'DEFMACROz)
+                 (preTOP/k dir (hash-set env (first args) (EVAL (second args))) state modules xs k)]
+                [(eq? f 'define)
+                 (DEF/k
+                  (car args) (cdr args)
+                  (λ (s x)
+                    (preTOP/k
+                     dir env state modules xs
+                     (λ (env state modules defines rs)
+                       (k env state modules (cons s defines) (cons `(define ,s ,x) rs))))))]
+                [(eq? f 'MODULEz) _!_]
+                [(eq? f 'RECORDz) _!_]
+                [(eq? f 'IMPALLz) _!_]
+                [else
+                 (preTOP/k
+                  dir env state modules xs
+                  (λ (env state modules defines rs)
+                    (k env state modules defines (cons x rs))))]))
+            (preTOP/k
+             dir env state modules xs
+             (λ (env state modules defines rs)
+               (k env state modules defines (cons x rs))))))))
+(define (postTOP/k compile-define dir env vars state modules xs k) ; (k vars state modules env define-lambdas xs)
+  (if (null? (cdr xs))
+      (COMPILE-tail/k
+       dir env vars state modules (car xs)
+       (λ (vars state modules xs)
+         (k vars state modules env '() xs)))
+      (let ([x (car xs)] [xs (cdr xs)])
+        (if (and (pair? x) (eq? (first x) 'define))
+            (let ([i (second x)] [v (third x)])
+              (if (and (pair? v) (or (eq? (car v) 'lambda) (eq? (car v) 'λ)))
+                  _!_
+                  (COMPILE/k
+                   dir env vars state modules v
+                   (λ (vars state modules vs v)
+                     (postTOP/k
+                      compile-define dir env vars state modules xs
+                      (λ (vars state modules env define-lambdas xs)
+                        (k vars state modules env define-lambdas (append (compile-define i v) xs))))))))
+            (COMPILE/k
+             dir env vars state modules x
+             (λ (vars state modules vs v)
+               (postTOP/k
+                compile-define dir env vars state modules xs
+                (λ (vars state modules env define-lambdas xs)
+                  (k vars state modules env define-lambdas (append vs ($$val v) xs))))))))))
+(define (COMPILE/k dir env vars state modules x k) ; (k vars state modules xs x)
+  (let ([x (macroexpand dir env state modules x)])
+    (cond
+      [(pair? x)
+       (let ([f (car x)] [args (cdr x)])
+         (cond
+           [(or (eq? f 'DEFMACROz) (eq? f 'define) (eq? f 'IMPALLz) (eq? f 'MODULEz) (eq? f 'RECORDz))
+            (error 'compile "invalid syntax" x)]
+           [(eq? f 'begin)
+            (BEGIN/k dir env vars state modules args k)]
+           [(eq? f 'HOSTz)
+            (HOST args
+                  (λ (x)
+                    (k vars state modules '() ($host-exp x)))
+                  (λ (x)
+                    (COMPILE/k dir env vars state modules x k)))]
+           [(eq? f 'HOSTCASEz)
+            (HOST args
+                  (λ (x)
+                    (COMPILE/k dir env vars state modules x k))
+                  (λ (x)
+                    (COMPILE/k dir env vars state modules x k)))]
+           [(eq? f 'if)
+            (COMPILE/k
+             dir env vars state modules (first args)
+             (λ (vars state modules bs b)
+               (COMPILE/k
+                dir env vars state modules (second args)
+                (λ (vars state modules xs x)
+                  (COMPILE/k
+                   dir env vars state modules (third args)
+                   (λ (vars state modules ys y)
+                     ($if/k b xs x ys y
+                            (λ (rs r)
+                              (k vars state modules (append bs rs) r)))))))))]
+           [(or (eq? f 'lambda) (eq? f 'λ)) _!_]
+           [(eq? f 'quote) _!_]
+           [else
+            (COMPILE/k
+             dir env vars state modules f
+             (λ (vars state modules fs f)
+               (COMPILE/k*
+                dir env vars state modules args
+                (λ (vars state modules argss args)
+                  ($apply/k f args
+                            (λ (rs r)
+                              (k vars state modules (append fs argss rs) r)))))))]))
+       [(symbol? x) (k (set-add vars x) state modules '() (run-just (hash-ref env x)))]
+       [else
+        (k vars state modules '()
+           (cond
+             [(number? x) ($number x)]
+             [(string? x) ($string x)]
+             [(char? x) ($char x)]
+             [(null? x) $null]
+             [else (error 'compile "invalid syntax" x)]))]])))
+(define (BEGIN/k dir env vars state modules xs k)
+  (if (null? (cdr xs))
+      (COMPILE/k dir env vars state modules (car xs) k)
+      (let ([x (car xs)] [xs (cdr xs)])
+        (COMPILE/k
+         dir env vars state modules x
+         (λ (vars state modules as a)
+           (BEGIN/k
+            dir env vars state modules xs
+            (λ (vars state modules ds d)
+              (k vars state modules (append as ($$val a) ds) d))))))))
+(define (COMPILE-tail/k dir env vars state modules x k) ; (k vars state modules xs)
+  (let ([x (macroexpand dir env state modules x)])
+    (define (X) (COMPILE/k dir env vars state modules x
+                           (λ (vars state modules xs x)
+                             (k vars state modules (append xs ($$tail-val x))))))
+    (cond
+      [(pair? x)
+       (let ([f (car x)] [args (cdr x)])
+         (cond
+           [(or (eq? f 'DEFMACROz) (eq? f 'define) (eq? f 'IMPALLz) (eq? f 'MODULEz) (eq? f 'RECORDz))
+            (error 'compile "invalid syntax" x)]
+           [(eq? f 'begin)
+            (BEGIN-tail/k dir env vars state modules args k)]
+           [(eq? f 'HOSTz)
+            (HOST args
+                  (λ (x)
+                    (k vars state modules ($$tail-val ($host-exp x))))
+                  (λ (x)
+                    (COMPILE-tail/k dir env vars state modules x k)))]
+           [(eq? f 'HOSTCASEz)
+            (HOST args
+                  (λ (x)
+                    (COMPILE-tail/k dir env vars state modules x k))
+                  (λ (x)
+                    (COMPILE-tail/k dir env vars state modules x k)))]
+           [(eq? f 'if)
+            (COMPILE/k
+             dir env vars state modules (first args)
+             (λ (vars state modules bs b)
+               (COMPILE-tail/k
+                dir env vars state modules (second args)
+                (λ (vars state modules xs)
+                  (COMPILE-tail/k
+                   dir env vars state modules (third args)
+                   (λ (vars state modules ys)
+                     (k vars state modules (append bs ($$tail-if b xs ys)))))))))]
+           [(or (eq? f 'lambda) (eq? f 'λ)) (X)]
+           [(eq? f 'quote) (X)]
+           [else
+            (COMPILE/k
+             dir env vars state modules f
+             (λ (vars state modules fs f)
+               (COMPILE/k*
+                dir env vars state modules args
+                (λ (vars state modules argss args)
+                  (k vars state modules (append fs argss ($$apply-tail f args)))))))]))]
+      [else (X)])))
+(define (BEGIN-tail/k dir env vars state modules xs k)
+  (if (null? (cdr xs))
+      (COMPILE-tail/k dir env vars state modules (car xs) k)
+      (let ([x (car xs)] [xs (cdr xs)])
+        (COMPILE-tail/k
+         dir env vars state modules x
+         (λ (vars state modules as)
+           (BEGIN-tail/k
+            dir env vars state modules xs
+            (λ (vars state modules ds)
+              (k vars state modules (append as ds)))))))))
+(define (COMPILE/k* dir env vars state modules xs k)
+  (if (null? (cdr xs))
+      (COMPILE/k dir env vars state modules (car xs) k)
+      (COMPILE/k
+       dir env vars state modules (car xs)
+       (λ (vars state modules as a)
+         (COMPILE/k*
+          dir env vars state modules (cdr xs)
+          (λ (vars state modules dss ds)
+            (k vars state modules (append as dss) (cons a ds))))))))
+    
