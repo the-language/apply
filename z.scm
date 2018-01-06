@@ -313,10 +313,22 @@
                    ($$top (set->list defines) (append prelude-xs xs)))))
 (define (z-current xs) (z (current-directory) xs))
 ;-----------------------------------rewrite
+(define (MODULEvalue-name m v)
+  (string->symbol
+   (string-append
+    (foldr string-append ""
+           (map (λ (s) (string-append (symbol->string s) "_")) (append m (list v))))
+    "Mz")))
+(define (MODULEname m)
+  (string->symbol
+   (string-append
+    (foldr string-append ""
+           (map (λ (s) (string-append (symbol->string s) "_")) m))
+    "_Mz")))
 (define (hash-append h xs)
   (foldl (λ (p h) (hash-set h (car p) (cdr p))) h xs))
 (define-record-type module
-  (module exports vars defines define-la xs)
+  (module exports vars defines define-lambdas xs)
   module?
   _!_
   )
@@ -329,13 +341,6 @@
   (just x)
   just?
   (x run-just))
-; (MODULEz <name> ([<export-name> <id>] ...) <body> ...)
-(define (MODULE/k dir env vars state modules xs k)
-  (let ([name (car xs)] [exports (cadr xs)] [body (cddr xs)])
-    (let ([exports (map
-     (λ (e)
-       (cons (first e) (hash-ref env (second e)))) exports)])
-      _!_)))
 (define-record-type define-lambda
   (define-lambda vars defines define-lambdas xs)
   define-lambda?
@@ -343,6 +348,14 @@
   (defines define-lambda-defines)
   (define-lambdas define-lambda-define-lambdas)
   (xs define-lambda-xs))
+; env : Hash Symbol (U Just Macro)
+; (MODULEz <name> ([<export-name> <id>] ...) <body> ...)
+(define (MODULE/k dir env vars state modules xs k)
+  (let ([name (car xs)] [exports (cadr xs)] [body (cddr xs)])
+    (let ([exports (map
+     (λ (e)
+       (cons (first e) (hash-ref env (second e)))) exports)])
+      _!_)))
 (define (macroexpand dir env state modules x)
   (if (pair? x)
       (let ([f (car x)] [args (cdr x)])
