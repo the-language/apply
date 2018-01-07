@@ -20,25 +20,6 @@
 (define EVAL (make-evaluator 'racket))
 (define null-set (set))
 (define null-hash (hash))
-;---------------------------
-(define ($var/k local-state state x k) (k local-state state `(!var ,x)))
-(define ($num/k local-state state x k) (k local-state state `(!num ,x)))
-(define ($sym/k local-state state x k) (k local-state state `(!sym ,x)))
-(define ($char/k local-state state x k) (k local-state state `(!char ,x)))
-(define ($str/k local-state state x k) (k local-state state `(!str ,x)))
-(define ($$val/k local-state state x k) (k local-state state `((!tail ,x))))
-(define ($$define/k local-state state f x k) (k local-state state `((!def ,f ,x))))
-(define $void `!void)
-(define $null `!null)
-(define ($$if/k local-state state b xs x ys y k) (k local-state state '() `(!if ,b (begin ,@xs ,x) (begin ,@ys y))))
-(define ($$if-tail/k local-state state b xs ys k) (k local-state state `((!tail-if ,b ,xs ,ys))))
-(define ($$apply/k local-state state f args k) (k local-state state '() `(!app ,f ,@args)))
-(define ($$tail-apply/k local-state state f args k) (k local-state state `((!tail-app ,f ,@args))))
-(define ($!pre-define-lambda local-state state parm k) (k local-state state))
-(define ($!pre-lambda local-state state parm k) (k local-state state))
-(define ($$define-lambda/k local-state local-state1 state name parm xs k) (k local-state state `((!def-lam ,name ,parm ,@xs))))
-(define ($$lambda/k local-state local-state1 state parm xs k) (k local-state state '() `(!lam ,parm ,@xs)))
-;-----------------------------
 (define-record-type macro
   (macro src proc)
   macro?
@@ -187,11 +168,8 @@
              (λ (local-state state xs)
                (k local-state state (append as xs ds) d)))))))))
 (define (COMPILE/k* local-state env state xs k) ; (k local-state state xs rs)
-  (if (null? (cdr xs))
-      (COMPILE/k
-       local-state env state (car xs)
-       (λ (local-state state xs x)
-         (k local-state state xs (list x))))
+  (if (null? xs)
+      (k local-state state '() '())
       (COMPILE/k
        local-state env state (car xs)
        (λ (local-state state as a)
@@ -259,3 +237,32 @@
              local-state state a
              (λ (local-state state xs)
                (k local-state state (append as xs ds))))))))))
+(define (z dir xs)
+  (BEGIN/k
+  (hash-set $null-local-state 'dir dir) $null-env $null-state (append xs '(VOIDz))
+  (λ (local-state state xs x)
+    ($$top local-state state xs))))
+
+;---------------------------
+(define ($var/k local-state state x k) (k local-state state `(!var ,x)))
+(define ($num/k local-state state x k) (k local-state state `(!num ,x)))
+(define ($sym/k local-state state x k) (k local-state state `(!sym ,x)))
+(define ($char/k local-state state x k) (k local-state state `(!char ,x)))
+(define ($str/k local-state state x k) (k local-state state `(!str ,x)))
+(define ($$val/k local-state state x k) (k local-state state `((!val ,x))))
+(define ($$define/k local-state state f x k) (k local-state state `((!def ,f ,x))))
+(define $void `!void)
+(define $null `!null)
+(define ($$if/k local-state state b xs x ys y k) (k local-state state '() `(!if ,b (begin ,@xs ,x) (begin ,@ys y))))
+(define ($$if-tail/k local-state state b xs ys k) (k local-state state `((!tail-if ,b ,xs ,ys))))
+(define ($$apply/k local-state state f args k) (k local-state state '() `(!app ,f ,@args)))
+(define ($$tail-apply/k local-state state f args k) (k local-state state `((!tail-app ,f ,@args))))
+(define ($!pre-define-lambda local-state state parm k) (k local-state state))
+(define ($!pre-lambda local-state state parm k) (k local-state state))
+(define ($$define-lambda/k local-state local-state1 state name parm xs k) (k local-state state `((!def-lam ,name ,parm ,@xs))))
+(define ($$lambda/k local-state local-state1 state parm xs k) (k local-state state '() `(!lam ,parm ,@xs)))
+(define $null-local-state null-hash)
+(define $null-env null-env)
+(define $null-state null-hash)
+(define ($$top local-state state xs) xs)
+;-----------------------------
