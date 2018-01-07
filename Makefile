@@ -2,7 +2,7 @@ all: arch-scm.rkt
 
 arch-%.rkt: arch-%.scm Makefile
 	echo "#lang racket" > $@
-	echo "(provide z)" >> $@
+	echo "(provide z z+prelude)" >> $@
 	echo '(include "zscheme.rkt")' >> $@
 	echo '(include "z.scm")' >> $@
 	echo "(include \"$<\")" >> $@

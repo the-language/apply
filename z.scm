@@ -233,6 +233,9 @@
                (k local-state state (append as xs ds))))))))))
 (define (z dir xs)
   (BEGIN/k
-  (hash-set $null-local-state 'dir dir) $null-env $null-state (append xs '(VOIDz))
-  (λ (local-state state xs x)
-    ($$top local-state state xs))))
+   (hash-set $null-local-state 'dir dir) $null-env $null-state (append xs '(VOIDz))
+   (λ (local-state state xs x)
+     ($$top local-state state xs))))
+(define prelude (INCLUDE-LISTz "prelude.scm"))
+(define (z+prelude dir xs)
+  (z dir (append prelude xs)))

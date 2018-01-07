@@ -4,3 +4,4 @@
 (define EVAL (make-evaluator 'racket))
 (define null-set (set))
 (define null-hash (hash))
+(define INCLUDE-LISTz file->list)
