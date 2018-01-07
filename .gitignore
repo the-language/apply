@@ -1,3 +1,4 @@
+arch-*.rkt
 *.rkt~
 compiled
 *.scm~
