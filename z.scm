@@ -20,6 +20,7 @@
 (define EVAL (make-evaluator 'racket))
 (define null-set (set))
 (define null-hash (hash))
+;-----------------------------
 (define-record-type macro
   (macro src proc)
   macro?
@@ -186,7 +187,7 @@
        (COMPILE/k
         local-state env state x
         (λ (local-state state xs x)
-          ($$val/k
+          ($$tail-val/k
            local-state state x
            (λ (local-state state es)
              (k local-state state (append xs es)))))))
@@ -250,6 +251,7 @@
 (define ($char/k local-state state x k) (k local-state state `(!char ,x)))
 (define ($str/k local-state state x k) (k local-state state `(!str ,x)))
 (define ($$val/k local-state state x k) (k local-state state `((!val ,x))))
+(define ($$tail-val/k local-state state x k) (k local-state state `((!tail ,x))))
 (define ($$define/k local-state state f x k) (k local-state state `((!def ,f ,x))))
 (define $void `!void)
 (define $null `!null)
@@ -265,4 +267,3 @@
 (define $null-env null-env)
 (define $null-state null-hash)
 (define ($$top local-state state xs) xs)
-;-----------------------------
