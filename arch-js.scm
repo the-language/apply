@@ -20,8 +20,8 @@
 (define ($$val/k local-state state x k) (k local-state state `(,x)))
 (define ($$tail-val/k local-state state x k) (k local-state state `(,x)))
 (define ($$define/k local-state state f x k) (k local-state state `((define ,f ,x))))
-(define $void 'VOIDz) ; BUG
-(define $null ''())
+(define $void `!void)
+(define $null `!null)
 (define ($$if/k local-state state b xs x ys y k) (k local-state state '()
                                                     (if (and (null? xs) (null? ys))
                                                              `(if ,b ,x ,y)
@@ -40,6 +40,4 @@
 (define $null-env null-env)
 (define $null-state null-hash)
 (define ($$top local-state state xs) xs)
-(define $arch 'scheme)
-(define ($$host-expr/k local-state state x k) (k local-state state '() x))
-(define ($$host-expr-tail/k local-state state x k) (k local-state state (list x)))
+(define $arch 'js)

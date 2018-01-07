@@ -37,22 +37,11 @@
 (define null-env
   (hash
    'DEFMACROz (macro
-               '(λ (local-state env state args default k)
-                  (k local-state (hash-set env (first args) (macro (second args) (EVAL (second args)))) state 'VOIDz))
+               '!DEFMACROz!
                (λ (local-state env state args default k)
                  (k local-state (hash-set env (first args) (macro (second args) (EVAL (second args)))) state 'VOIDz)))
    'define (macro
-            '(λ (local-state env state args default k)
-               (let ([f (car args)] [r (cdr args)])
-                 (if (pair? f)
-                     (k local-state env state `(define ,(car f) (λ ,(cdr f) ,@r)))
-                     (let ([v (car r)])
-                       (if (symbol? v)
-                           ($var/k
-                            local-state state v
-                            (λ (local-state state r)
-                              (k local-state (hash-set env f r) state 'VOIDz)))
-                           (default))))))
+            '!define!
             (λ (local-state env state args default k)
               (let ([f (car args)] [r (cdr args)])
                 (if (pair? f)
@@ -63,7 +52,8 @@
                            local-state state v
                            (λ (local-state state r)
                              (k local-state (hash-set env f r) state 'VOIDz)))
-                          (default)))))))))
+                          (default)))))))
+   ))
 (define (COMPILE/k local-state env state x k) ; (k local-state env state xs x)
   (macroexpand
    local-state env state x
@@ -120,6 +110,19 @@
                        local-state state b xs x ys y
                        (λ (local-state state rs r)
                          (k local-state env state (append bs rs) r)))))))))]
+            [(eq? f 'HOSTz)
+             (HOSTz
+              args
+              (λ (x) (COMPILE/k local-state env state x k))
+              (λ (x) ($$host-expr/k
+                      local-state state x
+                      (λ (local-state state rs r)
+                        (k local-state env state rs r)))))]
+            [(eq? f 'HOSTCASEz)
+             (HOSTz
+              args
+              (λ (x) (COMPILE/k local-state env state x k))
+              (λ (x) (COMPILE/k local-state env state x k)))]
             [else
              (COMPILE/k
               local-state env state f
@@ -132,7 +135,7 @@
                     (λ (local-state state rs r)
                       (k local-state env state (append fs argss rs) r)))))))]))]
        [(eq? x 'VOIDz) (k local-state env state '() $void)]
-       [(eq? x 'ARCHz) (k local-state env state '() $arch)]
+       [(eq? x 'ARCHz) (COMPILE/k local-state env state `(QUOTEz ,$arch) k)]
        [else
         ((cond
            [(symbol? x) $var/k]
@@ -206,6 +209,19 @@
                        local-state state b xs ys
                        (λ (local-state state rs)
                          (k local-state env state (append bs rs))))))))))]
+            [(eq? f 'HOSTz)
+             (HOSTz
+              args
+              (λ (x) (COMPILEtail/k local-state env state x k))
+              (λ (x) ($$host-expr-tail/k
+                      local-state state x
+                      (λ (local-state state rs)
+                        (k local-state env state rs)))))]
+            [(eq? f 'HOSTCASEz)
+             (HOSTz
+              args
+              (λ (x) (COMPILEtail/k local-state env state x k))
+              (λ (x) (COMPILEtail/k local-state env state x k)))]
             [else
              (COMPILE/k
               local-state env state f
@@ -231,6 +247,13 @@
              local-state state a
              (λ (local-state state xs)
                (k local-state env state (append as xs ds))))))))))
+(define (HOSTz xs elsek findk)
+  (let ([x (car xs)] [xs (cdr xs)])
+    (cond
+      [(eq? (first x) '_) (elsek (second x))]
+      [(eq? (first x) $arch) (findk (second x))]
+      [else (HOSTz xs elsek findk)])))
+
 (define (z dir xs)
   (BEGIN/k
    (hash-set $null-local-state 'dir dir) $null-env $null-state (append xs '(VOIDz))
