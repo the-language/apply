@@ -64,7 +64,7 @@
                            (λ (local-state state r)
                              (k local-state (hash-set env f r) state 'VOIDz)))
                           (default)))))))))
-(define (COMPILE/k local-state env state x k) ; (k local-state state xs x)
+(define (COMPILE/k local-state env state x k) ; (k local-state env state xs x)
   (macroexpand
    local-state env state x
    (λ (local-state env state x)
@@ -75,8 +75,8 @@
             [(eq? f 'QUOTEz) ; (QUOTEz <symbol>)
              ($sym/k
               local-state state (first args)
-              (λ (local-state state x)
-                (k local-state state '() x)))]
+              (λ (local-state env state x)
+                (k local-state env state '() x)))]
             [(eq? f 'define)
              (let ([n (first args)] [v (second args)])
                (if (or (eq? (car v) 'lambda) (eq? (car v) 'λ))
@@ -86,15 +86,15 @@
                       (λ (local-state1 state)
                         (BEGINtail/k
                          local-state1 env state body
-                         (λ (local-state1 state xs)
+                         (λ (local-state1 env state xs)
                            ($$define-lambda/k
                             local-state local-state1 state n parm xs
                             (λ (local-state state xs)
-                              (k local-state state xs $void))))))))
+                              (k local-state env state xs $void))))))))
                    ($$define/k
                     local-state state (first args) (second args)
                     (λ (local-state state xs)
-                      (k local-state state xs $void)))))]
+                      (k local-state env state xs $void)))))]
             [(eq? f 'begin) (BEGIN/k local-state env state args k)]
             [(or (eq? f 'lambda) (eq? f 'λ))
              (let ([parm (car args)] [body (cdr args)])
@@ -103,36 +103,36 @@
                 (λ (local-state1 state)
                   (BEGINtail/k
                    local-state1 env state body
-                   (λ (local-state1 state xs)
+                   (λ (local-state1 env state xs)
                      ($$lambda/k
                       local-state local-state1 state parm xs k))))))]
             [(eq? f 'if)
              (COMPILE/k
               local-state env state (first args)
-              (λ (local-state state bs b)
+              (λ (local-state env state bs b)
                 (COMPILE/k
                  local-state env state (second args)
-                 (λ (local-state state xs x)
+                 (λ (local-state env state xs x)
                    (COMPILE/k
                     local-state env state (third args)
-                    (λ (local-state state ys y)
+                    (λ (local-state env state ys y)
                       ($$if/k
                        local-state state b xs x ys y
                        (λ (local-state state rs r)
-                         (k local-state state (append bs rs) r)))))))))]
+                         (k local-state env state (append bs rs) r)))))))))]
             [else
              (COMPILE/k
               local-state env state f
-              (λ (local-state state fs f)
+              (λ (local-state env state fs f)
                 (COMPILE/k*
                  local-state env state args
-                 (λ (local-state state argss args)
+                 (λ (local-state env state argss args)
                    ($$apply/k
                     local-state state f args
                     (λ (local-state state rs r)
-                      (k local-state state (append fs argss rs) r)))))))]))]
-       [(eq? x 'VOIDz) (k local-state state '() $void)]
-       [(eq? x 'ARCHz) (k local-state state '() $arch)]
+                      (k local-state env state (append fs argss rs) r)))))))]))]
+       [(eq? x 'VOIDz) (k local-state env state '() $void)]
+       [(eq? x 'ARCHz) (k local-state env state '() $arch)]
        [else
         ((cond
            [(symbol? x) $var/k]
@@ -143,47 +143,47 @@
            [else (error 'compile "invalid syntax" x)])
          local-state state x
          (λ (local-state state x)
-           (k local-state state '() x)))]))))
+           (k local-state env state '() x)))]))))
 (define ($$val/k+ local-state state x k)
   (if (eq? x $void)
       (k local-state state '())
       ($$val/k local-state state x k)))
-(define (BEGIN/k local-state env state xs k) ; (k local-state state xs x)
+(define (BEGIN/k local-state env state xs k) ; (k local-state env state xs x)
   (if (null? (cdr xs))
       (COMPILE/k local-state env state (car xs) k)
       (COMPILE/k
        local-state env state (car xs)
-       (λ (local-state state as a)
+       (λ (local-state env state as a)
          (BEGIN/k
           local-state env state (cdr xs)
-          (λ (local-state state ds d)
+          (λ (local-state env state ds d)
             ($$val/k+
              local-state state a
              (λ (local-state state xs)
-               (k local-state state (append as xs ds) d)))))))))
-(define (COMPILE/k* local-state env state xs k) ; (k local-state state xs rs)
+               (k local-state env state (append as xs ds) d)))))))))
+(define (COMPILE/k* local-state env state xs k) ; (k local-state env state xs rs)
   (if (null? xs)
-      (k local-state state '() '())
+      (k local-state env state '() '())
       (COMPILE/k
        local-state env state (car xs)
-       (λ (local-state state as a)
+       (λ (local-state env state as a)
          (COMPILE/k*
           local-state env state (cdr xs)
-          (λ (local-state state xs rs)
-            (k local-state state (append as xs) (cons a rs))))))))
+          (λ (local-state env state xs rs)
+            (k local-state env state (append as xs) (cons a rs))))))))
 
-(define (COMPILEtail/k local-state env state x k) ; (k local-state state xs)
+(define (COMPILEtail/k local-state env state x k) ; (k local-state env state xs)
   (macroexpand
    local-state env state x
    (λ (local-state env state x)
      (define (X)
        (COMPILE/k
         local-state env state x
-        (λ (local-state state xs x)
+        (λ (local-state env state xs x)
           ($$tail-val/k
            local-state state x
            (λ (local-state state es)
-             (k local-state state (append xs es)))))))
+             (k local-state env state (append xs es)))))))
      (define (E) (error 'compile "invalid syntax" x))
      (cond
        [(pair? x)
@@ -195,46 +195,46 @@
             [(eq? f 'if)
              (COMPILE/k
               local-state env state (first args)
-              (λ (local-state state bs b)
+              (λ (local-state env state bs b)
                 (COMPILEtail/k
                  local-state env state (second args)
-                 (λ (local-state state xs)
+                 (λ (local-state env state xs)
                    (COMPILEtail/k
                     local-state env state (third args)
-                    (λ (local-state state ys)
+                    (λ (local-state env state ys)
                       ($$if-tail/k
                        local-state state b xs ys
                        (λ (local-state state rs)
-                         (k local-state state (append bs rs))))))))))]
+                         (k local-state env state (append bs rs))))))))))]
             [else
              (COMPILE/k
               local-state env state f
-              (λ (local-state state fs f)
+              (λ (local-state env state fs f)
                 (COMPILE/k*
                  local-state env state args
-                 (λ (local-state state argss args)
+                 (λ (local-state env state argss args)
                    ($$tail-apply/k
                     local-state state f args
                     (λ (local-state state rs)
-                      (k local-state state (append fs argss rs))))))))]))]
+                      (k local-state env state (append fs argss rs))))))))]))]
        [else (X)]))))
-(define (BEGINtail/k local-state env state xs k) ; (k local-state state xs)
+(define (BEGINtail/k local-state env state xs k) ; (k local-state env state xs)
   (if (null? (cdr xs))
       (COMPILEtail/k local-state env state (car xs) k)
       (COMPILE/k
        local-state env state (car xs)
-       (λ (local-state state as a)
+       (λ (local-state env state as a)
          (BEGINtail/k
           local-state env state (cdr xs)
-          (λ (local-state state ds)
+          (λ (local-state env state ds)
             ($$val/k+
              local-state state a
              (λ (local-state state xs)
-               (k local-state state (append as xs ds))))))))))
+               (k local-state env state (append as xs ds))))))))))
 (define (z dir xs)
   (BEGIN/k
    (hash-set $null-local-state 'dir dir) $null-env $null-state (append xs '(VOIDz))
-   (λ (local-state state xs x)
+   (λ (local-state env state xs x)
      ($$top local-state state xs))))
 (define prelude (INCLUDE-LISTz "prelude.scm"))
 (define (z+prelude dir xs)
