@@ -1,3 +1,6 @@
 [submodule "Map"]
 	path = Map
 	url = https://github.com/zaoqil/Map.git
+[submodule "JSLISP"]
+	path = JSLISP
+	url = https://github.com/zaoqil/JSLISP.git

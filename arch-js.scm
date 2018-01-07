@@ -12,6 +12,7 @@
 
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
+(load "JSLISP/js.scm")
 (define ($var/k local-state state x k) (k local-state state (**var x)))
 (define ($num/k local-state state x k) (k local-state state (**number x)))
 (define ($sym/k local-state state x k) (k local-state state (**apply* "SYMz" (list (**string x)))))
@@ -41,3 +42,5 @@
 (define $null-state null-hash)
 (define ($$top local-state state xs) (**top (append (map **define-undefined local-state) xs)))
 (define $arch 'js)
+(define ($$host-expr/k local-state state x k) (k local-state state '() (*exp x)))
+(define ($$host-expr-tail/k local-state state x k) (k local-state state (list (**return (*exp x)))))

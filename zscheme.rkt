@@ -5,3 +5,4 @@
 (define null-set (set))
 (define null-hash (hash))
 (define INCLUDE-LISTz file->list)
+(define-macro (load x) `(include ,x))

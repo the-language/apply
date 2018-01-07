@@ -69,7 +69,7 @@
                 (k local-state env state '() x)))]
             [(eq? f 'define)
              (let ([n (first args)] [v (second args)])
-               (if (or (eq? (car v) 'lambda) (eq? (car v) 'λ))
+               (if (and (pair? v) (or (eq? (car v) 'lambda) (eq? (car v) 'λ)))
                    (let ([parm (cadr v)] [body (cddr v)])
                      ($!pre-define-lambda
                       local-state state parm

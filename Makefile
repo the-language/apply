@@ -1,4 +1,4 @@
-all: arch-scm.rkt
+all: arch-scm.rkt arch-js.rkt
 
 arch-%.rkt: arch-%.scm Makefile
 	echo "#lang racket" > $@
