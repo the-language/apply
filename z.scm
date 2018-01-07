@@ -1,4 +1,3 @@
-#lang racket
 ;;  Copyright (C) 2017  Zaoqi
 
 ;;  This program is free software: you can redistribute it and/or modify
@@ -14,13 +13,6 @@
 ;;  You should have received a copy of the GNU Affero General Public License
 ;;  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-(require compatibility/defmacro)
-(require srfi/9) ; R7RS
-(require racket/sandbox)
-(define EVAL (make-evaluator 'racket))
-(define null-set (set))
-(define null-hash (hash))
-;-----------------------------
 (define-record-type macro
   (macro src proc)
   macro?
@@ -140,6 +132,7 @@
                     (λ (local-state state rs r)
                       (k local-state state (append fs argss rs) r)))))))]))]
        [(eq? x 'VOIDz) (k local-state state '() $void)]
+       [(eq? x 'ARCHz) (k local-state state '() $arch)]
        [else
         ((cond
            [(symbol? x) $var/k]
@@ -243,27 +236,3 @@
   (hash-set $null-local-state 'dir dir) $null-env $null-state (append xs '(VOIDz))
   (λ (local-state state xs x)
     ($$top local-state state xs))))
-
-;---------------------------
-(define ($var/k local-state state x k) (k local-state state `(!var ,x)))
-(define ($num/k local-state state x k) (k local-state state `(!num ,x)))
-(define ($sym/k local-state state x k) (k local-state state `(!sym ,x)))
-(define ($char/k local-state state x k) (k local-state state `(!char ,x)))
-(define ($str/k local-state state x k) (k local-state state `(!str ,x)))
-(define ($$val/k local-state state x k) (k local-state state `((!val ,x))))
-(define ($$tail-val/k local-state state x k) (k local-state state `((!tail ,x))))
-(define ($$define/k local-state state f x k) (k local-state state `((!def ,f ,x))))
-(define $void `!void)
-(define $null `!null)
-(define ($$if/k local-state state b xs x ys y k) (k local-state state '() `(!if ,b (begin ,@xs ,x) (begin ,@ys y))))
-(define ($$if-tail/k local-state state b xs ys k) (k local-state state `((!tail-if ,b ,xs ,ys))))
-(define ($$apply/k local-state state f args k) (k local-state state '() `(!app ,f ,@args)))
-(define ($$tail-apply/k local-state state f args k) (k local-state state `((!tail-app ,f ,@args))))
-(define ($!pre-define-lambda local-state state parm k) (k local-state state))
-(define ($!pre-lambda local-state state parm k) (k local-state state))
-(define ($$define-lambda/k local-state local-state1 state name parm xs k) (k local-state state `((!def-lam ,name ,parm ,@xs))))
-(define ($$lambda/k local-state local-state1 state parm xs k) (k local-state state '() `(!lam ,parm ,@xs)))
-(define $null-local-state null-hash)
-(define $null-env null-env)
-(define $null-state null-hash)
-(define ($$top local-state state xs) xs)
