@@ -23,13 +23,21 @@
 ;---------------------------
 (define ($var/k local-state state x k) (k local-state state `(!var ,x)))
 (define ($num/k local-state state x k) (k local-state state `(!num ,x)))
+(define ($sym/k local-state state x k) (k local-state state `(!sym ,x)))
 (define ($char/k local-state state x k) (k local-state state `(!char ,x)))
 (define ($str/k local-state state x k) (k local-state state `(!str ,x)))
-(define ($$val/k local-state state x k) (k local-state state (list x)))
+(define ($$val/k local-state state x k) (k local-state state `((!tail ,x))))
 (define ($$define/k local-state state f x k) (k local-state state `((!def ,f ,x))))
 (define $void `!void)
+(define $null `!null)
 (define ($$if/k local-state state b xs x ys y k) (k local-state state '() `(!if ,b (begin ,@xs ,x) (begin ,@ys y))))
+(define ($$if-tail/k local-state state b xs ys k) (k local-state state `((!tail-if ,b ,xs ,ys))))
 (define ($$apply/k local-state state f args k) (k local-state state '() `(!app ,f ,@args)))
+(define ($$tail-apply/k local-state state f args k) (k local-state state `((!tail-app ,f ,@args))))
+(define ($!pre-define-lambda local-state state parm k) (k local-state state))
+(define ($!pre-lambda local-state state parm k) (k local-state state))
+(define ($$define-lambda/k local-state local-state1 state name parm xs k) (k local-state state `((!def-lam ,name ,parm ,@xs))))
+(define ($$lambda/k local-state local-state1 state parm xs k) (k local-state state '() `(!lam ,parm ,@xs)))
 ;-----------------------------
 (define-record-type macro
   (macro src proc)
@@ -90,14 +98,40 @@
        [(pair? x)
         (let ([f (car x)] [args (cdr x)])
           (cond
-            [(eq? f 'quote) (QUOTE/k local-state env state (first args) k)]
+            [(eq? f 'QUOTEz) ; (QUOTEz <symbol>)
+             ($sym/k
+              local-state state (first args)
+              (λ (local-state state x)
+                (k local-state state '() x)))]
             [(eq? f 'define)
-             ($$define/k
-              local-state state (first args) (second args)
-              (λ (local-state state xs)
-                (k local-state state xs $void)))]
+             (let ([n (first args)] [v (second args)])
+               (if (or (eq? (car v) 'lambda) (eq? (car v) 'λ))
+                   (let ([parm (cadr v)] [body (cddr v)])
+                     ($!pre-define-lambda
+                      local-state state parm
+                      (λ (local-state1 state)
+                        (BEGINtail/k
+                         local-state1 env state body
+                         (λ (local-state1 state xs)
+                           ($$define-lambda/k
+                            local-state local-state1 state n parm xs
+                            (λ (local-state state xs)
+                              (k local-state state xs $void))))))))
+                   ($$define/k
+                    local-state state (first args) (second args)
+                    (λ (local-state state xs)
+                      (k local-state state xs $void)))))]
             [(eq? f 'begin) (BEGIN/k local-state env state args k)]
-            [(or (eq? f 'lambda) (eq? f 'λ)) !]
+            [(or (eq? f 'lambda) (eq? f 'λ))
+             (let ([parm (car args)] [body (cdr args)])
+               ($!pre-lambda
+                local-state state parm
+                (λ (local-state1 state)
+                  (BEGINtail/k
+                   local-state1 env state body
+                   (λ (local-state1 state xs)
+                     ($$lambda/k
+                      local-state local-state1 state parm xs k))))))]
             [(eq? f 'if)
              (COMPILE/k
               local-state env state (first args)
@@ -130,11 +164,11 @@
            [(number? x) $num/k]
            [(char? x) $char/k]
            [(string? x) $str/k]
+           [(null? x) $null]
            [else (error 'compile "invalid syntax" x)])
          local-state state x
          (λ (local-state state x)
            (k local-state state '() x)))]))))
-(define (QUOTE/k) (cond))
 (define ($$val/k+ local-state state x k)
   (if (eq? x $void)
       (k local-state state '())
@@ -183,7 +217,7 @@
        [(pair? x)
         (let ([f (car x)] [args (cdr x)])
           (cond
-            [(or (eq? f 'quote) (eq? f 'lambda) (eq? f 'λ)) (X)]
+            [(or (eq? f 'QUOTEz) (eq? f 'lambda) (eq? f 'λ)) (X)]
             [(eq? f 'define) (E)]
             [(eq? f 'begin) (BEGINtail/k local-state env state args k)]
             [(eq? f 'if)
