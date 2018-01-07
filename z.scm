@@ -81,10 +81,13 @@
                             local-state local-state1 state n parm xs
                             (λ (local-state state xs)
                               (k local-state env state xs $void))))))))
-                   ($$define/k
-                    local-state state (first args) (second args)
-                    (λ (local-state state xs)
-                      (k local-state env state xs $void)))))]
+                   (COMPILE/k
+                    local-state env state (second args)
+                    (λ (local-state env state xs1 x)
+                      ($$define/k
+                       local-state state (first args) x
+                       (λ (local-state state xs2)
+                         (k local-state env state (append xs1 xs2) $void)))))))]
             [(eq? f 'begin) (BEGIN/k local-state env state args k)]
             [(or (eq? f 'lambda) (eq? f 'λ))
              (let ([parm (car args)] [body (cdr args)])
@@ -256,7 +259,7 @@
 
 (define (z dir xs)
   (BEGIN/k
-   (hash-set $null-local-state 'dir dir) $null-env $null-state (append xs '(VOIDz))
+   (hash-set $null-local-state '_dir dir) $null-env $null-state (append xs '(VOIDz))
    (λ (local-state env state xs x)
      ($$top local-state state xs))))
 (define prelude (INCLUDE-LISTz "prelude.scm"))
