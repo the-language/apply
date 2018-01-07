@@ -34,7 +34,7 @@
 (define ($!pre-define-lambda local-state state parm k) (k '() state))
 (define ($!pre-lambda local-state state parm k) (k '() state))
 (define ($$define-lambda/k local-state local-state1 state name parm xs k)
-  (k (hash-set local-state '_ (cons name (hash-ref local-state '_))) state (list (**define name (**lambda parm xs)))))
+  (k (hash-set local-state '_ (cons name (hash-ref local-state '_))) state (list (**set! name (**lambda parm xs)))))
 (define ($$lambda/k local-state local-state1 state parm xs k)
   (k local-state state '() (**lambda parm (append (map **define-undefined (hash-ref local-state1 '_)) xs))))
 (define $null-local-state (hash '_ '()))
