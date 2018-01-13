@@ -1,15 +1,45 @@
+#lang racket
 (require compatibility/defmacro)
 (require srfi/9)
+
 (define-macro (譯詞法 名 原) `(define-macro (,名 . 參) (cons ',原 參)))
 (譯詞法 定 define)
 (譯詞法 定表 define-record-type)
-(譯詞法 若 if)
-(譯詞法 或 or)
-(譯詞法 皆 and)
 (譯詞法 名 let)
 (譯詞法 名眾 letrec)
+(譯詞法 入 λ)
+(定 用 apply)
+
 (定 首 car)
 (定 尾 cdr)
-(定 建 cons)
+(定 首尾 cons)
+(定 首尾？ pair?)
+(定 空 '())
+(定 空？ null?)
+(定 連 append)
+(定 簡 filter)
+(定 映 map)
+
+(譯詞法 或 or)
+(譯詞法 皆 and)
+(譯詞法 若 if)
+(定 陰陽？ boolean?)
 (定 陰 #f)
 (定 陽 #t)
+(定 (等？ 甲 乙 . 集)
+   (皆 (或 (equal? 甲 乙) (= 甲 乙))
+      (或 (空？ 集) (用 等？ 乙 集))))
+
+(定 數？ number?)
+(定 加 +)
+(定 減 -)
+(定 乘 *)
+(定 除 /)
+(定 小？ <)
+(定 大？ >)
+(定 小等？ <=)
+(定 大等？ >=)
+
+
+
+ 
