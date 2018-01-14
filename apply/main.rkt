@@ -74,6 +74,8 @@
 (定 串→數 number->string)
 
 (定 字？ char?)
+(定 字→數 char->integer)
+(定 數→字 integer->char)
 (定 串？ string?)
 (定 串 string)
 (定 列→串 list->string)
