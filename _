@@ -1,4 +1,5 @@
 #lang racket
+(provide (all-defined-out) #%module-begin #%datum #%top-interaction)
 (require compatibility/defmacro)
 (require srfi/9)
 
@@ -22,7 +23,7 @@
 (定 列 list)
 (定 連 append)
 (定 簡 filter)
-(定 映 map)
+(定 遍 map)
 
 (譯詞法 或 or)
 (譯詞法 皆 and)
@@ -49,3 +50,11 @@
 (定 串 string)
 (定 列→串 list->string)
 (定 串→列 string->list)
+
+(定 映 hash)
+(定 映？ hash?)
+(定 映-取 hash-ref)
+(定 映-改 hash-set)
+(定 映-有？ hash-has-key?)
+(定 映→列 hash->list)
+(定 列→映 make-immutable-hash)
