@@ -7,8 +7,10 @@
 (譯詞法 定表 define-record-type)
 (譯詞法 名 let)
 (譯詞法 名眾 letrec)
+
 (譯詞法 入 λ)
 (定 用 apply)
+(定 入？ procedure?)
 
 (定 首 car)
 (定 尾 cdr)
@@ -16,6 +18,8 @@
 (定 首尾？ pair?)
 (定 空 '())
 (定 空？ null?)
+(定 列？ list?)
+(定 列 list)
 (定 連 append)
 (定 簡 filter)
 (定 映 map)
@@ -40,6 +44,8 @@
 (定 小等？ <=)
 (定 大等？ >=)
 
-
-
- 
+(定 字？ char?)
+(定 串？ string?)
+(定 串 string)
+(定 列→串 list->string)
+(定 串→列 string->list)
