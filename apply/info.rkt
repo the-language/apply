@@ -1,6 +1,6 @@
 #lang info
 (define collection "apply")
-(define deps '("base"))
+(define deps '("racket"))
 (define build-deps '("scribble-lib" "racket-doc" "rackunit-lib"))
 (define scribblings '(("scribblings/apply.scrbl" ())))
 (define pkg-desc "Description Here")
