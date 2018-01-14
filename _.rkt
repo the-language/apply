@@ -8,7 +8,6 @@
 (譯詞法 定表 define-record-type)
 (譯詞法 名 let)
 (譯詞法 名眾 letrec)
-(譯詞法 定詞法 define-macro)
 (譯詞法 始 begin)
 
 (譯詞法 入 λ)
@@ -34,7 +33,8 @@
 (譯詞法 皆 and)
 (譯詞法 若 if)
 (譯詞法 若. cond)
-(譯詞法 若等. case)
+(define-macro (若等. . xs)
+     (cons 'case (map (λ (x) (if (list? (car x)) x (cons 'else (cdr x)))) xs)))
 (定 陰陽？ boolean?)
 (定 陰 #f)
 (定 陽 #t)
