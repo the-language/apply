@@ -8,6 +8,7 @@
 (譯詞法 定表 define-record-type)
 (譯詞法 名 let)
 (譯詞法 名眾 letrec)
+(譯詞法 定詞法 define-macro)
 
 (譯詞法 入 λ)
 (定 用 apply)
@@ -24,10 +25,15 @@
 (定 連 append)
 (定 簡 filter)
 (定 遍 map)
+(定 第一 first)
+(定 第二 second)
+(定 第三 third)
 
 (譯詞法 或 or)
 (譯詞法 皆 and)
 (譯詞法 若 if)
+(譯詞法 若. cond)
+(譯詞法 若等. case)
 (定 陰陽？ boolean?)
 (定 陰 #f)
 (定 陽 #t)
