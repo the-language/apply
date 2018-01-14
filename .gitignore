@@ -1,4 +1,6 @@
-arch-*.rkt
-*.rkt~
-compiled
-*.scm~
+*~
+\#*
+.\#*
+.DS_Store
+compiled/
+/doc/
