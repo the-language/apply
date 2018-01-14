@@ -9,6 +9,7 @@
 (譯詞法 名 let)
 (譯詞法 名眾 letrec)
 (譯詞法 定詞法 define-macro)
+(譯詞法 始 begin)
 
 (譯詞法 入 λ)
 (定 用 apply)
