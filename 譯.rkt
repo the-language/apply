@@ -1,4 +1,4 @@
-#lang s-exp "_.rkt"
+#lang apply
 #|
     譯
     Copyright (C) 2018  Zaoqi

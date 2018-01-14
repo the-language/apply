@@ -78,6 +78,7 @@
 (定 串 string)
 (定 列→串 list->string)
 (定 串→列 string->list)
+(定 連串 string-append)
 
 (定 符？ symbol?)
 (定 串→符 string->symbol)
