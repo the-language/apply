@@ -1,4 +1,21 @@
 #lang s-exp "_.rkt"
+#|
+    譯
+    Copyright (C) 2018  Zaoqi
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU Affero General Public License as published
+    by the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU Affero General Public License for more details.
+
+    You should have received a copy of the GNU Affero General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+|#
 ; 這裏手動CPS比values簡單
 (定 (譯 局態-址 局態-境 局態 態-塊集 態 式 續) ; (續 局態-址 局態-境 局態 態-塊集 態 句集 式)
    (譯詞法
