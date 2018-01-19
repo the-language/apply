@@ -16,7 +16,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 |#
-(provide (all-defined-out) (all-from-out racket))
+(provide (all-defined-out) (all-from-out racket srfi/9 compatibility/defmacro))
 (require compatibility/defmacro)
 (require srfi/9)
 
