@@ -27,6 +27,7 @@
 (復名詞法 名眾 letrec)
 (復名詞法 始 begin)
 (定 錯 error)
+(定 算 eval)
 
 (復名詞法 入 λ)
 (定 用 apply)
@@ -82,6 +83,7 @@
 (定 (字列→符 甲) (string->symbol (list->string 甲)))
 (定 (符→字列 甲) (string->list (symbol->string 甲)))
 
+(定 空映 (make-immutable-hash))
 (定 映 hash)
 (定 映？ hash?)
 (定 映-取 hash-ref)
@@ -89,3 +91,6 @@
 (定 映-有？ hash-has-key?)
 (定 映→列 hash->list)
 (定 列→映 make-immutable-hash)
+
+(定 無 (void))
+(定 無？ void?)
