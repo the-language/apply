@@ -28,6 +28,8 @@
 (復名詞法 始 begin)
 (定 錯 error)
 (定 算 eval)
+(復名詞法 嵌 include)
+(定 嵌式 file->list) ; bug
 
 (復名詞法 入 λ)
 (定 用 apply)
