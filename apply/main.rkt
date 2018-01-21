@@ -26,8 +26,7 @@
 (復名詞法 名 let)
 (復名詞法 名眾 letrec)
 (復名詞法 始 begin)
-(定 錯 error)
-(定 算 eval)
+(定 誤 error)
 (復名詞法 嵌 include)
 (define-macro (嵌式 址)
   `(include/reader
@@ -50,6 +49,10 @@
                   #'(quote (x ...))))
             (loop (append xs (list x)) (read-syntax source-name in)))))))
 
+(定 算
+   (名 ([境 (module->namespace 'apply)])
+      (入 (式)
+         (eval 式 境))))
 (復名詞法 入 λ)
 (定 用 apply)
 (定 入？ procedure?)
