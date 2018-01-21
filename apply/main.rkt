@@ -16,7 +16,7 @@
     You should have received a copy of the GNU Affero General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 |#
-(provide (all-defined-out) (all-from-out racket srfi/9 compatibility/defmacro))
+(provide (except-out (all-defined-out) %->首尾) (all-from-out racket srfi/9 compatibility/defmacro))
 (require compatibility/defmacro)
 (require srfi/9)
 
@@ -35,34 +35,40 @@
 (定 用 apply)
 (定 入？ procedure?)
 
-(定 首 car)
-(定 尾 cdr)
-(定 首尾 cons)
-(定 首尾？ pair?)
-(定 空 '())
-(定 空？ null?)
-(定 列？ list?)
-(定 列 list)
-(定 連 append)
-(定 簡 filter)
-(定 遍 map)
-(定 第一 first)
-(定 第二 second)
-(定 第三 third)
-
 (復名詞法 或 or)
 (復名詞法 皆 and)
 (復名詞法 若 if)
 (復名詞法 若. cond)
 (定 否則 #t)
 (define-macro (若等. x . xs)
-     (cons 'case (cons x (map (λ (x) (if (list? (car x)) x (cons 'else (cdr x)))) xs))))
+  (cons 'case (cons x (map (λ (x) (if (list? (car x)) x (cons 'else (cdr x)))) xs))))
 (定 陰陽？ boolean?)
 (定 陰 #f)
 (定 陽 #t)
-(定 (等？ 甲 乙 . 集)
-   (皆 (或 (equal? 甲 乙) (= 甲 乙))
-      (或 (空？ 集) (用 等？ 乙 集))))
+(定 等？ equal?)
+(定 (全等？ 甲 乙 . 集)
+   (皆 (或 (等？ 甲 乙) (皆 (數？ 甲) (數？ 乙) (= 甲 乙)))
+      (或 (空？ 集) (用 全等？ 乙 集))))
+
+(定 (%->首尾 甲)
+   (若.
+    [(string? 甲) (string->list 甲)]
+    [(vector? 甲) (vector->list 甲)]
+    [否則 甲]))
+(定 (首 甲) (car (%->首尾 甲)))
+(定 (尾 甲) (cdr (%->首尾 甲)))
+(定 (首尾 之首 之尾) (cons 之首 (%->首尾 之尾)))
+(定 (首尾？ 甲) (或 (pair? 甲) (string? 甲) (vector? 甲)))
+(定 空 '())
+(定 (空？ 甲) (null? (%->首尾 甲)))
+(定 (列？ 甲) (或 (list? 甲) (string? 甲) (vector? 甲)))
+(定 列 list)
+(定 (連 甲 乙) (append (%->首尾 甲) (%->首尾 乙)))
+(定 (簡 留？ 甲) (filter 留？ (%->首尾 甲)))
+(定 (遍 換 . 列列) (apply map 換 (map %->首尾 列列)))
+(定 (第一 甲) (first (%->首尾 甲)))
+(定 (第二 甲) (second (%->首尾 甲)))
+(定 (第三 甲) (third (%->首尾 甲)))
 
 (定 數？ number?)
 (定 加 +)
@@ -93,6 +99,3 @@
 (定 映-有？ hash-has-key?)
 (定 映→列 hash->list)
 (定 列→映 make-immutable-hash)
-
-(定 無 (void))
-(定 無？ void?)
