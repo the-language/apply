@@ -100,6 +100,9 @@
 (定 大等？ >=)
 (定 (數→字列 甲) (string->list (number->string 甲)))
 (定 (字列→數 甲) (string->number (list->string 甲)))
+(定 零？ zero?)
+(定 (減一 甲) (- 甲 1))
+(定 (加一 甲) (+ 甲 1))
 
 (定 字？ char?)
 (定 字→數 char->integer)
