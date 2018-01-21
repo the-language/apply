@@ -29,7 +29,15 @@
 (定 錯 error)
 (定 算 eval)
 (復名詞法 嵌 include)
-(定 嵌式 file->list) ; bug
+(define-macro (嵌式 址)
+  `(include/reader
+    ,址
+    (λ (source-name in)
+      (let ([E (read-syntax source-name in)])
+        (if (eof-object? E)
+            eof
+            (with-syntax ([E E])
+              #'(quote E)))))))
 
 (復名詞法 入 λ)
 (定 用 apply)
