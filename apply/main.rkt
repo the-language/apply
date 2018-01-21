@@ -31,13 +31,24 @@
 (復名詞法 嵌 include)
 (define-macro (嵌式 址)
   `(include/reader
-    ,址
+    (file ,址)
     (λ (source-name in)
       (let ([E (read-syntax source-name in)])
         (if (eof-object? E)
             eof
             (with-syntax ([E E])
               #'(quote E)))))))
+(define-macro (嵌式列 址)
+  `(include/reader
+    (file ,址)
+    (λ (source-name in)
+      (let loop ([xs '()] [x (read-syntax source-name in)])
+        (if (eof-object? x)
+            (if (null? xs)
+                eof
+                (with-syntax ([(x ...) xs])
+                  #'(quote (x ...))))
+            (loop (append xs (list x)) (read-syntax source-name in)))))))
 
 (復名詞法 入 λ)
 (定 用 apply)
